@@ -1,0 +1,527 @@
+/* ==========================================================
+   CY_FORUM theme for Flarum
+   Cyberpunk / glitch / acid yellow / magenta / black
+   Inspired by CY_BORG-like punk visual language
+   ========================================================== */
+
+@cy-black: #050505;
+@cy-black-2: #0b0b0e;
+@cy-panel: #111115;
+@cy-panel-2: #17171d;
+@cy-yellow: #f4ff00;
+@cy-magenta: #ff2bd6;
+@cy-cyan: #00e5ff;
+@cy-green: #39ff14;
+@cy-red: #ff2a2a;
+@cy-text: #f5f5f0;
+@cy-muted: #a7a7a7;
+@cy-border: #2b2b32;
+
+:root {
+  --primary-color: @cy-yellow;
+  --secondary-color: @cy-magenta;
+  --body-bg: @cy-black;
+  --body-color: @cy-text;
+  --link-color: @cy-yellow;
+  --control-bg: #181820;
+  --control-color: @cy-text;
+  --button-primary-bg: @cy-yellow;
+  --button-primary-color: #000;
+}
+
+/* Global */
+body {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255, 43, 214, .18), transparent 28%),
+    radial-gradient(circle at 85% 0%, rgba(0, 229, 255, .12), transparent 24%),
+    linear-gradient(180deg, #050505 0%, #0a0a0d 45%, #050505 100%);
+  color: @cy-text;
+  font-family: "Arial Narrow", "Roboto Condensed", "Inter", system-ui, sans-serif;
+  letter-spacing: .015em;
+}
+
+/* Noise / scanline overlay */
+body:before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: .11;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,.07) 0,
+      rgba(255,255,255,.07) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  mix-blend-mode: overlay;
+}
+
+/* Links */
+a {
+  color: @cy-yellow;
+  text-decoration: none;
+}
+
+a:hover {
+  color: @cy-magenta;
+  text-shadow: 0 0 8px rgba(255, 43, 214, .8);
+}
+
+/* Header */
+.App-header {
+  background:
+    linear-gradient(90deg, rgba(244,255,0,.95), rgba(255,43,214,.85) 48%, rgba(0,229,255,.85));
+  color: #000;
+  border-bottom: 4px solid #000;
+  box-shadow:
+    0 6px 0 @cy-magenta,
+    0 12px 28px rgba(0,0,0,.75);
+}
+
+.Header-title a,
+.Header-title {
+  color: #000 !important;
+  font-weight: 1000;
+  letter-spacing: .08em;
+  text-transform: none;
+  transform: skewX(-6deg);
+}
+
+.Header-title a:before {
+  content: "Cy";
+  color: #000;
+  background: @cy-yellow;
+  margin-right: .1rem;
+}
+
+/* Search and controls */
+.Search-input,
+.FormControl,
+.Select-input,
+.TextEditor textarea {
+  background: #09090c !important;
+  color: @cy-text !important;
+  border: 2px solid @cy-border !important;
+  border-radius: 0 !important;
+  box-shadow: inset 4px 0 0 @cy-yellow;
+}
+
+.Search-input:focus,
+.FormControl:focus,
+.TextEditor textarea:focus {
+  border-color: @cy-yellow !important;
+  box-shadow:
+    inset 4px 0 0 @cy-yellow,
+    0 0 0 3px rgba(244,255,0,.18) !important;
+}
+
+/* Buttons */
+.Button {
+  border-radius: 0 !important;
+  border: 2px solid @cy-border !important;
+  background: @cy-panel-2 !important;
+  color: @cy-text !important;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 rgba(255,43,214,.75);
+  transition: transform .08s ease, box-shadow .08s ease, background .08s ease;
+}
+
+.Button:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 rgba(0,229,255,.75);
+  border-color: @cy-yellow !important;
+}
+
+.Button--primary,
+.IndexPage-newDiscussion,
+.DiscussionComposer-changeTitle {
+  background: @cy-yellow !important;
+  color: #000 !important;
+  border-color: #000 !important;
+  box-shadow: 5px 5px 0 @cy-magenta;
+}
+
+.Button--primary:hover {
+  background: @cy-magenta !important;
+  color: #000 !important;
+  box-shadow: 5px 5px 0 @cy-cyan;
+}
+
+/* Hero */
+.Hero {
+  background:
+    linear-gradient(135deg, rgba(244,255,0,.96), rgba(255,43,214,.88) 58%, rgba(0,229,255,.75)),
+    repeating-linear-gradient(
+      -10deg,
+      rgba(0,0,0,.18) 0,
+      rgba(0,0,0,.18) 8px,
+      transparent 8px,
+      transparent 16px
+    );
+  color: #000;
+  border-bottom: 5px solid #000;
+  box-shadow: 0 12px 0 rgba(244,255,0,.25);
+}
+
+.Hero h2 {
+  color: #000;
+  font-weight: 1000;
+  text-transform: uppercase;
+  font-size: clamp(2rem, 5vw, 4.5rem);
+  line-height: .88;
+  letter-spacing: -.06em;
+  text-shadow:
+    3px 3px 0 @cy-cyan,
+    -3px -3px 0 @cy-magenta;
+}
+
+.Hero-subtitle {
+  color: #000;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+/* Main layout */
+.App-content {
+  background: transparent;
+}
+
+.container {
+  max-width: 1220px;
+}
+
+/* Sidebar */
+.IndexPage-nav .item-newDiscussion {
+  margin-bottom: 1rem;
+}
+
+.sideNav .Dropdown-menu,
+.IndexPage-nav .sideNav {
+  background: rgba(10,10,13,.82);
+  border: 2px solid @cy-border;
+  box-shadow: 6px 6px 0 rgba(244,255,0,.12);
+}
+
+.sideNav .Button {
+  box-shadow: none;
+  border-left: 4px solid transparent !important;
+}
+
+.sideNav .Button:hover,
+.sideNav .Button.active {
+  border-left-color: @cy-yellow !important;
+  color: @cy-yellow !important;
+  background: rgba(244,255,0,.08) !important;
+}
+
+/* Discussion list cards */
+.DiscussionListItem {
+  background:
+    linear-gradient(90deg, rgba(244,255,0,.08), transparent 34%),
+    @cy-panel;
+  border: 2px solid @cy-border;
+  margin-bottom: 12px;
+  box-shadow: 7px 7px 0 rgba(255,43,214,.14);
+  transition: transform .08s ease, border-color .08s ease, box-shadow .08s ease;
+}
+
+.DiscussionListItem:hover {
+  transform: translate(-2px, -2px);
+  border-color: @cy-yellow;
+  box-shadow:
+    8px 8px 0 rgba(255,43,214,.48),
+    0 0 24px rgba(244,255,0,.12);
+}
+
+.DiscussionListItem-title {
+  color: @cy-text;
+  font-weight: 1000;
+  text-transform: uppercase;
+  letter-spacing: -.02em;
+}
+
+.DiscussionListItem-title:hover {
+  color: @cy-yellow;
+}
+
+.DiscussionListItem-info,
+.DiscussionListItem-count,
+.DiscussionListItem-count:before {
+  color: @cy-muted;
+}
+
+.DiscussionListItem-count {
+  border-radius: 0;
+  background: #000;
+  border: 2px solid @cy-yellow;
+  color: @cy-yellow;
+}
+
+/* Avatars */
+.Avatar {
+  border-radius: 0 !important;
+  border: 2px solid @cy-yellow;
+  box-shadow:
+    3px 3px 0 @cy-magenta,
+    -2px -2px 0 @cy-cyan;
+}
+
+/* Tags */
+.TagLabel {
+  border-radius: 0 !important;
+  text-transform: uppercase;
+  font-weight: 900;
+  letter-spacing: .05em;
+  border: 1px solid #000;
+  box-shadow: 2px 2px 0 rgba(0,0,0,.8);
+}
+
+/* Posts */
+.PostStream-item {
+  margin-bottom: 22px;
+}
+
+.Post {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.025), transparent),
+    @cy-panel;
+  border: 2px solid @cy-border;
+  box-shadow: 8px 8px 0 rgba(0,229,255,.12);
+}
+
+.Post-header {
+  border-bottom: 2px solid rgba(244,255,0,.2);
+  padding-bottom: 10px;
+}
+
+.PostUser-name {
+  color: #fff;
+  font-weight: 1000;
+  text-transform: uppercase;
+
+  text-shadow:
+    0 0 2px #fff,
+    0 0 5px @cy-yellow,
+    0 0 10px @cy-yellow,
+    0 0 20px @cy-yellow,
+    0 0 35px @cy-yellow;
+}
+
+.Post-body {
+  color: @cy-text;
+  font-size: 1.02rem;
+  line-height: 1.58;
+}
+
+.Post-body code,
+.Post-body pre {
+  background: #000;
+  color: @cy-green;
+  border: 1px solid rgba(57,255,20,.4);
+  border-radius: 0;
+}
+
+.Post-body blockquote {
+  border-left: 6px solid @cy-magenta;
+  background: rgba(255,43,214,.08);
+  color: @cy-text;
+}
+
+/* Composer */
+.Composer {
+  background: #07070a;
+  border-top: 4px solid @cy-yellow;
+  box-shadow: 0 -8px 0 rgba(255,43,214,.3);
+}
+
+.ComposerBody-header {
+  background: @cy-panel;
+  border-bottom: 2px solid @cy-border;
+}
+
+/* Dropdowns / modals */
+.Dropdown-menu,
+.Modal-content {
+  background: #09090d;
+  color: @cy-text;
+  border: 2px solid @cy-yellow;
+  border-radius: 0;
+  box-shadow:
+    8px 8px 0 rgba(255,43,214,.5),
+    0 0 28px rgba(244,255,0,.15);
+}
+
+.Dropdown-menu > li > a,
+.Dropdown-menu > li > button {
+  color: @cy-text;
+}
+
+.Dropdown-menu > li > a:hover,
+.Dropdown-menu > li > button:hover {
+  background: @cy-yellow;
+  color: #000;
+}
+
+/* Alerts */
+.Alert {
+  border-radius: 0;
+  border: 2px solid #000;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.Alert--success {
+  background: @cy-green;
+  color: #000;
+}
+
+.Alert--error {
+  background: @cy-red;
+  color: #000;
+}
+
+/* Glitch effect on main forum title */
+.Hero h2,
+.Header-title a {
+  position: relative;
+}
+
+.Hero h2:after {
+  content: attr(data-content);
+}
+
+.Hero h2:before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 8px;
+  width: 100%;
+  height: 8px;
+  background: rgba(0,0,0,.8);
+  opacity: .28;
+  transform: skewX(-20deg);
+}
+
+/* Pseudo-random warning strip */
+.IndexPage-results:before {
+  content: "█▓▒░ CREATE A HANDLE // CONNECT // CONSUME // CONTRIBUTE // GET NOTICED ░▒▓█";
+  display: block;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: @cy-yellow;
+  color: #000;
+  font-weight: 1000;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  border: 2px solid #000;
+  box-shadow: 5px 5px 0 @cy-magenta;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Pagination */
+.Pagination-page {
+  border-radius: 0;
+  background: @cy-panel;
+  border: 2px solid @cy-border;
+}
+
+.Pagination-page.active {
+  background: @cy-yellow;
+  color: #000;
+}
+
+/* Mobile tuning */
+@media (max-width: 767px) {
+  .Hero h2 {
+    font-size: 2.4rem;
+  }
+
+  .DiscussionListItem {
+    margin-left: 4px;
+    margin-right: 4px;
+  }
+
+  .Button {
+    box-shadow: 3px 3px 0 rgba(255,43,214,.75);
+  }
+}
+
+@media (max-width: 767px) {
+  .App-header {
+    background:
+      linear-gradient(
+        90deg,
+        @cy-yellow 0%,
+        @cy-magenta 55%,
+        @cy-cyan 100%
+      ) !important;
+    color: #000 !important;
+    border-bottom: 4px solid #000 !important;
+    box-shadow:
+      0 6px 0 @cy-magenta,
+      0 10px 24px rgba(0,0,0,.8) !important;
+  }
+
+  .App-header .Button,
+  .App-header .Button--icon,
+  .App-header button {
+    color: #000 !important;
+    background: transparent !important;
+    border-color: transparent !important;
+  }
+
+  .App-header .Button:hover,
+  .App-header .Button--icon:hover {
+    color: @cy-magenta !important;
+    background: rgba(0,0,0,.12) !important;
+  }
+
+  .App-header .Header-title,
+  .App-header .Header-title a {
+    color: #000 !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+
+  .App-navigation {
+    background:
+      linear-gradient(
+        90deg,
+        @cy-yellow 0%,
+        @cy-magenta 55%,
+        @cy-cyan 100%
+      ) !important;
+
+    border-bottom: 4px solid #000 !important;
+
+    box-shadow:
+      0 6px 0 @cy-magenta,
+      0 10px 24px rgba(0,0,0,.8) !important;
+  }
+
+  .App-navigation .Button {
+    color: #000 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .App-navigation .Button:hover {
+    color: @cy-magenta !important;
+    background: rgba(0,0,0,.12) !important;
+  }
+
+}
+
+.TextEditor textarea {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    box-sizing: border-box;
+}
