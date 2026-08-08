@@ -1,21 +1,22 @@
 /* ==========================================================
-   CY_FORUM theme for Flarum
-   Cyberpunk / glitch / acid yellow / magenta / black
-   Inspired by CY_BORG-like punk visual language
+   CY_FORUM theme for Flarum (CY_BORG Edition)
+   Style: Punk / Brutalist / Acid Yellow / Hot Pink / Pitch Black
+   Visual language inspired by CY_BORG (Creative Commons)
    ========================================================== */
 
-@cy-black: #050505;
-@cy-black-2: #0b0b0e;
-@cy-panel: #111115;
-@cy-panel-2: #17171d;
-@cy-yellow: #f4ff00;
-@cy-magenta: #ff2bd6;
-@cy-cyan: #00e5ff;
-@cy-green: #39ff14;
-@cy-red: #ff2a2a;
-@cy-text: #f5f5f0;
-@cy-muted: #a7a7a7;
-@cy-border: #2b2b32;
+/* --- COLOR PALETTE (CY_BORG Official Vibes) --- */
+@cy-black:       #000000;
+@cy-black-panel: #0a0a0d;
+@cy-panel-hover: #121218;
+@cy-yellow:      #f4ff00; /* Acid Yellow */
+@cy-magenta:     #ff0055; /* CY_BORG Hot Pink */
+@cy-cyan:        #00e5ff;
+@cy-green:       #39ff14;
+@cy-red:         #ff2a2a;
+@cy-white:       #ffffff;
+@cy-text:        #f0f0f5;
+@cy-muted:       #8a8a9e;
+@cy-border:      #f4ff00;
 
 :root {
   --primary-color: @cy-yellow;
@@ -23,505 +24,464 @@
   --body-bg: @cy-black;
   --body-color: @cy-text;
   --link-color: @cy-yellow;
-  --control-bg: #181820;
+  --control-bg: #0d0d12;
   --control-color: @cy-text;
   --button-primary-bg: @cy-yellow;
-  --button-primary-color: #000;
+  --button-primary-color: #000000;
 }
 
-/* Global */
+/* --- SELECTION & GLOBAL RESETS --- */
+::selection {
+  background: @cy-magenta !important;
+  color: @cy-white !important;
+  text-shadow: none;
+}
+
 body {
-  background:
-    radial-gradient(circle at 10% 10%, rgba(255, 43, 214, .18), transparent 28%),
-    radial-gradient(circle at 85% 0%, rgba(0, 229, 255, .12), transparent 24%),
-    linear-gradient(180deg, #050505 0%, #0a0a0d 45%, #050505 100%);
+  background: @cy-black;
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(255, 0, 85, 0.15), transparent 35%),
+    radial-gradient(circle at 85% 85%, rgba(0, 229, 255, 0.1), transparent 30%),
+    linear-gradient(180deg, #000000 0%, #08080c 50%, #000000 100%);
   color: @cy-text;
-  font-family: "Arial Narrow", "Roboto Condensed", "Inter", system-ui, sans-serif;
-  letter-spacing: .015em;
+  font-family: 'Space Mono', monospace;
+  letter-spacing: -0.01em;
 }
 
-/* Noise / scanline overlay */
-body:before {
+/* Base Headings - CY_BORG Brutalist Type */
+h1, h2, h3, h4, h5, h6, 
+.Header-title, .DiscussionListItem-title {
+  font-family: 'Chakra Petch', sans-serif !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+
+/* Scanlines Effect Overlay */
+body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 9999;
-  opacity: .11;
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(255,255,255,.07) 0,
-      rgba(255,255,255,.07) 1px,
-      transparent 1px,
-      transparent 4px
-    );
+  z-index: 99999;
+  opacity: 0.12;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.1) 0,
+    rgba(255, 255, 255, 0.1) 1px,
+    transparent 1px,
+    transparent 3px
+  );
   mix-blend-mode: overlay;
 }
 
-/* Links */
+/* --- LINKS --- */
 a {
   color: @cy-yellow;
   text-decoration: none;
+  transition: all 0.05s ease;
 }
 
 a:hover {
-  color: @cy-magenta;
-  text-shadow: 0 0 8px rgba(255, 43, 214, .8);
+  color: @cy-black;
+  background: @cy-magenta;
+  box-shadow: 2px 2px 0 @cy-cyan;
 }
 
-/* Header */
+/* --- APP HEADER & NAVIGATION --- */
 .App-header {
-  background:
-    linear-gradient(90deg, rgba(244,255,0,.95), rgba(255,43,214,.85) 48%, rgba(0,229,255,.85));
-  color: #000;
-  border-bottom: 4px solid #000;
-  box-shadow:
-    0 6px 0 @cy-magenta,
-    0 12px 28px rgba(0,0,0,.75);
+  background: @cy-yellow !important;
+  color: @cy-black !important;
+  border-bottom: 4px solid @cy-black !important;
+  box-shadow: 0 6px 0 @cy-magenta;
+  position: relative;
+  z-index: 1000;
 }
 
 .Header-title a,
 .Header-title {
-  color: #000 !important;
-  font-weight: 1000;
-  letter-spacing: .08em;
-  text-transform: none;
-  transform: skewX(-6deg);
+  color: @cy-black !important;
+  font-size: 1.5rem;
+  letter-spacing: 0.05em;
+  transform: skewX(-8deg);
+  display: inline-block;
+  background: @cy-black;
+  color: @cy-yellow !important;
+  padding: 2px 10px;
+  border: 2px solid @cy-magenta;
+  box-shadow: 3px 3px 0 @cy-cyan;
 }
 
-.Header-title a:before {
-  content: "Cy";
-  color: #000;
-  background: @cy-yellow;
-  margin-right: .1rem;
+.Header-title a:hover {
+  background: @cy-magenta !important;
+  color: @cy-black !important;
 }
 
-/* Search and controls */
+.Header-controls .Button {
+  background: @cy-black !important;
+  color: @cy-yellow !important;
+  border: 2px solid @cy-black !important;
+  box-shadow: 3px 3px 0 @cy-magenta;
+}
+
+.Header-controls .Button:hover {
+  background: @cy-magenta !important;
+  color: @cy-black !important;
+  box-shadow: 3px 3px 0 @cy-cyan;
+}
+
+/* --- SEARCH & INPUT CONTROLS --- */
 .Search-input,
 .FormControl,
 .Select-input,
 .TextEditor textarea {
-  background: #09090c !important;
-  color: @cy-text !important;
-  border: 2px solid @cy-border !important;
+  background: @cy-black !important;
+  color: @cy-yellow !important;
+  border: 2px solid @cy-yellow !important;
   border-radius: 0 !important;
-  box-shadow: inset 4px 0 0 @cy-yellow;
+  font-family: 'Space Mono', monospace !important;
+  box-shadow: 4px 4px 0 @cy-magenta !important;
 }
 
 .Search-input:focus,
 .FormControl:focus,
 .TextEditor textarea:focus {
-  border-color: @cy-yellow !important;
-  box-shadow:
-    inset 4px 0 0 @cy-yellow,
-    0 0 0 3px rgba(244,255,0,.18) !important;
+  border-color: @cy-cyan !important;
+  background: #050508 !important;
+  box-shadow: 4px 4px 0 @cy-yellow !important;
+  outline: none !important;
 }
 
-/* Buttons */
+/* --- BUTTONS --- */
 .Button {
   border-radius: 0 !important;
-  border: 2px solid @cy-border !important;
-  background: @cy-panel-2 !important;
-  color: @cy-text !important;
-  font-weight: 900;
-  letter-spacing: .04em;
+  border: 2px solid @cy-yellow !important;
+  background: @cy-black !important;
+  color: @cy-yellow !important;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 900 !important;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  box-shadow: 4px 4px 0 rgba(255,43,214,.75);
-  transition: transform .08s ease, box-shadow .08s ease, background .08s ease;
+  box-shadow: 4px 4px 0 @cy-magenta;
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
 
-.Button:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0 rgba(0,229,255,.75);
-  border-color: @cy-yellow !important;
+.Button:hover, .Button:focus {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 @cy-cyan;
+  background: @cy-yellow !important;
+  color: @cy-black !important;
 }
 
 .Button--primary,
 .IndexPage-newDiscussion,
 .DiscussionComposer-changeTitle {
-  background: @cy-yellow !important;
-  color: #000 !important;
-  border-color: #000 !important;
-  box-shadow: 5px 5px 0 @cy-magenta;
+  background: @cy-magenta !important;
+  color: @cy-white !important;
+  border: 2px solid @cy-black !important;
+  box-shadow: 4px 4px 0 @cy-yellow !important;
 }
 
 .Button--primary:hover {
-  background: @cy-magenta !important;
-  color: #000 !important;
-  box-shadow: 5px 5px 0 @cy-cyan;
+  background: @cy-yellow !important;
+  color: @cy-black !important;
+  box-shadow: 4px 4px 0 @cy-cyan !important;
 }
 
-/* Hero */
+/* --- HERO SECTION --- */
 .Hero {
-  background:
-    linear-gradient(135deg, rgba(244,255,0,.96), rgba(255,43,214,.88) 58%, rgba(0,229,255,.75)),
-    repeating-linear-gradient(
-      -10deg,
-      rgba(0,0,0,.18) 0,
-      rgba(0,0,0,.18) 8px,
-      transparent 8px,
-      transparent 16px
-    );
-  color: #000;
-  border-bottom: 5px solid #000;
-  box-shadow: 0 12px 0 rgba(244,255,0,.25);
+  background: @cy-yellow !important;
+  color: @cy-black !important;
+  border-bottom: 5px solid @cy-black;
+  box-shadow: 0 10px 0 @cy-magenta;
+  padding: 2.5rem 1rem !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.Hero::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: repeating-linear-gradient(
+    -45deg,
+    #000,
+    #000 15px,
+    @cy-yellow 15px,
+    @cy-yellow 30px
+  );
 }
 
 .Hero h2 {
-  color: #000;
-  font-weight: 1000;
-  text-transform: uppercase;
-  font-size: clamp(2rem, 5vw, 4.5rem);
-  line-height: .88;
-  letter-spacing: -.06em;
-  text-shadow:
-    3px 3px 0 @cy-cyan,
-    -3px -3px 0 @cy-magenta;
+  color: @cy-black !important;
+  font-size: clamp(2.2rem, 6vw, 4.8rem) !important;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  text-shadow: 4px 4px 0 @cy-white, -3px -3px 0 @cy-magenta;
 }
 
 .Hero-subtitle {
-  color: #000;
-  font-weight: 900;
-  text-transform: uppercase;
+  color: @cy-black !important;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  background: @cy-white;
+  display: inline-block;
+  padding: 4px 8px;
+  border: 2px solid @cy-black;
+  transform: rotate(-1deg);
 }
 
-/* Main layout */
-.App-content {
-  background: transparent;
-}
-
-.container {
-  max-width: 1220px;
-}
-
-/* Sidebar */
-.IndexPage-nav .item-newDiscussion {
-  margin-bottom: 1rem;
+/* --- SIDEBAR & NAV PANELS --- */
+.App-nav,
+.sideNav,
+.sideNavOffset {
+  z-index: 100;
 }
 
 .sideNav .Dropdown-menu,
 .IndexPage-nav .sideNav {
-  background: rgba(10,10,13,.82);
-  border: 2px solid @cy-border;
-  box-shadow: 6px 6px 0 rgba(244,255,0,.12);
+  background: @cy-black-panel !important;
+  border: 2px solid @cy-yellow !important;
+  box-shadow: 6px 6px 0 @cy-magenta;
+  padding: 8px;
 }
 
 .sideNav .Button {
-  box-shadow: none;
-  border-left: 4px solid transparent !important;
+  box-shadow: none !important;
+  border: 1px solid transparent !important;
+  border-left: 5px solid transparent !important;
+  text-align: left;
+  margin-bottom: 2px;
 }
 
 .sideNav .Button:hover,
-.sideNav .Button.active {
+.sideNav .Button.active,
+.sideNav .item-selected .Button {
   border-left-color: @cy-yellow !important;
-  color: @cy-yellow !important;
-  background: rgba(244,255,0,.08) !important;
+  color: @cy-black !important;
+  background: @cy-yellow !important;
 }
 
-/* Discussion list cards */
+/* --- DISCUSSION LIST (CARDS) --- */
 .DiscussionListItem {
-  background:
-    linear-gradient(90deg, rgba(244,255,0,.08), transparent 34%),
-    @cy-panel;
-  border: 2px solid @cy-border;
-  margin-bottom: 12px;
-  box-shadow: 7px 7px 0 rgba(255,43,214,.14);
-  transition: transform .08s ease, border-color .08s ease, box-shadow .08s ease;
+  background: @cy-black-panel !important;
+  border: 2px solid @cy-yellow !important;
+  margin-bottom: 14px;
+  box-shadow: 6px 6px 0 @cy-magenta;
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
+  position: relative;
 }
 
 .DiscussionListItem:hover {
-  transform: translate(-2px, -2px);
-  border-color: @cy-yellow;
-  box-shadow:
-    8px 8px 0 rgba(255,43,214,.48),
-    0 0 24px rgba(244,255,0,.12);
+  transform: translate(-3px, -3px);
+  border-color: @cy-cyan !important;
+  box-shadow: 9px 9px 0 @cy-yellow;
 }
 
 .DiscussionListItem-title {
-  color: @cy-text;
-  font-weight: 1000;
-  text-transform: uppercase;
-  letter-spacing: -.02em;
+  color: @cy-white !important;
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
 }
 
-.DiscussionListItem-title:hover {
-  color: @cy-yellow;
-}
-
-.DiscussionListItem-info,
-.DiscussionListItem-count,
-.DiscussionListItem-count:before {
-  color: @cy-muted;
+.DiscussionListItem:hover .DiscussionListItem-title {
+  color: @cy-yellow !important;
 }
 
 .DiscussionListItem-count {
-  border-radius: 0;
-  background: #000;
-  border: 2px solid @cy-yellow;
-  color: @cy-yellow;
+  border-radius: 0 !important;
+  background: @cy-magenta !important;
+  border: 2px solid @cy-black !important;
+  color: @cy-white !important;
+  font-weight: 700;
+  box-shadow: 2px 2px 0 @cy-cyan;
 }
 
-/* Avatars */
+.DiscussionListItem--unread {
+  border-left: 8px solid @cy-magenta !important;
+}
+
+/* --- AVATARS & BADGES --- */
 .Avatar {
   border-radius: 0 !important;
-  border: 2px solid @cy-yellow;
-  box-shadow:
-    3px 3px 0 @cy-magenta,
-    -2px -2px 0 @cy-cyan;
+  border: 2px solid @cy-yellow !important;
+  box-shadow: 3px 3px 0 @cy-magenta;
 }
 
-/* Tags */
 .TagLabel {
   border-radius: 0 !important;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 900 !important;
   text-transform: uppercase;
-  font-weight: 900;
-  letter-spacing: .05em;
-  border: 1px solid #000;
-  box-shadow: 2px 2px 0 rgba(0,0,0,.8);
+  border: 1px solid @cy-black !important;
+  box-shadow: 2px 2px 0 @cy-black;
 }
 
-/* Posts */
+/* --- POST STREAM --- */
 .PostStream-item {
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .Post {
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.025), transparent),
-    @cy-panel;
-  border: 2px solid @cy-border;
-  box-shadow: 8px 8px 0 rgba(0,229,255,.12);
+  background: @cy-black-panel !important;
+  border: 2px solid @cy-yellow !important;
+  box-shadow: 8px 8px 0 @cy-magenta;
+  padding: 16px;
 }
 
 .Post-header {
-  border-bottom: 2px solid rgba(244,255,0,.2);
-  padding-bottom: 10px;
+  border-bottom: 2px dashed @cy-yellow;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
 }
 
-.PostUser-name {
-  color: #fff;
-  font-weight: 1000;
-  text-transform: uppercase;
-
-  text-shadow:
-    0 0 2px #fff,
-    0 0 5px @cy-yellow,
-    0 0 10px @cy-yellow,
-    0 0 20px @cy-yellow,
-    0 0 35px @cy-yellow;
+.PostUser-name, 
+.PostUser-name a {
+  color: @cy-yellow !important;
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.05em;
+  text-shadow: 2px 2px 0 @cy-magenta;
 }
 
 .Post-body {
   color: @cy-text;
-  font-size: 1.02rem;
-  line-height: 1.58;
+  font-size: 0.98rem;
+  line-height: 1.6;
 }
 
 .Post-body code,
 .Post-body pre {
-  background: #000;
-  color: @cy-green;
-  border: 1px solid rgba(57,255,20,.4);
-  border-radius: 0;
+  background: @cy-black !important;
+  color: @cy-green !important;
+  border: 2px solid @cy-green !important;
+  border-radius: 0 !important;
+  padding: 8px;
+  font-family: 'Space Mono', monospace;
 }
 
 .Post-body blockquote {
-  border-left: 6px solid @cy-magenta;
-  background: rgba(255,43,214,.08);
-  color: @cy-text;
+  border-left: 6px solid @cy-magenta !important;
+  background: rgba(255, 0, 85, 0.1) !important;
+  color: @cy-yellow !important;
+  padding: 10px 15px;
+  margin: 10px 0;
 }
 
-/* Composer */
+/* --- COMPOSER --- */
 .Composer {
-  background: #07070a;
-  border-top: 4px solid @cy-yellow;
-  box-shadow: 0 -8px 0 rgba(255,43,214,.3);
+  background: @cy-black !important;
+  border: 3px solid @cy-yellow !important;
+  box-shadow: 0 -10px 25px rgba(255, 0, 85, 0.4);
+  z-index: 1050 !important;
 }
 
 .ComposerBody-header {
-  background: @cy-panel;
-  border-bottom: 2px solid @cy-border;
+  background: @cy-black-panel !important;
+  border-bottom: 2px solid @cy-yellow !important;
 }
 
-/* Dropdowns / modals */
+/* --- DROPDOWNS & MODALS --- */
 .Dropdown-menu,
 .Modal-content {
-  background: #09090d;
-  color: @cy-text;
-  border: 2px solid @cy-yellow;
-  border-radius: 0;
-  box-shadow:
-    8px 8px 0 rgba(255,43,214,.5),
-    0 0 28px rgba(244,255,0,.15);
+  background: @cy-black !important;
+  color: @cy-text !important;
+  border: 3px solid @cy-yellow !important;
+  border-radius: 0 !important;
+  box-shadow: 8px 8px 0 @cy-magenta, 0 0 20px rgba(0,0,0,0.9) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .Dropdown-menu > li > a,
 .Dropdown-menu > li > button {
-  color: @cy-text;
+  color: @cy-text !important;
+  font-family: 'Space Mono', monospace;
 }
 
 .Dropdown-menu > li > a:hover,
 .Dropdown-menu > li > button:hover {
-  background: @cy-yellow;
-  color: #000;
+  background: @cy-yellow !important;
+  color: @cy-black !important;
 }
 
-/* Alerts */
+/* --- SYSTEM ALERTS --- */
 .Alert {
-  border-radius: 0;
-  border: 2px solid #000;
-  font-weight: 900;
-  text-transform: uppercase;
+  border-radius: 0 !important;
+  border: 3px solid @cy-black !important;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 900 !important;
+  box-shadow: 5px 5px 0 @cy-black;
 }
 
 .Alert--success {
-  background: @cy-green;
-  color: #000;
+  background: @cy-green !important;
+  color: @cy-black !important;
 }
 
 .Alert--error {
-  background: @cy-red;
-  color: #000;
+  background: @cy-red !important;
+  color: @cy-white !important;
 }
 
-/* Glitch effect on main forum title */
-.Hero h2,
-.Header-title a {
-  position: relative;
-}
-
-.Hero h2:after {
-  content: attr(data-content);
-}
-
-.Hero h2:before {
-  content: "";
-  position: absolute;
-  left: -6px;
-  top: 8px;
-  width: 100%;
-  height: 8px;
-  background: rgba(0,0,0,.8);
-  opacity: .28;
-  transform: skewX(-20deg);
-}
-
-/* Pseudo-random warning strip */
-.IndexPage-results:before {
+/* --- CY_BORG TICKER / WARNING STRIP --- */
+.IndexPage-results::before {
   content: "█▓▒░ CREATE A HANDLE // CONNECT // CONSUME // CONTRIBUTE // GET NOTICED ░▒▓█";
   display: block;
-  margin-bottom: 14px;
-  padding: 8px 12px;
-  background: @cy-yellow;
-  color: #000;
-  font-weight: 1000;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: @cy-magenta;
+  color: @cy-white;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: .08em;
-  border: 2px solid #000;
-  box-shadow: 5px 5px 0 @cy-magenta;
+  letter-spacing: 0.1em;
+  border: 2px solid @cy-black;
+  box-shadow: 5px 5px 0 @cy-yellow;
   overflow: hidden;
   white-space: nowrap;
 }
 
-/* Pagination */
-.Pagination-page {
-  border-radius: 0;
-  background: @cy-panel;
-  border: 2px solid @cy-border;
-}
-
-.Pagination-page.active {
-  background: @cy-yellow;
-  color: #000;
-}
-
-/* Mobile tuning */
-@media (max-width: 767px) {
-  .Hero h2 {
-    font-size: 2.4rem;
+/* --- MOBILE DRAWER & NAVIGATION FIXES --- */
+@media (max-width: 767.98px) {
+  .App-drawer {
+    background: @cy-black !important;
+    border-right: 4px solid @cy-yellow !important;
   }
 
-  .DiscussionListItem {
-    margin-left: 4px;
-    margin-right: 4px;
+  .App-drawer .App-titleControl,
+  .App-drawer .App-primaryControl {
+    color: @cy-yellow !important;
   }
 
-  .Button {
-    box-shadow: 3px 3px 0 rgba(255,43,214,.75);
-  }
-}
-
-@media (max-width: 767px) {
   .App-header {
-    background:
-      linear-gradient(
-        90deg,
-        @cy-yellow 0%,
-        @cy-magenta 55%,
-        @cy-cyan 100%
-      ) !important;
-    color: #000 !important;
-    border-bottom: 4px solid #000 !important;
-    box-shadow:
-      0 6px 0 @cy-magenta,
-      0 10px 24px rgba(0,0,0,.8) !important;
+    background: @cy-yellow !important;
   }
 
   .App-header .Button,
   .App-header .Button--icon,
   .App-header button {
-    color: #000 !important;
+    color: @cy-black !important;
     background: transparent !important;
     border-color: transparent !important;
-  }
-
-  .App-header .Button:hover,
-  .App-header .Button--icon:hover {
-    color: @cy-magenta !important;
-    background: rgba(0,0,0,.12) !important;
-  }
-
-  .App-header .Header-title,
-  .App-header .Header-title a {
-    color: #000 !important;
-  }
-}
-
-@media (max-width: 767.98px) {
-
-  .App-navigation {
-    background:
-      linear-gradient(
-        90deg,
-        @cy-yellow 0%,
-        @cy-magenta 55%,
-        @cy-cyan 100%
-      ) !important;
-
-    border-bottom: 4px solid #000 !important;
-
-    box-shadow:
-      0 6px 0 @cy-magenta,
-      0 10px 24px rgba(0,0,0,.8) !important;
-  }
-
-  .App-navigation .Button {
-    color: #000 !important;
-    background: transparent !important;
-    border: 0 !important;
     box-shadow: none !important;
   }
 
-  .App-navigation .Button:hover {
-    color: @cy-magenta !important;
-    background: rgba(0,0,0,.12) !important;
+  .App-navigation {
+    background: @cy-yellow !important;
+    border-bottom: 3px solid @cy-black !important;
   }
 
-}
+  .App-navigation .Button {
+    color: @cy-black !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
 
-.TextEditor textarea {
-    padding-left: 14px !important;
-    padding-right: 14px !important;
-    box-sizing: border-box;
+  .Hero h2 {
+    font-size: 2.2rem !important;
+  }
 }
