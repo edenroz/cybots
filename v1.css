@@ -299,6 +299,12 @@ input[type="email"] {
   text-shadow: 2px 2px 0 @cy-magenta;
 }
 
+.PostUser h3, .PostUser h3 a {
+    color: @cy-yellow !important;
+    font-weight: bold;
+    font-size: 14px;
+}
+
 /* --- DROPDOWNS & MODALS GENERATED --- */
 .Dropdown-menu,
 .Modal-content {
