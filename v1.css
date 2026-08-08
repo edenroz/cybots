@@ -1,17 +1,17 @@
 /* ==========================================================
-   CY_FORUM theme for Flarum (CY_BORG Edition)
-   Style: Punk / Brutalist / Acid Yellow / Hot Pink / Pitch Black
+   CY_FORUM theme for Flarum (CY_BORG Edition - Glitch & Matrix)
+   Style: Punk / Brutalist / Matrix Rain / Text Glitch
    Visual language inspired by CY_BORG (Creative Commons)
    ========================================================== */
 
-/* --- COLOR PALETTE (CY_BORG Official Vibes) --- */
+/* --- COLOR PALETTE --- */
 @cy-black:       #000000;
 @cy-black-panel: #0a0a0d;
 @cy-panel-hover: #121218;
 @cy-yellow:      #f4ff00; /* Acid Yellow */
 @cy-magenta:     #ff0055; /* CY_BORG Hot Pink */
 @cy-cyan:        #00e5ff;
-@cy-green:       #39ff14;
+@cy-green:       #39ff14; /* Matrix Green */
 @cy-red:         #ff2a2a;
 @cy-white:       #ffffff;
 @cy-text:        #f0f0f5;
@@ -46,9 +46,11 @@ body {
   color: @cy-text;
   font-family: 'Space Mono', monospace;
   letter-spacing: -0.01em;
+  position: relative;
+  overflow-x: hidden;
 }
 
-/* Base Headings - CY_BORG Brutalist Type */
+/* Headings Base */
 h1, h2, h3, h4, h5, h6, 
 .Header-title, .DiscussionListItem-title {
   font-family: 'Chakra Petch', sans-serif !important;
@@ -56,8 +58,31 @@ h1, h2, h3, h4, h5, h6,
   text-transform: uppercase !important;
 }
 
-/* Scanlines Effect Overlay */
+/* --- MATRIX DIGITAL RAIN EFFECT --- */
 body::before {
+  content: "01001100 11011100 CY_BORG 01000101 00111000 ERROR_CORRUPT 10101011 00011100 11100011 SYSTEM_FAILURE 01010101 11001101 00100101 11110000 01010100 OVERRIDE 01100110 10101010 01110101";
+  position: fixed;
+  inset: -100px 0;
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  line-height: 18px;
+  color: rgba(57, 255, 20, 0.18);
+  text-shadow: 0 0 4px rgba(57, 255, 20, 0.4);
+  word-break: break-all;
+  pointer-events: none;
+  z-index: 99998;
+  opacity: 0.35;
+  animation: matrixRain 18s linear infinite;
+  mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.8) 15%, rgba(0,0,0,0.8) 85%, transparent 100%);
+}
+
+@keyframes matrixRain {
+  0% { transform: translateY(-30%); }
+  100% { transform: translateY(30%); }
+}
+
+/* Scanlines Overlay */
+body::after {
   content: "";
   position: fixed;
   inset: 0;
@@ -66,12 +91,48 @@ body::before {
   opacity: 0.12;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.1) 0,
-    rgba(255, 255, 255, 0.1) 1px,
+    rgba(255, 255, 255, 0.15) 0,
+    rgba(255, 255, 255, 0.15) 1px,
     transparent 1px,
     transparent 3px
   );
   mix-blend-mode: overlay;
+}
+
+/* --- GLITCH & CORRUPTED TEXT ANIMATIONS --- */
+.Hero h2,
+.DiscussionListItem-title,
+.PostUser-name,
+.Header-title a {
+  animation: cyGlitchFlicker 6s infinite ease-in-out;
+}
+
+@keyframes cyGlitchFlicker {
+  0%, 88%, 100% {
+    transform: translate(0);
+    text-shadow: none;
+    clip-path: none;
+  }
+  89% {
+    transform: translate(-3px, 1px);
+    text-shadow: 3px 0 @cy-magenta, -3px 0 @cy-cyan;
+    clip-path: inset(15% 0 40% 0);
+  }
+  91% {
+    transform: translate(3px, -2px);
+    text-shadow: -3px 0 @cy-magenta, 3px 0 @cy-yellow;
+    clip-path: inset(50% 0 10% 0);
+  }
+  93% {
+    transform: translate(-1px, 2px);
+    text-shadow: 2px 0 @cy-cyan, -2px 0 @cy-magenta;
+    clip-path: inset(5% 0 70% 0);
+  }
+  95% {
+    transform: translate(0);
+    text-shadow: none;
+    clip-path: none;
+  }
 }
 
 /* --- LINKS --- */
@@ -87,7 +148,7 @@ a:hover {
   box-shadow: 2px 2px 0 @cy-cyan;
 }
 
-/* --- APP HEADER & NAVIGATION --- */
+/* --- APP HEADER --- */
 .App-header {
   background: @cy-yellow !important;
   color: @cy-black !important;
@@ -106,7 +167,7 @@ a:hover {
   display: inline-block;
   background: @cy-black;
   color: @cy-yellow !important;
-  padding: 2px 10px;
+  padding: 4px 12px;
   border: 2px solid @cy-magenta;
   box-shadow: 3px 3px 0 @cy-cyan;
 }
@@ -129,17 +190,25 @@ a:hover {
   box-shadow: 3px 3px 0 @cy-cyan;
 }
 
-/* --- SEARCH & INPUT CONTROLS --- */
+/* --- TEXTBOXES & INPUTS (PADDING FIX) --- */
 .Search-input,
 .FormControl,
 .Select-input,
-.TextEditor textarea {
+.TextEditor textarea,
+input[type="text"],
+input[type="password"],
+input[type="email"] {
   background: @cy-black !important;
   color: @cy-yellow !important;
   border: 2px solid @cy-yellow !important;
   border-radius: 0 !important;
   font-family: 'Space Mono', monospace !important;
   box-shadow: 4px 4px 0 @cy-magenta !important;
+  
+  /* Padding spazioso */
+  padding: 10px 16px !important;
+  line-height: 1.5 !important;
+  box-sizing: border-box !important;
 }
 
 .Search-input:focus,
@@ -161,6 +230,7 @@ a:hover {
   font-weight: 900 !important;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  padding: 8px 16px !important;
   box-shadow: 4px 4px 0 @cy-magenta;
   transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
@@ -193,7 +263,7 @@ a:hover {
   color: @cy-black !important;
   border-bottom: 5px solid @cy-black;
   box-shadow: 0 10px 0 @cy-magenta;
-  padding: 2.5rem 1rem !important;
+  padding: 2.5rem 1.5rem !important;
   position: relative;
   overflow: hidden;
 }
@@ -228,7 +298,8 @@ a:hover {
   font-weight: 700;
   background: @cy-white;
   display: inline-block;
-  padding: 4px 8px;
+  padding: 6px 12px;
+  margin-top: 10px;
   border: 2px solid @cy-black;
   transform: rotate(-1deg);
 }
@@ -245,7 +316,7 @@ a:hover {
   background: @cy-black-panel !important;
   border: 2px solid @cy-yellow !important;
   box-shadow: 6px 6px 0 @cy-magenta;
-  padding: 8px;
+  padding: 10px;
 }
 
 .sideNav .Button {
@@ -253,7 +324,8 @@ a:hover {
   border: 1px solid transparent !important;
   border-left: 5px solid transparent !important;
   text-align: left;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
+  padding: 8px 12px !important;
 }
 
 .sideNav .Button:hover,
@@ -264,11 +336,12 @@ a:hover {
   background: @cy-yellow !important;
 }
 
-/* --- DISCUSSION LIST (CARDS) --- */
+/* --- DISCUSSION LIST CARDS --- */
 .DiscussionListItem {
   background: @cy-black-panel !important;
   border: 2px solid @cy-yellow !important;
   margin-bottom: 14px;
+  padding: 6px 10px;
   box-shadow: 6px 6px 0 @cy-magenta;
   transition: transform 0.05s ease, box-shadow 0.05s ease;
   position: relative;
@@ -296,6 +369,7 @@ a:hover {
   border: 2px solid @cy-black !important;
   color: @cy-white !important;
   font-weight: 700;
+  padding: 2px 8px !important;
   box-shadow: 2px 2px 0 @cy-cyan;
 }
 
@@ -315,6 +389,7 @@ a:hover {
   font-family: 'Chakra Petch', sans-serif;
   font-weight: 900 !important;
   text-transform: uppercase;
+  padding: 2px 6px !important;
   border: 1px solid @cy-black !important;
   box-shadow: 2px 2px 0 @cy-black;
 }
@@ -328,13 +403,13 @@ a:hover {
   background: @cy-black-panel !important;
   border: 2px solid @cy-yellow !important;
   box-shadow: 8px 8px 0 @cy-magenta;
-  padding: 16px;
+  padding: 18px;
 }
 
 .Post-header {
   border-bottom: 2px dashed @cy-yellow;
   padding-bottom: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .PostUser-name, 
@@ -358,7 +433,7 @@ a:hover {
   color: @cy-green !important;
   border: 2px solid @cy-green !important;
   border-radius: 0 !important;
-  padding: 8px;
+  padding: 12px !important;
   font-family: 'Space Mono', monospace;
 }
 
@@ -366,8 +441,8 @@ a:hover {
   border-left: 6px solid @cy-magenta !important;
   background: rgba(255, 0, 85, 0.1) !important;
   color: @cy-yellow !important;
-  padding: 10px 15px;
-  margin: 10px 0;
+  padding: 12px 18px !important;
+  margin: 12px 0;
 }
 
 /* --- COMPOSER --- */
@@ -381,6 +456,7 @@ a:hover {
 .ComposerBody-header {
   background: @cy-black-panel !important;
   border-bottom: 2px solid @cy-yellow !important;
+  padding: 8px !important;
 }
 
 /* --- DROPDOWNS & MODALS --- */
@@ -391,6 +467,7 @@ a:hover {
   border: 3px solid @cy-yellow !important;
   border-radius: 0 !important;
   box-shadow: 8px 8px 0 @cy-magenta, 0 0 20px rgba(0,0,0,0.9) !important;
+  padding: 10px !important;
   opacity: 1 !important;
   visibility: visible !important;
 }
@@ -399,6 +476,7 @@ a:hover {
 .Dropdown-menu > li > button {
   color: @cy-text !important;
   font-family: 'Space Mono', monospace;
+  padding: 8px 12px !important;
 }
 
 .Dropdown-menu > li > a:hover,
@@ -413,6 +491,7 @@ a:hover {
   border: 3px solid @cy-black !important;
   font-family: 'Chakra Petch', sans-serif;
   font-weight: 900 !important;
+  padding: 12px 16px !important;
   box-shadow: 5px 5px 0 @cy-black;
 }
 
@@ -428,7 +507,7 @@ a:hover {
 
 /* --- CY_BORG TICKER / WARNING STRIP --- */
 .IndexPage-results::before {
-  content: "█▓▒░ CREATE A HANDLE // CONNECT // CONSUME // CONTRIBUTE // GET NOTICED ░▒▓█";
+  content: "/// SYSTEM WARNING: CY_BORG PROTOCOL ACTIVE // CONNECT // TRANSMIT // DESTROY ///";
   display: block;
   margin-bottom: 16px;
   padding: 10px 14px;
