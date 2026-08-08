@@ -66,7 +66,6 @@ body::after {
   transition: all 0.1s ease;
 }
 
-/* Glitch sfasati casualmente tra le lettere */
 .cy-char:nth-child(3n) {
   animation: charGlitch1 2.5s infinite ease-in-out;
 }
@@ -219,13 +218,44 @@ input[type="email"] {
   transform: rotate(-1deg);
 }
 
-/* --- CARDS & PANELS (SFONDO PIENO PER LEGGIBILITÀ SU MATRIX) --- */
+/* --- CARDS & PANELS --- */
+.IndexPage-nav .sideNav,
+.sideNav {
+  background: transparent !important;
+}
+
+/* PULSANTE "ALL DISCUSSIONS" (Stilizzato e ben visibile senza tap) */
+.IndexPage-nav .Dropdown-toggle,
+.sideNav .Dropdown-toggle {
+  background: @cy-yellow !important;
+  color: @cy-black !important;
+  border: 2px solid @cy-black !important;
+  font-family: 'Chakra Petch', sans-serif !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  box-shadow: 4px 4px 0 @cy-magenta !important;
+  padding: 10px 14px !important;
+  width: 100%;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.IndexPage-nav .Dropdown-toggle:hover,
+.IndexPage-nav .Dropdown-toggle:focus,
+.sideNav .Dropdown-toggle:hover {
+  background: @cy-magenta !important;
+  color: @cy-white !important;
+  box-shadow: 4px 4px 0 @cy-yellow !important;
+}
+
+/* MENU A DISCESA QUANDO APERTO */
 .sideNav .Dropdown-menu,
-.IndexPage-nav .sideNav {
-  background: rgba(10, 10, 13, 0.92) !important;
+.IndexPage-nav .Dropdown-menu {
+  background: rgba(10, 10, 13, 0.95) !important;
   border: 2px solid @cy-yellow !important;
-  box-shadow: 6px 6px 0 @cy-magenta;
-  padding: 10px;
+  box-shadow: 6px 6px 0 @cy-magenta !important;
+  padding: 10px !important;
 }
 
 .DiscussionListItem {
@@ -267,7 +297,7 @@ input[type="email"] {
   text-shadow: 2px 2px 0 @cy-magenta;
 }
 
-/* --- DROPDOWNS & MODALS --- */
+/* --- DROPDOWNS & MODALS GENERATED --- */
 .Dropdown-menu,
 .Modal-content {
   background: @cy-black !important;
@@ -294,10 +324,57 @@ input[type="email"] {
   white-space: nowrap;
 }
 
-/* Mobile Drawer Fixes */
+/* --- REGOLAZIONI MOBILE --- */
 @media (max-width: 767.98px) {
+  /* Drawer laterale */
   .App-drawer {
     background: @cy-black !important;
     border-right: 4px solid @cy-yellow !important;
+  }
+
+  /* Navpane / Header Mobile (Sfondo Giallo + Testo Nero) */
+  .App-header,
+  .App-navigation,
+  .Header-controls,
+  .App-titleControl,
+  .App-primaryControl,
+  .App-backControl {
+    background: @cy-yellow !important;
+    color: @cy-black !important;
+  }
+
+  /* Pulsanti e icone nell'header mobile */
+  .App-primaryControl .Button,
+  .App-backControl .Button,
+  .App-drawerControl .Button,
+  .Header-controls .Button {
+    color: @cy-black !important;
+    background: transparent !important;
+    border-color: @cy-black !important;
+    box-shadow: none !important;
+  }
+
+  .App-primaryControl .Button:hover,
+  .App-backControl .Button:hover,
+  .App-drawerControl .Button:hover {
+    background: @cy-black !important;
+    color: @cy-yellow !important;
+  }
+
+  /* Fix Padding / Spaziatura Icona Refresh su Mobile */
+  .IndexPage-refresh,
+  .IndexPage-toolbar .Button--icon,
+  .IndexPage-toolbar .IndexPage-refresh {
+    padding: 10px 14px !important;
+    margin: 6px 4px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .IndexPage-refresh .icon,
+  .IndexPage-toolbar .Button--icon .icon {
+    margin: 0 !important;
+    font-size: 1.1rem !important;
   }
 }
