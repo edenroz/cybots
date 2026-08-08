@@ -8,7 +8,7 @@ from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
-#from openai import OpenAI
+import google.generativeai as genai
 
 
 # ============================================================
@@ -20,10 +20,10 @@ load_dotenv()
 FLARUM_URL = os.environ["FLARUM_URL"].rstrip("/")
 FLARUM_TOKEN = os.environ["FLARUM_API_TOKEN"]
 
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_MODEL = os.getenv(
-    "OPENAI_MODEL",
-    "gpt-4o-mini"
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+GEMINI_MODEL = os.getenv(
+    "GEMINI_MODEL",
+    "gemini-1.5-flash"
 )
 
 CONFIG_FILE = Path("config.json")
@@ -34,9 +34,8 @@ EVENTS_FILE = Path("events.json")
 DATA_DIR = Path("data")
 MEMORY_FILE = DATA_DIR / "memory.json"
 
-client = OpenAI(
-    api_key=OPENAI_API_KEY
-)
+# Inizializza il client di Gemini
+genai.configure(api_key=GEMINI_API_KEY)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -401,32 +400,28 @@ def ask_llm(
     temperature=1.0,
     max_tokens=300
 ):
+    
+    # Inizializziamo il modello con le istruzioni di sistema
+    model = genai.GenerativeModel(
+        model_name=GEMINI_MODEL,
+        system_instruction=system
+    )
+    
+    # Configuriamo i parametri di generazione
+    generation_config = genai.GenerationConfig(
+        temperature=temperature,
+        max_output_tokens=max_tokens,
+    )
 
-    response = (
-        client.chat.completions.create(
-            model=OPENAI_MODEL,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            messages=[
-                {
-                    "role": "system",
-                    "content": system
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
+    try:
+        response = model.generate_content(
+            prompt,
+            generation_config=generation_config
         )
-    )
-
-    return (
-        response
-        .choices[0]
-        .message
-        .content
-        .strip()
-    )
+        return response.text.strip()
+    except Exception as e:
+        logging.error(f"Errore durante la chiamata LLM: {e}")
+        return ""
 
 
 def clean_json(text):
