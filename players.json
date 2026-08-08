@@ -1,0 +1,27 @@
+[
+  {
+    "username": "danilo",
+    "character": "Vex",
+    "description": "Fixer occasionale, conosce bene i quartieri bassi."
+  },
+  {
+    "username": "marco",
+    "character": "Kronos",
+    "description": "Solo, impulsivo, tende a risolvere i problemi con la violenza."
+  },
+  {
+    "username": "chiara",
+    "character": "Nyx",
+    "description": "Netrunner, molto interessata alla Net e ai sistemi corporativi."
+  },
+  {
+    "username": "luca",
+    "character": "Mantis",
+    "description": "Techie, curioso e ossessionato dalle modificazioni."
+  },
+  {
+    "username": "sara",
+    "character": "Saint",
+    "description": "Ex-corpo, conosce bene il funzionamento delle megacorporazioni."
+  }
+]

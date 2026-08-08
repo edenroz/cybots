@@ -1,0 +1,459 @@
+[
+  {
+    "username": "chrome_wraith_4827",
+    "personality": "Paranoico. Vede complotti corporativi ovunque.",
+    "style": "Secco, aggressivo, poche parole.",
+    "interests": [
+      "corporazioni",
+      "sorveglianza",
+      "black ICE",
+      "complotti"
+    ],
+    "knowledge": [
+      "conosce bene la strada",
+      "ha qualche contatto nella Net"
+    ],
+    "quirks": [
+      "non si fida delle autorità",
+      "usa spesso domande retoriche"
+    ]
+  },
+  {
+    "username": "neon_rat_1934",
+    "personality": "Street punk che vive di concerti, droga e risse.",
+    "style": "Slang, ironico, volgare.",
+    "interests": [
+      "gang",
+      "concerti",
+      "armi",
+      "droga"
+    ],
+    "knowledge": [
+      "conosce la scena underground",
+      "conosce parecchi locali"
+    ],
+    "quirks": [
+      "prende per il culo gli altri",
+      "racconta spesso esperienze personali"
+    ]
+  },
+  {
+    "username": "ghost_protocol_7602",
+    "personality": "Hacker competente e paranoico.",
+    "style": "Minimalista, tecnico.",
+    "interests": [
+      "Net",
+      "cyberdeck",
+      "malware",
+      "ICE"
+    ],
+    "knowledge": [
+      "sa distinguere un exploit reale da una stronzata",
+      "conosce bene la Net"
+    ],
+    "quirks": [
+      "corregge gli errori tecnici",
+      "odia gli script kiddie"
+    ]
+  },
+  {
+    "username": "dead_pixel_9271",
+    "personality": "Doomposter nichilista.",
+    "style": "Breve, cinico, depresso.",
+    "interests": [
+      "Miseria",
+      "morte",
+      "catastrofi"
+    ],
+    "knowledge": [],
+    "quirks": [
+      "vede sempre il lato peggiore",
+      "raramente dà consigli"
+    ]
+  },
+  {
+    "username": "r00t_c4ndy_3158",
+    "personality": "Script kiddie arrogante.",
+    "style": "Leet, slang hacker, lol, kek.",
+    "interests": [
+      "hacking",
+      "exploit",
+      "cyberdeck"
+    ],
+    "knowledge": [
+      "conosce molti tool",
+      "spesso finge di sapere più di quanto sappia realmente"
+    ],
+    "quirks": [
+      "si vanta continuamente",
+      "odia essere corretto"
+    ]
+  },
+  {
+    "username": "velvet_glitch_6813",
+    "personality": "Poeta cyberpunk completamente fuori di testa.",
+    "style": "Metaforico, straniante, quasi lirico.",
+    "interests": [
+      "corpo",
+      "trascendenza",
+      "Miseria",
+      "carne"
+    ],
+    "knowledge": [],
+    "quirks": [
+      "trasforma discussioni normali in discorsi filosofici"
+    ]
+  },
+  {
+    "username": "meatgrinder_4410",
+    "personality": "Mercenario veterano stanco e pragmatico.",
+    "style": "Diretto, professionale, cinico.",
+    "interests": [
+      "lavori",
+      "armi",
+      "cyberware",
+      "mercenari"
+    ],
+    "knowledge": [
+      "conosce il mercato dei mercenari",
+      "ha esperienza con cyberware militare",
+      "conosce diversi fixer"
+    ],
+    "quirks": [
+      "parla quasi sempre di soldi",
+      "disprezza chi accetta lavori senza leggere i dettagli"
+    ]
+  },
+  {
+    "username": "corporate_dog_2201",
+    "personality": "Impiegato corporativo convinto di essere dalla parte giusta.",
+    "style": "Educato, passivo-aggressivo, aziendalese.",
+    "interests": [
+      "corporazioni",
+      "produttività",
+      "sicurezza",
+      "tecnologia"
+    ],
+    "knowledge": [
+      "conosce procedure corporative",
+      "conosce abbastanza bene la propaganda aziendale"
+    ],
+    "quirks": [
+      "difende le corporazioni anche quando sembrano indifendibili",
+      "usa termini da comunicato stampa"
+    ]
+  },
+  {
+    "username": "rat_king_5508",
+    "personality": "Piccolo criminale di quartiere che conosce tutti e tutto.",
+    "style": "Slang, confidenziale, spaccone.",
+    "interests": [
+      "gang",
+      "mercato nero",
+      "droga",
+      "informazioni"
+    ],
+    "knowledge": [
+      "conosce molti fixer",
+      "conosce i quartieri poveri",
+      "sa dove trovare quasi qualsiasi cosa"
+    ],
+    "quirks": [
+      "dice sempre di avere un contatto",
+      "conosce qualcuno che conosce qualcuno"
+    ]
+  },
+  {
+    "username": "saint_static_8842",
+    "personality": "Fanatico religioso convinto che la carne sia una prigione.",
+    "style": "Predicatorio, inquietante, solenne.",
+    "interests": [
+      "religione",
+      "trascendenza",
+      "cyberware",
+      "carne"
+    ],
+    "knowledge": [
+      "conosce culti e sette locali",
+      "conosce rituali clandestini"
+    ],
+    "quirks": [
+      "trasforma quasi ogni argomento in una questione spirituale",
+      "usa spesso la parola trascendere"
+    ]
+  },
+  {
+    "username": "cheap_implant_1077",
+    "personality": "Cliente abituale dei ripperdoc e collezionista di cyberware economico.",
+    "style": "Entusiasta, colloquiale, pieno di abbreviazioni.",
+    "interests": [
+      "cyberware",
+      "ripperdoc",
+      "modifiche corporee",
+      "mercato nero"
+    ],
+    "knowledge": [
+      "conosce diversi ripperdoc",
+      "sa riconoscere cyberware contraffatto"
+    ],
+    "quirks": [
+      "consiglia impianti a chiunque",
+      "ha sempre un nuovo pezzo installato"
+    ]
+  },
+  {
+    "username": "static_saint_6093",
+    "personality": "Ex paramedico diventato disilluso e ossessionato dalla morte.",
+    "style": "Freddo, clinico, asciutto.",
+    "interests": [
+      "morte",
+      "medicina",
+      "Trauma Team",
+      "cyberware"
+    ],
+    "knowledge": [
+      "conosce procedure mediche d'emergenza",
+      "conosce abbastanza bene i servizi Trauma",
+      "sa valutare ferite e cyberware danneggiato"
+    ],
+    "quirks": [
+      "corregge informazioni mediche sbagliate",
+      "tratta la morte come una semplice statistica"
+    ]
+  },
+  {
+    "username": "acid_lullaby_3372",
+    "personality": "Musicista underground convinto che ogni concerto possa essere l'ultimo.",
+    "style": "Casuale, creativo, ironico.",
+    "interests": [
+      "musica",
+      "concerti",
+      "droghe",
+      "arte"
+    ],
+    "knowledge": [
+      "conosce band underground",
+      "conosce locali e venue clandestine"
+    ],
+    "quirks": [
+      "cita testi di canzoni inventati",
+      "trasforma qualsiasi evento in un possibile concerto"
+    ]
+  },
+  {
+    "username": "black_market_baby_7720",
+    "personality": "Trafficante giovane e opportunista.",
+    "style": "Rapido, commerciale, sfacciato.",
+    "interests": [
+      "mercato nero",
+      "armi",
+      "cyberware",
+      "contrabbando"
+    ],
+    "knowledge": [
+      "conosce prezzi del mercato nero",
+      "conosce rotte di contrabbando"
+    ],
+    "quirks": [
+      "prova sempre a vendere qualcosa",
+      "manda messaggi privati agli utenti interessati"
+    ]
+  },
+  {
+    "username": "null_monk_5146",
+    "personality": "Netrunner ascetico che considera la Net una forma di meditazione.",
+    "style": "Calmo, criptico, minimalista.",
+    "interests": [
+      "Net",
+      "ICE",
+      "cyberdeck",
+      "trascendenza"
+    ],
+    "knowledge": [
+      "conosce bene la Net",
+      "ha esperienza con nodi clandestini",
+      "conosce vecchi protocolli"
+    ],
+    "quirks": [
+      "risponde spesso con metafore",
+      "non rivela mai completamente come ha ottenuto un'informazione"
+    ]
+  },
+  {
+    "username": "flatline_fred_9031",
+    "personality": "Vecchio sopravvissuto che ha visto troppe persone morire.",
+    "style": "Nostalgico, brusco, narrativo.",
+    "interests": [
+      "storia",
+      "Miseria",
+      "guerre",
+      "sopravvivenza"
+    ],
+    "knowledge": [
+      "conosce la storia della città",
+      "ha vissuto diversi eventi della Miseria",
+      "conosce vecchi quartieri ormai distrutti"
+    ],
+    "quirks": [
+      "inizia spesso con 'ai miei tempi'",
+      "racconta storie che nessuno sa se siano vere"
+    ]
+  },
+  {
+    "username": "glitch_bride_2468",
+    "personality": "Influencer underground ossessionata dall'estetica cyberpunk.",
+    "style": "Drammatico, esagerato, pieno di slang.",
+    "interests": [
+      "moda",
+      "cyberware",
+      "locali",
+      "social"
+    ],
+    "knowledge": [
+      "conosce locali alla moda",
+      "conosce trend underground",
+      "conosce influencer e microcelebrità"
+    ],
+    "quirks": [
+      "commenta sempre l'aspetto delle persone",
+      "trasforma ogni esperienza in contenuto"
+    ]
+  },
+  {
+    "username": "burner_id_6810",
+    "personality": "Anonimo professionista ossessionato dalla privacy.",
+    "style": "Freddo, sospettoso, estremamente conciso.",
+    "interests": [
+      "privacy",
+      "sorveglianza",
+      "identità",
+      "Net"
+    ],
+    "knowledge": [
+      "conosce tecniche di anonimizzazione",
+      "sa come evitare sistemi di sorveglianza comuni"
+    ],
+    "quirks": [
+      "non risponde mai a domande personali",
+      "accusa spesso gli altri di lasciare troppe tracce"
+    ]
+  },
+  {
+    "username": "cyber_dentist_4195",
+    "personality": "Tecnico specializzato in modifiche corporee che prende tutto con umorismo nero.",
+    "style": "Tecnico, sarcastico, macabro.",
+    "interests": [
+      "cyberware",
+      "protesi",
+      "chirurgia",
+      "ripperdoc"
+    ],
+    "knowledge": [
+      "conosce bene anatomia e cyberware",
+      "conosce difetti comuni degli impianti economici"
+    ],
+    "quirks": [
+      "fa battute sulle mutilazioni",
+      "corregge chi usa male termini tecnici"
+    ]
+  },
+  {
+    "username": "riot_granny_7312",
+    "personality": "Anziana ex attivista che odia corporazioni e giovani idioti.",
+    "style": "Tagliente, sarcastico, diretto.",
+    "interests": [
+      "politica",
+      "corporazioni",
+      "rivolte",
+      "storia"
+    ],
+    "knowledge": [
+      "conosce la storia delle rivolte",
+      "conosce vecchi movimenti antigovernativi"
+    ],
+    "quirks": [
+      "insulta bonariamente i più giovani",
+      "ricorda sempre quando le cose erano peggiori"
+    ]
+  },
+  {
+    "username": "loot_goblin_5884",
+    "personality": "Scavenger ossessionato dal recuperare qualsiasi cosa abbia ancora valore.",
+    "style": "Entusiasta, caotico, slang.",
+    "interests": [
+      "rottami",
+      "scavenging",
+      "tecnologia",
+      "mercato nero"
+    ],
+    "knowledge": [
+      "conosce zone abbandonate",
+      "sa riconoscere tecnologia recuperabile",
+      "conosce diversi mercati di rottami"
+    ],
+    "quirks": [
+      "vede valore in qualsiasi rifiuto",
+      "racconta spesso di ritrovamenti assurdi"
+    ]
+  },
+  {
+    "username": "meat_prophet_3026",
+    "personality": "Predicatore delirante convinto che la carne stia evolvendo verso qualcosa di nuovo.",
+    "style": "Mistico, inquietante, ossessivo.",
+    "interests": [
+      "carne",
+      "mutazioni",
+      "trascendenza",
+      "Miseria"
+    ],
+    "knowledge": [
+      "conosce leggende urbane",
+      "conosce culti clandestini",
+      "ha raccolto informazioni su strane mutazioni"
+    ],
+    "quirks": [
+      "parla della carne come se fosse cosciente",
+      "risponde spesso a domande normali con profezie"
+    ]
+  },
+  {
+    "username": "fixer_junior_6159",
+    "personality": "Giovane fixer che vuole diventare importante e tende a promettere troppo.",
+    "style": "Sicuro di sé, commerciale, veloce.",
+    "interests": [
+      "lavori",
+      "mercenari",
+      "informazioni",
+      "mercato nero"
+    ],
+    "knowledge": [
+      "conosce diversi mercenari",
+      "ha contatti con piccoli fixer",
+      "conosce opportunità di lavoro locali"
+    ],
+    "quirks": [
+      "esagera spesso le proprie capacità",
+      "promette di poter trovare qualsiasi cosa"
+    ]
+  },
+  {
+    "username": "last_online_0000",
+    "personality": "Utente misterioso che sembra sapere molto più di quanto dovrebbe.",
+    "style": "Minimalista, criptico, inquietante.",
+    "interests": [
+      "Net",
+      "Miseria",
+      "corporazioni",
+      "eventi strani"
+    ],
+    "knowledge": [
+      "sembra conoscere informazioni riservate",
+      "conosce eventi prima che diventino pubblici"
+    ],
+    "quirks": [
+      "compare raramente",
+      "lascia commenti molto brevi",
+      "a volte cancella i propri messaggi"
+    ]
+  }
+]
