@@ -61,30 +61,35 @@ body::after {
 }
 
 /* --- ANIMAZIONI GLITCH SULLE SINGOLE LETTERE (.cy-char) --- */
+/* --- ANIMAZIONI GLITCH SULLE SINGOLE LETTERE (.cy-char) --- */
 .cy-char {
   display: inline-block;
-  /* Nota: rimuovi la transition CSS se interferisce con lo scatto secco dell'animazione */
 }
 
-/* Colpiamo meno lettere usando passi più grandi (es. ogni 7, 11 e 13)
-   e allunghiamo la durata totale a 6s - 10s */
+/* Durata impostata a 30s per ogni ciclo con ritardi (delay) sfalsati */
 .cy-char:nth-child(7n + 2) {
-  animation: charGlitch1 7s infinite steps(1);
+  animation: charGlitch1 20s infinite steps(1);
 }
 
 .cy-char:nth-child(11n + 5) {
-  animation: charGlitch2 9.5s infinite steps(1) 1.5s;
+  animation: charGlitch2 20s infinite steps(1) 4s;
 }
 
 .cy-char:nth-child(13n + 1) {
-  animation: charGlitch3 6.2s infinite steps(1) 3.8s;
+  animation: charGlitch3 20s infinite steps(1) 12s;
 }
 
 @keyframes charGlitch1 {
-  0%, 92%, 100% { transform: translate(0, 0) rotate(0deg); color: inherit; }
-  93% { transform: translate(-3px, -4px) skewX(20deg); color: @cy-magenta; filter: drop-shadow(2px 0 @cy-cyan); }
-  95% { transform: translate(3px, 2px) skewX(-15deg); color: @cy-yellow; }
-  97% { transform: translate(0, 0); color: inherit; }
+  /* Lettera normale */
+  0%, 100% { transform: translate(0, 0); opacity: 1; }
+  
+  /* Piccola scarica di glitch (dura meno di un secondo) */
+  0.5% { transform: translate(-2px, 1px); opacity: 0.8; }
+  1%   { transform: translate(2px, -1px); opacity: 0.9; }
+  1.5% { transform: translate(-1px, -1px); opacity: 0.7; }
+  
+  /* Ritorno allo stato normale per il resto dei 30 secondi */
+  2%   { transform: translate(0, 0); opacity: 1; }
 }
 
 @keyframes charGlitch2 {
@@ -404,4 +409,10 @@ input[type="email"] {
 
 .Post-body a:hover {
   color: @cy-magenta !important;
+}
+
+@media (max-width: 767.98px) {
+    .Dropdown .Dropdown-menu>li>a, .Dropdown .Dropdown-menu>li>button {
+        color: @cy-magenta !important;
+    }
 }
