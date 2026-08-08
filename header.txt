@@ -1,0 +1,93 @@
+<!-- Font CY_BORG -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,700;0,900;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,700&display=swap" rel="stylesheet">
+
+<!-- Matrix Rain Canvas Script + Single Letter Glitch -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. MATRIX RAIN CANVAS ENGINE
+  const canvas = document.createElement('canvas');
+  canvas.id = 'cy-matrix-bg';
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0.38;';
+  document.body.prepend(canvas);
+
+  const ctx = canvas.getContext('2d');
+  let width = canvas.width = window.innerWidth;
+  let height = canvas.height = window.innerHeight;
+
+  window.addEventListener('resize', () => {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+  });
+
+  const chars = '01CY_BORG_ERR0R_SYSTEM_FAILURE_OVERRIDE_10101011_CYBERPUNK_SYS_KILL_';
+  const fontSize = 14;
+  const columns = Math.floor(width / fontSize);
+  const drops = Array(columns).fill(1);
+
+  function drawMatrix() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.font = fontSize + 'px "Space Mono", monospace';
+
+    for (let i = 0; i < drops.length; i++) {
+      // 10% di probabilità di goccia magenta (CY_BORG style), altrimenti verde Matrix
+      const isMagenta = Math.random() < 0.08;
+      ctx.fillStyle = isMagenta ? '#ff0055' : '#0000ff';
+
+      const text = chars.charAt(Math.floor(Math.random() * chars.length));
+      ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+      if (drops[i] * fontSize > height && Math.random() > 0.975) {
+        drops[i] = 0;
+      }
+      drops[i]++;
+    }
+  }
+  setInterval(drawMatrix, 73);
+
+  // 2. GLITCH SULLE SINGOLE LETTERE
+  const applyLetterSplit = () => {
+    const targets = document.querySelectorAll('.Hero h2, .DiscussionListItem-title, .PostUser-name a, .Header-title a');
+    targets.forEach(el => {
+      if (!el.classList.contains('cy-split')) {
+        el.classList.add('cy-split');
+        const text = el.textContent;
+        el.innerHTML = '';
+        [...text].forEach(char => {
+          const span = document.createElement('span');
+          span.className = 'cy-char';
+          span.innerHTML = char === ' ' ? '&nbsp;' : char;
+          el.appendChild(span);
+        });
+      }
+    });
+  };
+
+  applyLetterSplit();
+  const observer = new MutationObserver(applyLetterSplit);
+  observer.observe(document.body, { childList: true, subtree: true });
+});
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Funzione per spezzare il testo dei post in singoli span .cy-char
+    function glitchifyPosts() {
+      const posts = document.querySelectorAll('.Post-body p:not(.glitchified)');
+      posts.forEach(p => {
+        p.classList.add('glitchified');
+        const text = p.textContent;
+        p.innerHTML = text.split('').map(char => {
+          if (char === ' ') return ' ';
+          return `<span class="cy-char">${char}</span>`;
+        }).join('');
+      });
+    }
+
+    // Esegui all'avvio e osserva le modifiche per i post caricati dinamicamente
+    glitchifyPosts();
+    const observer = new MutationObserver(glitchifyPosts);
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+</script>
