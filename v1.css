@@ -1,53 +1,37 @@
 /* ==========================================================
-   CY_FORUM theme for Flarum (CY_BORG Edition - Glitch & Matrix)
-   Style: Punk / Brutalist / Matrix Rain / Text Glitch
-   Visual language inspired by CY_BORG (Creative Commons)
+   CY_FORUM theme for Flarum (CY_BORG - Matrix Canvas & Glitch)
    ========================================================== */
 
-/* --- COLOR PALETTE --- */
+/* --- PALETTE COLORI --- */
 @cy-black:       #000000;
 @cy-black-panel: #0a0a0d;
-@cy-panel-hover: #121218;
-@cy-yellow:      #f4ff00; /* Acid Yellow */
-@cy-magenta:     #ff0055; /* CY_BORG Hot Pink */
+@cy-yellow:      #f4ff00;
+@cy-magenta:     #ff0055;
 @cy-cyan:        #00e5ff;
-@cy-green:       #39ff14; /* Matrix Green */
+@cy-green:       #39ff14;
 @cy-red:         #ff2a2a;
 @cy-white:       #ffffff;
 @cy-text:        #f0f0f5;
-@cy-muted:       #8a8a9e;
-@cy-border:      #f4ff00;
 
 :root {
   --primary-color: @cy-yellow;
   --secondary-color: @cy-magenta;
-  --body-bg: @cy-black;
+  --body-bg: transparent;
   --body-color: @cy-text;
   --link-color: @cy-yellow;
-  --control-bg: #0d0d12;
-  --control-color: @cy-text;
-  --button-primary-bg: @cy-yellow;
-  --button-primary-color: #000000;
 }
 
-/* --- SELECTION & GLOBAL RESETS --- */
-::selection {
-  background: @cy-magenta !important;
-  color: @cy-white !important;
-  text-shadow: none;
-}
-
-body {
-  background: @cy-black;
-  background-image: 
-    radial-gradient(circle at 15% 15%, rgba(255, 0, 85, 0.15), transparent 35%),
-    radial-gradient(circle at 85% 85%, rgba(0, 229, 255, 0.1), transparent 30%),
-    linear-gradient(180deg, #000000 0%, #08080c 50%, #000000 100%);
+/* --- TRASPARENZA LAYOUT PER MATRIX CANVAS --- */
+html, body {
+  background: @cy-black !important;
   color: @cy-text;
   font-family: 'Space Mono', monospace;
-  letter-spacing: -0.01em;
   position: relative;
   overflow-x: hidden;
+}
+
+#app, .App, .App-content, .App-site, .IndexPage, .DiscussionPage {
+  background: transparent !important;
 }
 
 /* Headings Base */
@@ -58,139 +42,64 @@ h1, h2, h3, h4, h5, h6,
   text-transform: uppercase !important;
 }
 
-/* --- MATRIX DIGITAL RAIN EFFECT --- */
-body::before {
-  content: "01001100 11011100 CY_BORG 01000101 00111000 ERROR_CORRUPT 10101011 00011100 11100011 SYSTEM_FAILURE 01010101 11001101 00100101 11110000 01010100 OVERRIDE 01100110 10101010 01110101";
-  position: fixed;
-  inset: -100px 0;
-  font-family: 'Space Mono', monospace;
-  font-size: 13px;
-  line-height: 18px;
-  color: rgba(57, 255, 20, 0.18);
-  text-shadow: 0 0 4px rgba(57, 255, 20, 0.4);
-  word-break: break-all;
-  pointer-events: none;
-  z-index: 99998;
-  opacity: 0.35;
-  animation: matrixRain 18s linear infinite;
-  mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.8) 15%, rgba(0,0,0,0.8) 85%, transparent 100%);
-}
-
-@keyframes matrixRain {
-  0% { transform: translateY(-30%); }
-  100% { transform: translateY(30%); }
-}
-
-/* Scanlines Overlay */
+/* Overlay righe TV (Scanlines) sopra la Matrix Rain */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 99999;
-  opacity: 0.12;
+  opacity: 0.15;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.15) 0,
-    rgba(255, 255, 255, 0.15) 1px,
+    rgba(255, 255, 255, 0.2) 0,
+    rgba(255, 255, 255, 0.2) 1px,
     transparent 1px,
     transparent 3px
   );
   mix-blend-mode: overlay;
 }
 
-/* --- GLITCH & CORRUPTED TEXT ANIMATIONS --- */
-.Hero h2,
-.DiscussionListItem-title,
-.PostUser-name,
-.Header-title a {
-  animation: cyGlitchFlicker 6s infinite ease-in-out;
-}
-
-@keyframes cyGlitchFlicker {
-  0%, 88%, 100% {
-    transform: translate(0);
-    text-shadow: none;
-    clip-path: none;
-  }
-  89% {
-    transform: translate(-3px, 1px);
-    text-shadow: 3px 0 @cy-magenta, -3px 0 @cy-cyan;
-    clip-path: inset(15% 0 40% 0);
-  }
-  91% {
-    transform: translate(3px, -2px);
-    text-shadow: -3px 0 @cy-magenta, 3px 0 @cy-yellow;
-    clip-path: inset(50% 0 10% 0);
-  }
-  93% {
-    transform: translate(-1px, 2px);
-    text-shadow: 2px 0 @cy-cyan, -2px 0 @cy-magenta;
-    clip-path: inset(5% 0 70% 0);
-  }
-  95% {
-    transform: translate(0);
-    text-shadow: none;
-    clip-path: none;
-  }
-}
-
-/* --- LINKS --- */
-a {
-  color: @cy-yellow;
-  text-decoration: none;
-  transition: all 0.05s ease;
-}
-
-a:hover {
-  color: @cy-black;
-  background: @cy-magenta;
-  box-shadow: 2px 2px 0 @cy-cyan;
-}
-
-/* --- APP HEADER --- */
-.App-header {
-  background: @cy-yellow !important;
-  color: @cy-black !important;
-  border-bottom: 4px solid @cy-black !important;
-  box-shadow: 0 6px 0 @cy-magenta;
-  position: relative;
-  z-index: 1000;
-}
-
-.Header-title a,
-.Header-title {
-  color: @cy-black !important;
-  font-size: 1.5rem;
-  letter-spacing: 0.05em;
-  transform: skewX(-8deg);
+/* --- ANIMAZIONI GLITCH SULLE SINGOLE LETTERE (.cy-char) --- */
+.cy-char {
   display: inline-block;
-  background: @cy-black;
-  color: @cy-yellow !important;
-  padding: 4px 12px;
-  border: 2px solid @cy-magenta;
-  box-shadow: 3px 3px 0 @cy-cyan;
+  transition: all 0.1s ease;
 }
 
-.Header-title a:hover {
-  background: @cy-magenta !important;
-  color: @cy-black !important;
+/* Glitch sfasati casualmente tra le lettere */
+.cy-char:nth-child(3n) {
+  animation: charGlitch1 2.5s infinite ease-in-out;
 }
 
-.Header-controls .Button {
-  background: @cy-black !important;
-  color: @cy-yellow !important;
-  border: 2px solid @cy-black !important;
-  box-shadow: 3px 3px 0 @cy-magenta;
+.cy-char:nth-child(5n) {
+  animation: charGlitch2 3.8s infinite ease-in-out 0.3s;
 }
 
-.Header-controls .Button:hover {
-  background: @cy-magenta !important;
-  color: @cy-black !important;
-  box-shadow: 3px 3px 0 @cy-cyan;
+.cy-char:nth-child(7n) {
+  animation: charGlitch3 3.1s infinite ease-in-out 0.9s;
 }
 
-/* --- TEXTBOXES & INPUTS (PADDING FIX) --- */
+@keyframes charGlitch1 {
+  0%, 92%, 100% { transform: translate(0, 0) rotate(0deg); color: inherit; }
+  93% { transform: translate(-3px, -4px) skewX(20deg); color: @cy-magenta; filter: drop-shadow(2px 0 @cy-cyan); }
+  95% { transform: translate(3px, 2px) skewX(-15deg); color: @cy-yellow; }
+  97% { transform: translate(0, 0); color: inherit; }
+}
+
+@keyframes charGlitch2 {
+  0%, 88%, 100% { transform: translate(0, 0); opacity: 1; }
+  89% { transform: translate(4px, 3px); color: @cy-cyan; opacity: 0.3; }
+  91% { transform: translate(-4px, -2px); color: @cy-magenta; opacity: 0.9; }
+  93% { transform: translate(0, 0); opacity: 1; }
+}
+
+@keyframes charGlitch3 {
+  0%, 94%, 100% { transform: scale(1); color: inherit; }
+  95% { transform: scale(1.35) rotate(10deg); color: @cy-green; text-shadow: 0 0 8px @cy-green; }
+  97% { transform: scale(0.8) rotate(-6deg); color: @cy-red; }
+}
+
+/* --- TEXTBOX & INPUT PADDING --- */
 .Search-input,
 .FormControl,
 .Select-input,
@@ -204,8 +113,6 @@ input[type="email"] {
   border-radius: 0 !important;
   font-family: 'Space Mono', monospace !important;
   box-shadow: 4px 4px 0 @cy-magenta !important;
-  
-  /* Padding spazioso */
   padding: 10px 16px !important;
   line-height: 1.5 !important;
   box-sizing: border-box !important;
@@ -257,7 +164,30 @@ input[type="email"] {
   box-shadow: 4px 4px 0 @cy-cyan !important;
 }
 
-/* --- HERO SECTION --- */
+/* --- HEADER & HERO --- */
+.App-header {
+  background: @cy-yellow !important;
+  color: @cy-black !important;
+  border-bottom: 4px solid @cy-black !important;
+  box-shadow: 0 6px 0 @cy-magenta;
+  position: relative;
+  z-index: 1000;
+}
+
+.Header-title a,
+.Header-title {
+  color: @cy-black !important;
+  font-size: 1.5rem;
+  letter-spacing: 0.05em;
+  transform: skewX(-8deg);
+  display: inline-block;
+  background: @cy-black;
+  color: @cy-yellow !important;
+  padding: 4px 12px;
+  border: 2px solid @cy-magenta;
+  box-shadow: 3px 3px 0 @cy-cyan;
+}
+
 .Hero {
   background: @cy-yellow !important;
   color: @cy-black !important;
@@ -266,22 +196,7 @@ input[type="email"] {
   padding: 2.5rem 1.5rem !important;
   position: relative;
   overflow: hidden;
-}
-
-.Hero::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 12px;
-  background: repeating-linear-gradient(
-    -45deg,
-    #000,
-    #000 15px,
-    @cy-yellow 15px,
-    @cy-yellow 30px
-  );
+  z-index: 2;
 }
 
 .Hero h2 {
@@ -304,47 +219,24 @@ input[type="email"] {
   transform: rotate(-1deg);
 }
 
-/* --- SIDEBAR & NAV PANELS --- */
-.App-nav,
-.sideNav,
-.sideNavOffset {
-  z-index: 100;
-}
-
+/* --- CARDS & PANELS (SFONDO PIENO PER LEGGIBILITÀ SU MATRIX) --- */
 .sideNav .Dropdown-menu,
 .IndexPage-nav .sideNav {
-  background: @cy-black-panel !important;
+  background: rgba(10, 10, 13, 0.92) !important;
   border: 2px solid @cy-yellow !important;
   box-shadow: 6px 6px 0 @cy-magenta;
   padding: 10px;
 }
 
-.sideNav .Button {
-  box-shadow: none !important;
-  border: 1px solid transparent !important;
-  border-left: 5px solid transparent !important;
-  text-align: left;
-  margin-bottom: 3px;
-  padding: 8px 12px !important;
-}
-
-.sideNav .Button:hover,
-.sideNav .Button.active,
-.sideNav .item-selected .Button {
-  border-left-color: @cy-yellow !important;
-  color: @cy-black !important;
-  background: @cy-yellow !important;
-}
-
-/* --- DISCUSSION LIST CARDS --- */
 .DiscussionListItem {
-  background: @cy-black-panel !important;
+  background: rgba(10, 10, 13, 0.9) !important;
   border: 2px solid @cy-yellow !important;
   margin-bottom: 14px;
-  padding: 6px 10px;
+  padding: 8px 12px;
   box-shadow: 6px 6px 0 @cy-magenta;
   transition: transform 0.05s ease, box-shadow 0.05s ease;
   position: relative;
+  z-index: 2;
 }
 
 .DiscussionListItem:hover {
@@ -356,60 +248,15 @@ input[type="email"] {
 .DiscussionListItem-title {
   color: @cy-white !important;
   font-size: 1.25rem;
-  letter-spacing: 0.02em;
-}
-
-.DiscussionListItem:hover .DiscussionListItem-title {
-  color: @cy-yellow !important;
-}
-
-.DiscussionListItem-count {
-  border-radius: 0 !important;
-  background: @cy-magenta !important;
-  border: 2px solid @cy-black !important;
-  color: @cy-white !important;
-  font-weight: 700;
-  padding: 2px 8px !important;
-  box-shadow: 2px 2px 0 @cy-cyan;
-}
-
-.DiscussionListItem--unread {
-  border-left: 8px solid @cy-magenta !important;
-}
-
-/* --- AVATARS & BADGES --- */
-.Avatar {
-  border-radius: 0 !important;
-  border: 2px solid @cy-yellow !important;
-  box-shadow: 3px 3px 0 @cy-magenta;
-}
-
-.TagLabel {
-  border-radius: 0 !important;
-  font-family: 'Chakra Petch', sans-serif;
-  font-weight: 900 !important;
-  text-transform: uppercase;
-  padding: 2px 6px !important;
-  border: 1px solid @cy-black !important;
-  box-shadow: 2px 2px 0 @cy-black;
-}
-
-/* --- POST STREAM --- */
-.PostStream-item {
-  margin-bottom: 24px;
 }
 
 .Post {
-  background: @cy-black-panel !important;
+  background: rgba(10, 10, 13, 0.94) !important;
   border: 2px solid @cy-yellow !important;
   box-shadow: 8px 8px 0 @cy-magenta;
   padding: 18px;
-}
-
-.Post-header {
-  border-bottom: 2px dashed @cy-yellow;
-  padding-bottom: 12px;
-  margin-bottom: 14px;
+  position: relative;
+  z-index: 2;
 }
 
 .PostUser-name, 
@@ -417,46 +264,7 @@ input[type="email"] {
   color: @cy-yellow !important;
   font-family: 'Chakra Petch', sans-serif;
   font-size: 1.2rem;
-  letter-spacing: 0.05em;
   text-shadow: 2px 2px 0 @cy-magenta;
-}
-
-.Post-body {
-  color: @cy-text;
-  font-size: 0.98rem;
-  line-height: 1.6;
-}
-
-.Post-body code,
-.Post-body pre {
-  background: @cy-black !important;
-  color: @cy-green !important;
-  border: 2px solid @cy-green !important;
-  border-radius: 0 !important;
-  padding: 12px !important;
-  font-family: 'Space Mono', monospace;
-}
-
-.Post-body blockquote {
-  border-left: 6px solid @cy-magenta !important;
-  background: rgba(255, 0, 85, 0.1) !important;
-  color: @cy-yellow !important;
-  padding: 12px 18px !important;
-  margin: 12px 0;
-}
-
-/* --- COMPOSER --- */
-.Composer {
-  background: @cy-black !important;
-  border: 3px solid @cy-yellow !important;
-  box-shadow: 0 -10px 25px rgba(255, 0, 85, 0.4);
-  z-index: 1050 !important;
-}
-
-.ComposerBody-header {
-  background: @cy-black-panel !important;
-  border-bottom: 2px solid @cy-yellow !important;
-  padding: 8px !important;
 }
 
 /* --- DROPDOWNS & MODALS --- */
@@ -465,49 +273,13 @@ input[type="email"] {
   background: @cy-black !important;
   color: @cy-text !important;
   border: 3px solid @cy-yellow !important;
-  border-radius: 0 !important;
   box-shadow: 8px 8px 0 @cy-magenta, 0 0 20px rgba(0,0,0,0.9) !important;
   padding: 10px !important;
-  opacity: 1 !important;
-  visibility: visible !important;
 }
 
-.Dropdown-menu > li > a,
-.Dropdown-menu > li > button {
-  color: @cy-text !important;
-  font-family: 'Space Mono', monospace;
-  padding: 8px 12px !important;
-}
-
-.Dropdown-menu > li > a:hover,
-.Dropdown-menu > li > button:hover {
-  background: @cy-yellow !important;
-  color: @cy-black !important;
-}
-
-/* --- SYSTEM ALERTS --- */
-.Alert {
-  border-radius: 0 !important;
-  border: 3px solid @cy-black !important;
-  font-family: 'Chakra Petch', sans-serif;
-  font-weight: 900 !important;
-  padding: 12px 16px !important;
-  box-shadow: 5px 5px 0 @cy-black;
-}
-
-.Alert--success {
-  background: @cy-green !important;
-  color: @cy-black !important;
-}
-
-.Alert--error {
-  background: @cy-red !important;
-  color: @cy-white !important;
-}
-
-/* --- CY_BORG TICKER / WARNING STRIP --- */
+/* --- CY_BORG TICKER --- */
 .IndexPage-results::before {
-  content: "/// SYSTEM WARNING: CY_BORG PROTOCOL ACTIVE // CONNECT // TRANSMIT // DESTROY ///";
+  content: "// CREATE @ HANDLE // CONNECT // CONSUME // CONTRIBUTE // GET NOTICED";
   display: block;
   margin-bottom: 16px;
   padding: 10px 14px;
@@ -516,51 +288,16 @@ input[type="email"] {
   font-family: 'Chakra Petch', sans-serif;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
   border: 2px solid @cy-black;
   box-shadow: 5px 5px 0 @cy-yellow;
   overflow: hidden;
   white-space: nowrap;
 }
 
-/* --- MOBILE DRAWER & NAVIGATION FIXES --- */
+/* Mobile Drawer Fixes */
 @media (max-width: 767.98px) {
   .App-drawer {
     background: @cy-black !important;
     border-right: 4px solid @cy-yellow !important;
-  }
-
-  .App-drawer .App-titleControl,
-  .App-drawer .App-primaryControl {
-    color: @cy-yellow !important;
-  }
-
-  .App-header {
-    background: @cy-yellow !important;
-  }
-
-  .App-header .Button,
-  .App-header .Button--icon,
-  .App-header button {
-    color: @cy-black !important;
-    background: transparent !important;
-    border-color: transparent !important;
-    box-shadow: none !important;
-  }
-
-  .App-navigation {
-    background: @cy-yellow !important;
-    border-bottom: 3px solid @cy-black !important;
-  }
-
-  .App-navigation .Button {
-    color: @cy-black !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-
-  .Hero h2 {
-    font-size: 2.2rem !important;
   }
 }
