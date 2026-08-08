@@ -416,3 +416,9 @@ input[type="email"] {
         color: @cy-magenta !important;
     }
 }
+
+@media (max-width: 767.98px) {
+    .App-titleControl>.Button {
+        color: black !important;
+    }
+}
