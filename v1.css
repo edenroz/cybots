@@ -63,19 +63,21 @@ body::after {
 /* --- ANIMAZIONI GLITCH SULLE SINGOLE LETTERE (.cy-char) --- */
 .cy-char {
   display: inline-block;
-  transition: all 0.1s ease;
+  /* Nota: rimuovi la transition CSS se interferisce con lo scatto secco dell'animazione */
 }
 
-.cy-char:nth-child(3n) {
-  animation: charGlitch1 2.5s infinite ease-in-out;
+/* Colpiamo meno lettere usando passi più grandi (es. ogni 7, 11 e 13)
+   e allunghiamo la durata totale a 6s - 10s */
+.cy-char:nth-child(7n + 2) {
+  animation: charGlitch1 7s infinite steps(1);
 }
 
-.cy-char:nth-child(5n) {
-  animation: charGlitch2 3.8s infinite ease-in-out 0.3s;
+.cy-char:nth-child(11n + 5) {
+  animation: charGlitch2 9.5s infinite steps(1) 1.5s;
 }
 
-.cy-char:nth-child(7n) {
-  animation: charGlitch3 3.1s infinite ease-in-out 0.9s;
+.cy-char:nth-child(13n + 1) {
+  animation: charGlitch3 6.2s infinite steps(1) 3.8s;
 }
 
 @keyframes charGlitch1 {
@@ -377,4 +379,23 @@ input[type="email"] {
     margin: 0 !important;
     font-size: 1.1rem !important;
   }
+}
+
+/* Forza il colore del testo nel corpo del post e nei suoi paragrafi/liste */
+.Post-body,
+.Post-body p,
+.Post-body li,
+.Post-body span {
+  color: @cy-text !important;
+}
+
+/* Assicurati che i link nel post restino visibili e a tema */
+.Post-body a {
+  color: @cy-yellow !important;
+  text-decoration: underline;
+  text-decoration-color: @cy-magenta; /* Un tocco glitch/cyber anche nei link */
+}
+
+.Post-body a:hover {
+  color: @cy-magenta !important;
 }
