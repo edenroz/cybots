@@ -452,3 +452,7 @@ input[type="email"] {
 .Post-body {
     font-size: 20px;
 }
+
+.Button--primary, .IndexPage-newDiscussion, .DiscussionComposer-changeTitle {
+    margin-top: 50px;
+}
