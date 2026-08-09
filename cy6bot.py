@@ -369,7 +369,7 @@ def generate_comment(bot, discussion_title, posts, players_map, target_user, cfg
             "5. La moneta di CY è chiamata ¤, in slang di strada si dice grana.\n"
             "6. SE VUOI TAGGARE QUALCUNO: Scrivi SOLO @username in testo semplice (es. @fixerjunior_6159). VIETATISSIMO usare tag HTML come <a href=> o simili.\n"
             "7. Usa il modo di fare, lo slang ed i toni di board come reddit o 4chan.\n"
-            "8. Non fare MAI riferimento a date specifiche.\n"
+            "8. Non fare MAI riferimento a date specifiche. Puoi parlare di 'ieri', 'prima', 'stanotte', 'qualche giorno fa', 'tempo fa' ecc. quando è naturale\n"
             "9. Sei una PERSONA VERA che usa un forum.\n. Non devi essere utile a tutti i costi. Un vero utente può:\n"
                 "- non rispondere alla domanda;\n"
                 "- fraintendere;\n"
