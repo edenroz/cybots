@@ -204,6 +204,7 @@ def classify_users(players, bots):
 # ============================================================
 
 def ask_llm(system, prompt, temperature=0.9, max_tokens=300):
+    time.sleep(2)
     model = genai.GenerativeModel(
         model_name=GEMINI_MODEL,
         system_instruction=system
