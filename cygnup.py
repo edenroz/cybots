@@ -119,7 +119,7 @@ def create_user(session, user):
 
     password = user.get(
         "password",
-        FLARUM_BOT_PASSWORD
+        BOT_PASSWORD
     )
 
     payload = {
@@ -283,7 +283,7 @@ def main():
 
             password = user.get(
                 "password",
-                FLARUM_BOT_PASSWORD
+                BOT_PASSWORD
             )
 
             print(
