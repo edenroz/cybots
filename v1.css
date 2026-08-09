@@ -25,7 +25,7 @@
 html, body {
   background: @cy-black !important;
   color: @cy-text;
-  font-family: 'VT323', monospace;
+  font-family: 'Chakra Petch', monospace !important;
   position: relative;
   overflow-x: hidden;
 }
@@ -37,7 +37,7 @@ html, body {
 /* Headings Base */
 h1, h2, h3, h4, h5, h6, 
 .Header-title, .DiscussionListItem-title {
-  font-family: 'Chakra Petch', sans-serif !important;
+  font-family: 'Chakra Petch', monospace !important;
   font-weight: 900 !important;
   text-transform: uppercase !important;
 }
@@ -117,7 +117,7 @@ input[type="email"] {
   color: @cy-yellow !important;
   border: 2px solid @cy-yellow !important;
   border-radius: 0 !important;
-  font-family: 'VT323', monospace !important;
+  font-family: 'Chakra Petch', monospace !important;
   box-shadow: 4px 4px 0 @cy-magenta !important;
   padding: 10px 16px !important;
   line-height: 1.5 !important;
@@ -139,7 +139,7 @@ input[type="email"] {
   border: 2px solid @cy-yellow !important;
   background: @cy-black !important;
   color: @cy-yellow !important;
-  font-family: 'Chakra Petch', sans-serif;
+  font-family: 'Chakra Petch', monospace !important;
   font-weight: 900 !important;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -237,7 +237,7 @@ input[type="email"] {
   background: @cy-yellow !important;
   color: @cy-black !important;
   border: 2px solid @cy-black !important;
-  font-family: 'Chakra Petch', sans-serif !important;
+  font-family: 'Chakra Petch', monospace !important;
   font-weight: 900 !important;
   text-transform: uppercase !important;
   box-shadow: 4px 4px 0 @cy-magenta !important;
@@ -299,7 +299,7 @@ input[type="email"] {
 .PostUser-name, 
 .PostUser-name a {
   color: @cy-yellow !important;
-  font-family: 'Chakra Petch', sans-serif;
+  font-family: 'VT323', monospace !important;
   font-size: 1.2rem;
   text-shadow: 2px 2px 0 @cy-magenta;
 }
@@ -450,7 +450,7 @@ input[type="email"] {
 }
 
 .Post-body {
-    font-size: 20px;
+    font-size: 18px;
 }
 
 .Button--primary, .IndexPage-newDiscussion, .DiscussionComposer-changeTitle {
