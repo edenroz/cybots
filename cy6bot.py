@@ -414,10 +414,16 @@ Rispondi SOLO col testo del messaggio da pubblicare sulla BBS:
 
     return ask_llm(system_prompt, user_prompt, temperature=cfg["temperature"], max_tokens=1500)
 
-class NewDiscussion(TypedDict):
-    title: str = Field(description="Titolo breve e d'impatto senza hashtag, max 10-12 parole")
-    content: str = Field(description="Testo del post, breve e in stile forum cyberpunk")
-    board: str = Field(description="Solo ed esclusivamente l'ID della board scelto tra '4', '5', '6', '7', '8'")
+class NewDiscussion(BaseModel):
+    title: str = Field(
+        description="Breve titolo del thread. MASSIMO 10 PAROLE IN TOTALE. Deve essere composto solo da testo leggibile e parole di senso compiuto. Nessun codice, nessun glitch."
+    )
+    content: str = Field(
+        description="Corpo del post. Applica qui lo stile forum cyberpunk, lo slang, la personalità e l'eventuale formattazione irregolare o glitch."
+    )
+    board: str = Field(
+        description="ID della board. In base al contesto del thread, inserisci solo una singola cifra: '4', '5', '6', '7', o '8'."
+    )
 
 def generate_thread(bot, cfg):
     recent_events = get_events()[-5:]
