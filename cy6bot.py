@@ -414,68 +414,57 @@ Rispondi SOLO col testo del messaggio da pubblicare sulla BBS:
 
     return ask_llm(system_prompt, user_prompt, temperature=cfg["temperature"], max_tokens=1500)
 
-class NewDiscussion(BaseModel):
-    title: str = Field(
-        description="SOLO L'OGGETTO/TITOLO del thread. Massimo 5-8 parole. Esempio: 'Pezzi cydroidi usati a North Side, svendo tutto!' - NIENTE testo lungo qui."
-    )
+class DiscussionBody(BaseModel):
     content: str = Field(
-        description="IL CORPO DEL MESSAGGIO VERO E PROPRIO (Obbligatorio). Qui va il post completo con tutti i dettagli, lo slang, le imprecazioni e gli hashtag."
+        description="OBBLIGATORIO. IL CORPO COMPLETO DEL THREAD. Non lasciare vuoto. Includi dettagli, slang, imprecazioni se coerenti col bot."
     )
     board: str = Field(
-        description="ID della board. In base al contesto del thread, inserisci solo una singola cifra: '4', '5', '6', '7', o '8'."
+        description="ID della board. Inserisci solo una singola cifra stringa: '4', '5', '6', '7', o '8'."
     )
+
+class DiscussionTitle(BaseModel):
+    title: str = Field(
+        description="SOLO L'OGGETTO/TITOLO del thread. Massimo 7-10 parole."
+    )
+
 
 def generate_thread(bot, cfg):
     recent_events = get_events()[-5:]
     events_text = "\n".join(f"- {e['text']}" for e in recent_events)
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
-    system_prompt = (
-            "Sei un abitante della metropoli di Cy, sei collegato a Cy6?, la BBS principale della NET (nel gioco di ruolo CY_BORG).\n Vuoi aprire una nuova discussione spontanea.\n"
-            "REGOLE TASSATIVE DI COMPORTAMENTO:\n"
-            "1. NON sei un assistente IA, non sei un chatbot, non dai consigli utili e non sei gentile.\n"
-            "2. SEGUI RIGOROSAMENTE la personalità, lo stile e le patologie del tuo personaggio forniti nel prompt.\n"
-            "3. Parli in italiano di strada/cyberpunk. Usa slang tecnologico, acronimi, abbreviazioni, "
-            "o formattazione irregolare (glitch, maiuscole, punteggiatura spezzata) se lo stile del tuo personaggio lo richiede. I veri utenti dei forum non scrivono quasi mai temi lunghi.\n"
-            "4. Scrivi come un reale utente di un forum: proponi le tue teorie, insulta, shitposta, fai domande, "
-            "vendi roba, o reagisci in base alla tua fazione/agenda.\n"
-            "5. La moneta di CY è chiamata ¤, in slang di strada si dice grana.\n"
-            "6. SE VUOI TAGGARE QUALCUNO: Scrivi SOLO @username in testo semplice (es. @fixerjunior_6159). VIETATISSIMO usare tag HTML come <a href=> o simili.\n"
-            "7. Usa il modo di fare, lo slang ed i toni di board come reddit o 4chan.\n"
-            "8. Non fare MAI riferimento a date specifiche. Puoi parlare di 'ieri', 'prima', 'stanotte', 'qualche giorno fa', 'tempo fa' ecc. quando è naturale\n"
-            "9. Sei una PERSONA VERA che usa un forum.\n. Non devi essere utile a tutti i costi. Un vero utente può:\n"
-                "- fraintendere;\n"
-                "- dire una stronzata;\n"
-                "- rispondere con una battuta;\n"
-                "- insultare;\n"
-                "- cambiare argomento;\n"
-                "- rispondere 'boh';\n"
-                "- ignorare completamente il punto principale;\n"
-                "- raccontare un'esperienza personale.\n"
-            "10. NON cercare di aiutare il giocatore. Se puoi dare informazioni, fallo solo perché il TUO PERSONAGGIO avrebbe un motivo per farlo."
-                "Potresti anche mentire, esagerare o avere informazioni sbagliate.\n Non sei onnisciente. Conosci soltanto ciò che il tuo personaggio"
-                 " potrebbe realisticamente conoscere in CY_BORG vivendo a Cy."
-            "11. NON spiegare la lore al lettore. Cy, le corporazioni, le gang, la NET e gli eventi del mondo fanno parte della vita quotidiana del personaggio."
-                "Non introdurli come se stessi scrivendo una wiki o spiegando il gioco a qualcuno.\n"
-            "12. SEPARAZIONE TITOLO/CONTENUTO: Il caos, i glitch e le patologie del personaggio vanno applicati SOLO nel 'content'. Il 'title' deve rimanere un riassunto normale, leggibile e lungo al massimo 10 parole.\n"
-            "13. REGOLA ANTI-SPAM:\n"
-            "   - Usa il testo normale. È severamente vietato generare codice binario o lunghe stringhe di numeri senza senso.\n"
-            "   - NO HASHTAG MULTIPLI (al massimo UNO solo alla fine del post, ZERO nel titolo).\n"
-            "   - Nessuna parola inventata più lunga di 15 caratteri.\n"
+    # ==========================================
+    # STEP 1: GENERAZIONE CONTENUTO E BOARD
+    # ==========================================
+    system_prompt_body = (
+        "Sei un abitante della metropoli di Cy, sei collegato a Cy6?, la BBS principale della NET (nel gioco di ruolo CY_BORG).\n"
+        "Vuoi aprire una nuova discussione spontanea.\n\n"
+        "REGOLE TASSATIVE DI COMPORTAMENTO:\n"
+        "1. NON sei un assistente IA, non sei un chatbot, non dai consigli utili e non sei gentile.\n"
+        "2. SEGUI RIGOROSAMENTE la personalità, lo stile e le patologie del tuo personaggio forniti nel prompt.\n"
+        "3. Parli in italiano di strada/cyberpunk. Usa slang tecnologico, acronimi, abbreviazioni, "
+        "o formattazione irregolare (glitch, maiuscole, punteggiatura spezzata) se lo stile del tuo personaggio lo richiede.\n"
+        "4. Scrivi come un reale utente di un forum: proponi le tue teorie, insulta, shitposta, fai domande, "
+        "vendi roba, o reagisci in base alla tua fazione/agenda.\n"
+        "5. La moneta di CY è chiamata ¤, in slang di strada si dice grana.\n"
+        "6. SE VUOI TAGGARE QUALCUNO: Scrivi SOLO @username in testo semplice. VIETATISSIMO usare tag HTML.\n"
+        "7. Usa il modo di fare, lo slang ed i toni di board come reddit o 4chan.\n"
+        "8. Non fare MAI riferimento a date specifiche ('ieri', 'stanotte', 'tempo fa' vanno bene).\n"
+        "9. Non devi essere utile a tutti i costi. Puoi mentire, esagerare, fraintendere o dire cavolate.\n"
+        "10. NON spiegare la lore al lettore.\n"
+        "11. REGOLA ANTI-SPAM:\n"
+        "   - È severamente vietato generare codice binario o lunghe stringhe di numeri senza senso.\n"
+        "   - NO HASHTAG MULTIPLI (al massimo UNO solo alla fine del post).\n"
+        "   - Nessuna parola inventata più lunga di 15 caratteri.\n\n"
+        "Gli ID delle board disponibili sono:\n"
+        "- 4: market compro/vendo\n"
+        "- 5: AAA cercasi\n"
+        "- 6: rumors e teorie dello sprawl\n"
+        "- 7: argomenti riguardanti la NET in generale\n"
+        "- 8: argomenti religiosi e culti\n"
+    )
 
-                f"""
-
-Gli ID delle board disponibili sono:
-- 4: market compro/vendo\n
-- 5: AAA cercasi\n
-- 6: rumors e teorie dello sprawl\n
-- 7: argomenti riguardanti la NET in generale\n
-- 8: argomenti religiosi e culti\n
-
-Il Titolo deve essere breve e incisivo, il contenuto deve essere coerente con la personalità del bot e con lo stile CY_BORG. Non aggiungere spiegazioni o commenti extra.\n
-"""
-        )
-    
-    user_prompt = f"""
+    user_prompt_body = f"""
 USERNAME: {bot['username']}
 PERSONALITA': {bot['personality']}
 STILE: {bot['style']}
@@ -484,49 +473,89 @@ INTERESSI: {", ".join(bot['interests'])}
 RUMORS / EVENTI IN CITTA':
 {events_text}
 
-Crea un nuovo thread. Può essere:
-- Un allarme paranoico su pattuglie corporate o virus nella rete.
-- Un'offerta/richiesta per hardware illegale o stimolanti.
-- Una domanda provocatoria alla community.
-- Un rumor su una banda di strada o un lavoro andato male.
-- Quello che vuoi, purché sia coerente con la personalità del bot e con lo stile CY_BORG.
-- Non devi per forza collegare gli eventi rumors recenti al thread, ma puoi farlo se vuoi.
-
-IMPORTANTE SULLA STRUTTURA:
-- 'title': Scrivi SOLO un titolo/oggetto breve (massimo 7-10 parole).
-- 'content': Scrivi il messaggio vero e proprio nel dettaglio. Non lasciarlo vuoto!
+Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
 """
-    model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
-    model = genai.GenerativeModel(
+    model_body = genai.GenerativeModel(
         model_name=model_name,
-        system_instruction=system_prompt
+        system_instruction=system_prompt_body
     )
 
-    # Impostiamo lo Schema Strutturato Rigido
-    generation_config = genai.GenerationConfig(
-        temperature=0.7,
-        max_output_tokens=1500, # Aumentato per evitare troncamenti
+    config_body = genai.GenerationConfig(
+        temperature=0.75,
+        max_output_tokens=1500,
         response_mime_type="application/json",
-        response_schema=NewDiscussion  # <-- FORZA LA STRUTTURA
+        response_schema=DiscussionBody
     )
 
     try:
-        time.sleep(2)
-        response = model.generate_content(user_prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
-        print(f"DEBUG: Risposta LLM per @{bot['username']}:\n{response.text}\n")
-        text = response.text.strip()
+        time.sleep(1)
+        res_body = model_body.generate_content(
+            user_prompt_body, 
+            generation_config=config_body, 
+            safety_settings=SAFETY_SETTINGS
+        )
         
-        # Pulizia di sicurezza via Regex (estrazione tra prima { e ultima })
-        json_match = re.search(r'\{.*\}', text, re.DOTALL)
-        if json_match:
-            text = json_match.group(0)
+        body_json = json.loads(res_body.text)
+        content_text = body_json.get("content", "").strip()
+        board_id = body_json.get("board", "6")
 
-        return json.loads(text)
+        if not content_text:
+            raise ValueError("Content generato vuoto dallo Step 1.")
 
     except Exception as e:
-        logging.warning(f"Errore valutazione per @{bot['username']}: {e} | Raw: {text if 'text' in locals() else 'None'}")
+        logging.warning(f"Errore Step 1 (Content) per @{bot['username']}: {e}")
         return {"interested": False, "score": 0.0, "reason": "eval_error", "target_user": None}
+
+    # ==========================================
+    # STEP 2: GENERAZIONE DEL TITOLO DALS CONTENUTO
+    # ==========================================
+    system_prompt_title = (
+        "Sei un algoritmo della BBS Cy6?. Il tuo unico compito è leggere un post appena scritto e generare un titolo/oggetto sintesi.\n"
+        "REGOLE RIGIDE PER IL TITOLO:\n"
+        "1. Lunghezza: massimo 7-10 parole.\n"
+        "2. Deve essere chiaro, incisivo e leggibile (niente glitch o formattazioni illegibili nel titolo).\n"
+        "3. ZERO hashtag nel titolo.\n"
+        "4. Rispecchia l'argomento del post senza fare preamboli."
+    )
+
+    user_prompt_title = f"Genera un titolo breve per questo post:\n\n\"{content_text}\""
+
+    model_title = genai.GenerativeModel(
+        model_name=model_name,
+        system_instruction=system_prompt_title
+    )
+
+    config_title = genai.GenerationConfig(
+        temperature=0.4, # Temperatura più bassa per titoli più precisi e coerenti
+        max_output_tokens=150,
+        response_mime_type="application/json",
+        response_schema=DiscussionTitle
+    )
+
+    try:
+        time.sleep(1)
+        res_title = model_title.generate_content(
+            user_prompt_title, 
+            generation_config=config_title, 
+            safety_settings=SAFETY_SETTINGS
+        )
+        
+        title_json = json.loads(res_title.text)
+        title_text = title_json.get("title", "Nuova discussione").strip()
+
+    except Exception as e:
+        logging.warning(f"Errore Step 2 (Title) per @{bot['username']}: {e}")
+        title_text = "Messaggio dalla NET"
+
+    # ==========================================
+    # RISULTATO FINALE
+    # ==========================================
+    return {
+        "title": title_text,
+        "content": content_text,
+        "board": board_id
+    }
 
 # ============================================================
 # AZIONI BOT
@@ -638,7 +667,7 @@ def run_thread_action(bot, session, cfg):
 # - "7": argomenti riguardanti la NET in generale
 # - "8": argomenti religiosi e culti
 
-    logging.info(f"🔥 NUOVO THREAD #{new_id} aperto da @{bot['username']}: {thread_data['title']} in {thread_data['board']}")
+    logging.info(f"🔥 NUOVO THREAD aperto da @{bot['username']}: {thread_data['title']} in {thread_data['board']}")
     payload = {
         "data": {
             "type": "discussions",
