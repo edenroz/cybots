@@ -492,7 +492,7 @@ Crea un nuovo thread. Può essere:
 
     # Impostiamo lo Schema Strutturato Rigido
     generation_config = genai.GenerationConfig(
-        temperature=0.3,
+        temperature=0.6,
         max_output_tokens=1500, # Aumentato per evitare troncamenti
         response_mime_type="application/json",
         response_schema=NewDiscussion  # <-- FORZA LA STRUTTURA
@@ -619,6 +619,13 @@ def run_thread_action(bot, session, cfg):
     if not thread_data:
         return False
 
+# - "4": market compro/vendo
+# - "5": AAA cercasi
+# - "6": rumors e teorie dello sprawl
+# - "7": argomenti riguardanti la NET in generale
+# - "8": argomenti religiosi e culti
+
+    logging.info(f"🔥 NUOVO THREAD #{new_id} aperto da @{bot['username']}: {thread_data['title']} in {thread_data['board']}")
     payload = {
         "data": {
             "type": "discussions",
@@ -628,7 +635,7 @@ def run_thread_action(bot, session, cfg):
             },
             "relationships": {
                 "tags": {
-                    "data": [{"type": "tags", "id": str(cfg["tag_id"])}]
+                    "data": [{"type": "tags", "id": thread_data["board"]}]
                 }
             }
         }
@@ -636,7 +643,6 @@ def run_thread_action(bot, session, cfg):
 
     res = flarum_post(session, "/api/discussions", payload)
     new_id = res.get("data", {}).get("id", "??")
-    logging.info(f"🔥 NUOVO THREAD #{new_id} aperto da @{bot['username']}: {thread_data['title']}")
     return True
 
 # ============================================================
