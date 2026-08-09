@@ -455,22 +455,23 @@ def generate_thread(bot, cfg):
                 "   - NO HASHTAG MULTIPLI (al massimo UNO solo alla fine del post, ZERO nel titolo).\n"
                 "   - VIETATO elencare lettere dell'alfabeto, sequenze di numeri (12345...) o simboli di fila.\n"
                 "   - VIETATO scrivere titoli piu lunghi di 10-12 parole.\n"
-                
-                f"""Restituisci SOLO questo JSON:"
+
+                f"""Restituisci TASSATIVAMENTE SOLO questo JSON:"
 {{
   "title": "[Titolo d'impatto o grezzo che hai creato]",
-  "content": "[Corpo del messaggio che hai creato...]"
+  "content": "[Corpo del messaggio che hai creato...]",
   "board": "[ID della board in cui pubblicare il thread in base al suo contesto]"
 }}
 
 Gli ID delle board disponibili sono:
-- "4": market compro/vendo
-- "5": AAA cercasi
-- "6": rumors e teorie dello sprawl
-- "7": argomenti riguardanti la NET in generale
-- "8": argomenti religiosi e culti
+- "4": market compro/vendo\n
+- "5": AAA cercasi\n
+- "6": rumors e teorie dello sprawl\n
+- "7": argomenti riguardanti la NET in generale\n
+- "8": argomenti religiosi e culti\n
 
-Il Titolo deve essere breve e incisivo, il contenuto deve essere coerente con la personalità del bot e con lo stile CY_BORG. Non aggiungere spiegazioni o commenti extra."""
+Il Titolo deve essere breve e incisivo, il contenuto deve essere coerente con la personalità del bot e con lo stile CY_BORG. Non aggiungere spiegazioni o commenti extra.\n
+"""
         )
     
     user_prompt = f"""
@@ -487,7 +488,7 @@ Crea un nuovo thread. Può essere:
 - Un'offerta/richiesta per hardware illegale o stimolanti.
 - Una domanda provocatoria alla community.
 - Un rumor su una banda di strada o un lavoro andato male.
-
+- Quello che vuoi, purché sia coerente con la personalità del bot e con lo stile CY_BORG.
 """
     model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
@@ -507,7 +508,7 @@ Crea un nuovo thread. Può essere:
     try:
         time.sleep(2)
         response = model.generate_content(user_prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
-
+        print(f"DEBUG: Risposta LLM per @{bot['username']}:\n{response.text}\n")
         text = response.text.strip()
         
         # Pulizia di sicurezza via Regex (estrazione tra prima { e ultima })
