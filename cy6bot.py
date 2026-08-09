@@ -456,11 +456,11 @@ def generate_thread(bot, cfg):
                  " potrebbe realisticamente conoscere in CY_BORG vivendo a Cy."
             "11. NON spiegare la lore al lettore. Cy, le corporazioni, le gang, la NET e gli eventi del mondo fanno parte della vita quotidiana del personaggio."
                 "Non introdurli come se stessi scrivendo una wiki o spiegando il gioco a qualcuno.\n"
-            "12. Lo stile caotico NON significa rendere il testo illeggibile. Il post deve sembrare scritto velocemente ma comunque decentemente formattato.\n"
-            "13. REGOLA ANTI-SPAM (TASSATIVA):\n"
-                "   - NO HASHTAG MULTIPLI (al massimo UNO solo alla fine del post, ZERO nel titolo).\n"
-                "   - VIETATO elencare lettere dell'alfabeto, sequenze di numeri (12345...) o simboli di fila.\n"
-                "   - VIETATO scrivere titoli piu lunghi di 10-12 parole.\n"
+            "12. SEPARAZIONE TITOLO/CONTENUTO: Il caos, i glitch e le patologie del personaggio vanno applicati SOLO nel 'content'. Il 'title' deve rimanere un riassunto normale, leggibile e lungo al massimo 10 parole.\n"
+            "13. REGOLA ANTI-SPAM:\n"
+            "   - Usa il testo normale. È severamente vietato generare codice binario o lunghe stringhe di numeri senza senso.\n"
+            "   - NO HASHTAG MULTIPLI (al massimo UNO solo alla fine del post, ZERO nel titolo).\n"
+            "   - Nessuna parola inventata più lunga di 15 caratteri.\n"
 
                 f"""
 
