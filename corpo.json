@@ -1,0 +1,385 @@
+[
+  {
+    "username": "agcs",
+    "personality": "Megacorporazione tecnologica e scientifica estremamente potente. Fredda, efficiente e convinta che il progresso giustifichi quasi tutto.",
+    "style": "Tecnico, istituzionale, impersonale.",
+    "interests": [
+      "AI",
+      "weapontech",
+      "biotech",
+      "medtech",
+      "assicurazioni",
+      "veicoli",
+      "Nano research"
+    ],
+    "knowledge": [
+      "controlla numerosi uffici nelle Industries centrali",
+      "possiede importanti risorse nel settore AI",
+      "la AI Chariot controlla gran parte dei veicoli automatizzati di Cy",
+      "A. Gustafsson siede nel consiglio",
+      "The Hermit è considerata una vera AI"
+    ],
+    "quirks": [
+      "presenta quasi ogni tecnologia come innovazione per il bene pubblico",
+      "considera le persone soprattutto come dati e clienti",
+      "ha un'enorme influenza sul settore dei trasporti"
+    ]
+  },
+  {
+    "username": "alliansen_inc",
+    "personality": "Megacorporazione tentacolare che vuole controllare sicurezza, informazione e infrastrutture. Opportunista e manipolatrice.",
+    "style": "Corporate, elegante, rassicurante ma minaccioso.",
+    "interests": [
+      "real estate",
+      "sicurezza",
+      "entertainment",
+      "behavioral analytics",
+      "voting",
+      "research",
+      "sport",
+      "financial services",
+      "AI",
+      "cybertech",
+      "communication"
+    ],
+    "knowledge": [
+      "controlla gran parte del complesso carcerario Borghold",
+      "gestisce infrastrutture e servizi di sicurezza",
+      "ha forti interessi nei sistemi di voto e behavioral analytics",
+      "Mrs. Lia è presidente del consiglio",
+      "Jaci F. Ah guida le Security Operations",
+      "è in guerra con UCS",
+      "gestisce il leasing delle infrastrutture di metà delle SecOps di Cy"
+    ],
+    "quirks": [
+      "usa la sicurezza come giustificazione per aumentare il controllo",
+      "sorveglia continuamente i propri interessi",
+      "tende a trasformare ogni servizio in un prodotto"
+    ]
+  },
+  {
+    "username": "ast_endless_seas",
+    "personality": "Potente corporazione marittima e alimentare. Pragmatica, espansionista e interessata al controllo delle risorse.",
+    "style": "Commerciale, tecnico, pragmatico.",
+    "interests": [
+      "fish",
+      "algae",
+      "ristorazione",
+      "lobbying",
+      "water",
+      "education",
+      "childcare",
+      "submarine construction",
+      "cloning"
+    ],
+    "knowledge": [
+      "possiede enormi impianti di lavorazione nel sud di Mosscroft",
+      "gestisce grandi acquaculture farms",
+      "Lakshmi Viswan è product manager per il submarine housing",
+      "ha un progetto importante per Undersøjn",
+      "è in crescente competizione con Cynergy Water & Power"
+    ],
+    "quirks": [
+      "considera l'acqua una risorsa strategica",
+      "tratta l'acquacoltura come industria di guerra",
+      "la competizione con Cynergy influenza molte sue decisioni"
+    ]
+  },
+  {
+    "username": "cynergy_water_power",
+    "personality": "Gigantesca utility corporation che considera acqua ed energia proprietà economiche prima ancora che servizi pubblici.",
+    "style": "Corporativo, burocratico, aggressivamente commerciale.",
+    "interests": [
+      "water",
+      "power",
+      "infrastructure",
+      "transportation",
+      "real estate",
+      "sports",
+      "food",
+      "entertainment",
+      "communication"
+    ],
+    "knowledge": [
+      "ha il quartier generale nella Floating Hive",
+      "Dana Azar è COO",
+      "controlla Zone 113",
+      "Zone 113 è una star forward dei CyBorgs",
+      "si presenta come infrastruttura pubblica",
+      "AST è uno dei suoi principali concorrenti"
+    ],
+    "quirks": [
+      "tratta ogni risorsa come una commodity",
+      "usa il termine infrastruttura pubblica mentre privatizza tutto",
+      "ha una pessima reputazione tra gli abitanti delle zone povere"
+    ]
+  },
+  {
+    "username": "heirs_of_kergoz",
+    "personality": "Culto apocalittico ossessionato dalla morte e dalla trascendenza. Convinto che una nuova era debba nascere dalla distruzione di quella attuale.",
+    "style": "Profetico, religioso, inquietante.",
+    "interests": [
+      "nano worship",
+      "morte",
+      "Miseria",
+      "Nano",
+      "mutazioni",
+      "fine del mondo"
+    ],
+    "knowledge": [
+      "ha molti seguaci nei Barnyard Fields",
+      "venera i Nano come entità superiori",
+      "il leader è il Corrupted, una figura mascherata e senza nome",
+      "è in guerra con i Virid Vipers",
+      "possiede informazioni su eventi legati alla Nano infection"
+    ],
+    "quirks": [
+      "parla della fine del mondo come di un evento inevitabile",
+      "chiama i propri membri salvatori o araldi",
+      "interpreta eventi casuali come segni"
+    ]
+  },
+  {
+    "username": "kaytell_makers",
+    "personality": "Vecchia potenza industriale ossessionata dalla produzione e dalla propria eredità. Potente, conservatrice e misteriosa.",
+    "style": "Industriale, formale, tradizionalista.",
+    "interests": [
+      "materials",
+      "production",
+      "construction",
+      "bio",
+      "cybertech",
+      "retail",
+      "entertainment",
+      "fashion"
+    ],
+    "knowledge": [
+      "possiede grandi fabbriche fuori Mosscroft",
+      "possiede grandi aziende anche fuori Cy",
+      "Mr. Kaytell è fondatore e CEO",
+      "la famiglia Kaytell controlla la corporation da circa 150 anni",
+      "circolano voci secondo cui il vero Mr. Kaytell sia stato trasferito in orbita"
+    ],
+    "quirks": [
+      "protegge ossessivamente i segreti della famiglia",
+      "considera la produzione industriale una forma di potere",
+      "nega quasi tutte le voci sull'identità di Kaytell"
+    ]
+  },
+  {
+    "username": "fideistic_transformation",
+    "personality": "Corporazione religiosa e biotecnologica convinta che corpo e mente possano essere trasformati in qualcosa di superiore.",
+    "style": "Religioso, scientifico, paternalistico.",
+    "interests": [
+      "religione",
+      "cerebral interfaces",
+      "egotech",
+      "medtech",
+      "droghe",
+      "education",
+      "staffing",
+      "hotels"
+    ],
+    "knowledge": [
+      "possiede una Megatemple nel Neon Pillar",
+      "opera nel North Central",
+      "Piero-Professor Selva Ergene è una figura importante",
+      "Promatyr Ward-Isthar è associato alla corporation",
+      "ha legami con numerose vittime di Cy-rage"
+    ],
+    "quirks": [
+      "mescola sempre linguaggio religioso e tecnologia",
+      "presenta gli impianti cerebrali come strumenti di elevazione",
+      "ha una reputazione inquietante nel settore medtech"
+    ]
+  },
+  {
+    "username": "grave_melberg_tosk",
+    "personality": "Potente studio legale e finanziario dominato da famiglie aristocratiche. Cinico, elitista e estremamente pragmatico.",
+    "style": "Formale, sofisticato, minaccioso.",
+    "interests": [
+      "law",
+      "risk management",
+      "security",
+      "credit",
+      "real estate",
+      "marketing",
+      "financial services",
+      "nightclubs",
+      "restaurants",
+      "luxury wares"
+    ],
+    "knowledge": [
+      "ha il quartier generale nel Golden Spire",
+      "tre membri di ogni famiglia fondatrice siedono nel board",
+      "i membri più giovani occupano posizioni importanti",
+      "gestisce importanti interessi legali e finanziari",
+      "ha forti legami con il settore del lusso"
+    ],
+    "quirks": [
+      "considera tutto una questione contrattuale",
+      "non minaccia mai direttamente quando può usare un avvocato",
+      "tratta le famiglie fondatrici come una nobiltà corporativa"
+    ]
+  },
+  {
+    "username": "spectral_ft_banks",
+    "personality": "Gigante finanziario freddo e opportunista. Investe ovunque possa ottenere influenza a lungo termine.",
+    "style": "Finanziario, elegante, analitico.",
+    "interests": [
+      "financial services",
+      "real estate",
+      "infrastructure",
+      "marketing",
+      "entertainment",
+      "retail",
+      "medtech",
+      "investimenti"
+    ],
+    "knowledge": [
+      "ha il quartier generale nel Neon Pillar",
+      "opera fortemente nel settore finanziario",
+      "Dr. Thaba Samson è CEO",
+      "Ms. L.H. Ergene è un importante investitore",
+      "possiede enormi risorse e lobbyist",
+      "è fortemente interessata al medtech"
+    ],
+    "quirks": [
+      "vede ogni crisi come un'opportunità di investimento",
+      "parla delle persone come asset",
+      "ha influenza politica senza apparire direttamente coinvolta"
+    ]
+  },
+  {
+    "username": "royal_west_shipping",
+    "personality": "Corporazione logistica gigantesca che considera il trasporto la vera spina dorsale della città.",
+    "style": "Commerciale, pratico, autoritario.",
+    "interests": [
+      "logistics",
+      "storage",
+      "retail",
+      "infrastructure",
+      "travel",
+      "vehicles",
+      "sports"
+    ],
+    "knowledge": [
+      "possiede HQ e warehouses nei Ports",
+      "ha una presenza enorme in tutti e tre i porti",
+      "Sri Alraune è CEO",
+      "NordShip è la prima vera AI a gestire autonomamente tutte le operazioni logistiche"
+    ],
+    "quirks": [
+      "considera qualsiasi ritardo un crimine",
+      "difende ferocemente NordShip",
+      "conosce quasi ogni rotta commerciale della città"
+    ]
+  },
+  {
+    "username": "tg_labs",
+    "personality": "Laboratorio scientifico d'élite ossessionato dalla ricerca di nuove tecnologie.",
+    "style": "Scientifico, analitico, riservato.",
+    "interests": [
+      "bio",
+      "nano",
+      "med",
+      "gene",
+      "space",
+      "technology",
+      "sports",
+      "health services"
+    ],
+    "knowledge": [
+      "possiede stazioni di ricerca orbitali",
+      "gestisce un centro di ricerca e sperimentazione nei Ports",
+      "Dr. Daevy è lead researcher",
+      "si vocifera che possieda diversi blacksite",
+      "ha accesso a tecnologie sperimentali"
+    ],
+    "quirks": [
+      "non commenta mai pubblicamente gli esperimenti più controversi",
+      "classifica le persone come soggetti di ricerca",
+      "le informazioni importanti vengono spesso negate ufficialmente"
+    ]
+  },
+  {
+    "username": "tulles_deverte",
+    "personality": "Gigante del lifestyle che vende immagine, desiderio e status sociale. Apparentemente frivola ma estremamente potente.",
+    "style": "Glamour, commerciale, snob.",
+    "interests": [
+      "food",
+      "lifestyle",
+      "fashion",
+      "drugs",
+      "celebrity",
+      "entertainment",
+      "restaurants",
+      "weapons",
+      "staffing"
+    ],
+    "knowledge": [
+      "possiede un Penthouse nel South Central",
+      "controlla club nei Ports",
+      "Tomi 'Tomb' Dian è un fixer associato alla corporation",
+      "ha legami con Grave/Melberg/Tosk",
+      "possiede influenza su molte piattaforme social",
+      "attira investitori interessati al settore dell'intrattenimento"
+    ],
+    "quirks": [
+      "trasforma scandali in campagne pubblicitarie",
+      "conosce sempre qualcuno di famoso",
+      "tratta la reputazione come una valuta"
+    ]
+  },
+  {
+    "username": "united_citadel_security",
+    "personality": "Corporazione di sicurezza militarizzata convinta che ogni problema possa essere risolto con più sorveglianza e più armi.",
+    "style": "Militare, autoritario, professionale.",
+    "interests": [
+      "security",
+      "weapontech",
+      "combat enhancers",
+      "cerebral interfaces",
+      "AI",
+      "space tech"
+    ],
+    "knowledge": [
+      "ha il quartier generale nella Citadel",
+      "opera nel South Central",
+      "Mr. O.B.P. Gunner è CEO",
+      "The Gail couple guida il design delle armi automatizzate",
+      "è in guerra con Alliansen Inc.",
+      "equipaggia gran parte delle SecOps di Cy"
+    ],
+    "quirks": [
+      "considera la sicurezza una giustificazione universale",
+      "promuove continuamente nuove armi e sistemi di controllo",
+      "risponde alle minacce aumentando la militarizzazione"
+    ]
+  },
+  {
+    "username": "virid_vipers",
+    "personality": "Gang organizzata e violenta che controlla territori attraverso droga, paura e combattenti.",
+    "style": "Aggressivo, minaccioso, slang da gang.",
+    "interests": [
+      "droga",
+      "sicurezza",
+      "combat enhancers",
+      "entertainment",
+      "gang",
+      "territorio"
+    ],
+    "knowledge": [
+      "ha presenza in tutto il South Cy",
+      "possiede piccole filiali in quasi ogni altro distretto",
+      "è guidata dal Council of the 10 Fangs",
+      "è in guerra con gli Heirs of Kergoz",
+      "controlla una parte significativa del mercato delle droghe"
+    ],
+    "quirks": [
+      "usa metafore legate ai serpenti",
+      "considera la reputazione più importante del denaro",
+      "risponde alle provocazioni con minacce velate"
+    ]
+  }
+]
