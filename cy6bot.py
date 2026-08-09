@@ -30,6 +30,7 @@ CONFIG_FILE = Path("config.json")
 BOTS_FILE = Path("bots.json")
 PLAYERS_FILE = Path("players.json")
 EVENTS_FILE = Path("events.json")
+BOT_PASSWORD = os.getenv("FLARUM_BOT_PASSWORD")
 
 DATA_DIR = Path("data")
 MEMORY_FILE = DATA_DIR / "memory.json"
@@ -46,6 +47,44 @@ logging.basicConfig(
 # ============================================================
 # JSON
 # ============================================================
+
+def login(session, USERNAME, PASSWORD):
+    """
+    Effettua il login del bot e conserva il cookie/token
+    nella requests.Session().
+    """
+
+    url = f"{FLARUM_URL}/api/token"
+
+    response = session.post(
+        url,
+        json={
+            "identification": USERNAME,
+            "password": PASSWORD
+        },
+        timeout=REQUEST_TIMEOUT
+    )
+
+    if response.status_code != 200:
+        print("\nERRORE: impossibile effettuare il login.")
+        print(f"HTTP {response.status_code}")
+        print(response.text)
+        sys.exit(1)
+
+    data = response.json()
+
+    token = data.get("token")
+
+    if not token:
+        print("ERRORE: Flarum non ha restituito un token.")
+        print(data)
+        sys.exit(1)
+
+    session.headers.update({
+        "Authorization": f"Token {token}"
+    })
+
+    print("Login Flarum: OK")
 
 def load_json(path, default):
 
