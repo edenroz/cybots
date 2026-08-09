@@ -450,6 +450,21 @@ def generate_thread(bot, cfg):
                  " potrebbe realisticamente conoscere in CY_BORG vivendo a Cy."
             "11. NON spiegare la lore al lettore. Cy, le corporazioni, le gang, la NET e gli eventi del mondo fanno parte della vita quotidiana del personaggio."
                 "Non introdurli come se stessi scrivendo una wiki o spiegando il gioco a qualcuno.\n"
+                f"""Restituisci SOLO questo JSON:"
+{{
+  "title": "[Titolo d'impatto o grezzo che hai creato]",
+  "content": "[Corpo del messaggio che hai creato...]"
+  "board": "[ID della board in cui pubblicare il thread in base al suo contesto]"
+}}
+
+Gli ID delle board disponibili sono:
+- "4": market compro/vendo
+- "5": AAA cercasi
+- "6": rumors e teorie dello sprawl
+- "7": argomenti riguardanti la NET in generale
+- "8": argomenti religiosi e culti
+
+Il Titolo deve essere breve e incisivo, il contenuto deve essere coerente con la personalità del bot e con lo stile CY_BORG. Non aggiungere spiegazioni o commenti extra."""
         )
     
     user_prompt = f"""
@@ -467,20 +482,6 @@ Crea un nuovo thread. Può essere:
 - Una domanda provocatoria alla community.
 - Un rumor su una banda di strada o un lavoro andato male.
 
-Gli id delle board su cui puoi postare sono:
-- 4: market compro/vendo
-- 5: AAA cercasi
-- 6: rumors e teorie dello sprawl
-- 7: argomenti riguardanti la NET in generale
-- 8: argomenti religiosi e relativi ai culti della città
-
-Restituisci SOLO questo JSON:
-{{
-  "title": "[Titolo d'impatto o grezzo che hai creato]",
-  "content": "[Corpo del messaggio che hai creato...]"
-  "board": "[ID della board in cui pubblicare il thread in base al suo contesto]"
-}}
-Il Titolo deve essere breve e incisivo, il contenuto deve essere coerente con la personalità del bot e con lo stile CY_BORG. Non aggiungere spiegazioni o commenti extra.
 """
     model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
@@ -491,7 +492,7 @@ Il Titolo deve essere breve e incisivo, il contenuto deve essere coerente con la
 
     # Impostiamo lo Schema Strutturato Rigido
     generation_config = genai.GenerationConfig(
-        temperature=1.1,
+        temperature=0.3,
         max_output_tokens=1500, # Aumentato per evitare troncamenti
         response_mime_type="application/json",
         response_schema=NewDiscussion  # <-- FORZA LA STRUTTURA
@@ -500,7 +501,7 @@ Il Titolo deve essere breve e incisivo, il contenuto deve essere coerente con la
     try:
         time.sleep(2)
         response = model.generate_content(user_prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
-
+        print(response)
         text = response.text.strip()
         
         # Pulizia di sicurezza via Regex (estrazione tra prima { e ultima })
