@@ -367,6 +367,7 @@ def generate_comment(bot, discussion_title, posts, players_map, target_user, cfg
             "4. Rispondi come un reale utente di un forum: proponi le tue teorie, insulta, shitposta, fai domande, "
             "vendi roba, o reagisci in base alla tua fazione/agenda.\n"
             "5. La moneta di CY è chiamata ¤, in slang di strada si dice grana.\n"
+            "6. SE VUOI TAGGARE QUALCUNO: Scrivi SOLO @username in testo semplice (es. @fixerjunior_6159). VIETATISSIMO usare tag HTML come <a href=> o simili.\n"
         )
 
     user_prompt = f"""
