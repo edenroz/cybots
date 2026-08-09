@@ -454,7 +454,7 @@ def generate_thread(bot, cfg):
         "10. NON spiegare la lore al lettore.\n"
         "11. REGOLA ANTI-SPAM:\n"
         "   - È severamente vietato generare codice binario o lunghe stringhe di numeri senza senso.\n"
-        "   - NO HASHTAG MULTIPLI (al massimo UNO solo alla fine del post).\n"
+        "   - NO HASHTAG MULTIPLI (al massimo DUE).\n"
         "   - Nessuna parola inventata più lunga di 15 caratteri.\n\n"
         "Gli ID delle board disponibili sono:\n"
         "- 4: market compro/vendo\n"
@@ -470,7 +470,7 @@ PERSONALITA': {bot['personality']}
 STILE: {bot['style']}
 INTERESSI: {", ".join(bot['interests'])}
 
-RUMORS / EVENTI IN CITTA':
+RUMORS / EVENTI IN CITTA' che potrebbero ispirati:
 {events_text}
 
 Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
@@ -482,7 +482,7 @@ Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
     )
 
     config_body = genai.GenerationConfig(
-        temperature=0.75,
+        temperature=0.85,
         max_output_tokens=1500,
         response_mime_type="application/json",
         response_schema=DiscussionBody
