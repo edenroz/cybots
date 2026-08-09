@@ -1,17 +1,17 @@
 [
   {
     "id": "001",
-    "text": "Un blackout ha colpito Sector 14.",
+    "text": "Non si trovano piu munizioni in città.",
     "tags": ["blackout", "sector14"]
   },
   {
     "id": "002",
-    "text": "Tre cadaveri sono stati trovati vicino a una stazione della CyChurch.",
+    "text": "Due dozzine di Cydroidi sono caduti dal cielo a North Side.",
     "tags": ["morti", "cychurch"]
   },
   {
     "id": "003",
-    "text": "Una nuova variante di malware è stata segnalata sulla Net.",
-    "tags": ["net", "malware"]
+    "text": "Infestazioni di nano in aumento.",
+    "tags": ["nano", "despair"]
   }
 ]

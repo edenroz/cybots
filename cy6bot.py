@@ -414,15 +414,43 @@ Rispondi SOLO col testo del messaggio da pubblicare sulla BBS:
 
     return ask_llm(system_prompt, user_prompt, temperature=cfg["temperature"], max_tokens=1500)
 
+class NewDiscussion(TypedDict):
+    title: str
+    content: str
+
 def generate_thread(bot, cfg):
     recent_events = get_events()[-5:]
     events_text = "\n".join(f"- {e['text']}" for e in recent_events)
 
     system_prompt = (
-        "Sei un utente di una BBS cyberpunk clandestina in una metropoli decadente. "
-        "Vuoi aprire una nuova discussione spontanea. Rispondi SOLO in JSON valido."
-    )
-
+            "Sei un abitante della metropoli di Cy, sei collegato a Cy6?, la BBS principale della NET (nel gioco di ruolo CY_BORG).\n Vuoi aprire una nuova discussione spontanea.\n"
+            "REGOLE TASSATIVE DI COMPORTAMENTO:\n"
+            "1. NON sei un assistente IA, non sei un chatbot, non dai consigli utili e non sei gentile.\n"
+            "2. SEGUI RIGOROSAMENTE la personalità, lo stile e le patologie del tuo personaggio forniti nel prompt.\n"
+            "3. Parli in italiano di strada/cyberpunk. Usa slang tecnologico, acronimi, abbreviazioni, "
+            "o formattazione irregolare (glitch, maiuscole, punteggiatura spezzata) se lo stile del tuo personaggio lo richiede. I veri utenti dei forum non scrivono quasi mai temi lunghi.\n"
+            "4. Scrivi come un reale utente di un forum: proponi le tue teorie, insulta, shitposta, fai domande, "
+            "vendi roba, o reagisci in base alla tua fazione/agenda.\n"
+            "5. La moneta di CY è chiamata ¤, in slang di strada si dice grana.\n"
+            "6. SE VUOI TAGGARE QUALCUNO: Scrivi SOLO @username in testo semplice (es. @fixerjunior_6159). VIETATISSIMO usare tag HTML come <a href=> o simili.\n"
+            "7. Usa il modo di fare, lo slang ed i toni di board come reddit o 4chan.\n"
+            "8. Non fare MAI riferimento a date specifiche. Puoi parlare di 'ieri', 'prima', 'stanotte', 'qualche giorno fa', 'tempo fa' ecc. quando è naturale\n"
+            "9. Sei una PERSONA VERA che usa un forum.\n. Non devi essere utile a tutti i costi. Un vero utente può:\n"
+                "- fraintendere;\n"
+                "- dire una stronzata;\n"
+                "- rispondere con una battuta;\n"
+                "- insultare;\n"
+                "- cambiare argomento;\n"
+                "- rispondere 'boh';\n"
+                "- ignorare completamente il punto principale;\n"
+                "- raccontare un'esperienza personale.\n"
+            "10. NON cercare di aiutare il giocatore. Se puoi dare informazioni, fallo solo perché il TUO PERSONAGGIO avrebbe un motivo per farlo."
+                "Potresti anche mentire, esagerare o avere informazioni sbagliate.\n Non sei onnisciente. Conosci soltanto ciò che il tuo personaggio"
+                 " potrebbe realisticamente conoscere in CY_BORG vivendo a Cy."
+            "11. NON spiegare la lore al lettore. Cy, le corporazioni, le gang, la NET e gli eventi del mondo fanno parte della vita quotidiana del personaggio."
+                "Non introdurli come se stessi scrivendo una wiki o spiegando il gioco a qualcuno.\n"
+        )
+    
     user_prompt = f"""
 USERNAME: {bot['username']}
 PERSONALITA': {bot['personality']}
@@ -443,13 +471,39 @@ Restituisci SOLO questo JSON:
   "title": "[Titolo d'impatto o grezzo che hai creato]",
   "content": "[Corpo del messaggio che hai creato...]"
 }}
+Il Titolo deve essere breve e incisivo, il contenuto deve essere coerente con la personalità del bot e con lo stile CY_BORG. Non aggiungere spiegazioni o commenti extra.
 """
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
-    result = ask_llm(system_prompt, user_prompt, temperature=cfg["temperature"], max_tokens=300)
+    model = genai.GenerativeModel(
+        model_name=model_name,
+        system_instruction=system_prompt
+    )
+
+    # Impostiamo lo Schema Strutturato Rigido
+    generation_config = genai.GenerationConfig(
+        temperature=1.1,
+        max_output_tokens=1500, # Aumentato per evitare troncamenti
+        response_mime_type="application/json",
+        response_schema=NewDiscussion  # <-- FORZA LA STRUTTURA
+    )
+
     try:
-        return json.loads(clean_json(result))
-    except Exception:
-        return None
+        time.sleep(2)
+        response = model.generate_content(user_prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
+
+        text = response.text.strip()
+        
+        # Pulizia di sicurezza via Regex (estrazione tra prima { e ultima })
+        json_match = re.search(r'\{.*\}', text, re.DOTALL)
+        if json_match:
+            text = json_match.group(0)
+
+        return json.loads(text)
+
+    except Exception as e:
+        logging.warning(f"Errore valutazione per @{bot['username']}: {e} | Raw: {text if 'text' in locals() else 'None'}")
+        return {"interested": False, "score": 0.0, "reason": "eval_error", "target_user": None}
 
 # ============================================================
 # AZIONI BOT
@@ -607,7 +661,7 @@ def main():
 
         mode = cfg.get("mode", "auto")
         success = False
-        mode = "comment" # Forzato per test, rimuovere in produzione
+        mode = "new_thread" # Forzato per test, rimuovere in produzione
         if mode == "new_thread":
             success = run_thread_action(bot, session, cfg)
         elif mode == "comment":
