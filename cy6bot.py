@@ -450,6 +450,12 @@ def generate_thread(bot, cfg):
                  " potrebbe realisticamente conoscere in CY_BORG vivendo a Cy."
             "11. NON spiegare la lore al lettore. Cy, le corporazioni, le gang, la NET e gli eventi del mondo fanno parte della vita quotidiana del personaggio."
                 "Non introdurli come se stessi scrivendo una wiki o spiegando il gioco a qualcuno.\n"
+            "12. Lo stile caotico NON significa rendere il testo illeggibile. Il post deve sembrare scritto velocemente ma comunque decentemente formattato.\n"
+            "13. REGOLA ANTI-SPAM (TASSATIVA):\n"
+                "   - NO HASHTAG MULTIPLI (al massimo UNO solo alla fine del post, ZERO nel titolo).\n"
+                "   - VIETATO elencare lettere dell'alfabeto, sequenze di numeri (12345...) o simboli di fila.\n"
+                "   - VIETATO scrivere titoli piu lunghi di 10-12 parole.\n"
+                
                 f"""Restituisci SOLO questo JSON:"
 {{
   "title": "[Titolo d'impatto o grezzo che hai creato]",
@@ -492,7 +498,7 @@ Crea un nuovo thread. Può essere:
 
     # Impostiamo lo Schema Strutturato Rigido
     generation_config = genai.GenerationConfig(
-        temperature=0.6,
+        temperature=0.2,
         max_output_tokens=1500, # Aumentato per evitare troncamenti
         response_mime_type="application/json",
         response_schema=NewDiscussion  # <-- FORZA LA STRUTTURA
