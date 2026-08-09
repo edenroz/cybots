@@ -417,6 +417,7 @@ Rispondi SOLO col testo del messaggio da pubblicare sulla BBS:
 class NewDiscussion(TypedDict):
     title: str
     content: str
+    board: str
 
 def generate_thread(bot, cfg):
     recent_events = get_events()[-5:]
@@ -466,10 +467,18 @@ Crea un nuovo thread. Può essere:
 - Una domanda provocatoria alla community.
 - Un rumor su una banda di strada o un lavoro andato male.
 
+Gli id delle board su cui puoi postare sono:
+- 4: market compro/vendo
+- 5: AAA cercasi
+- 6: rumors e teorie dello sprawl
+- 7: argomenti riguardanti la NET in generale
+- 8: argomenti religiosi e relativi ai culti della città
+
 Restituisci SOLO questo JSON:
 {{
   "title": "[Titolo d'impatto o grezzo che hai creato]",
   "content": "[Corpo del messaggio che hai creato...]"
+  "board": "[ID della board in cui pubblicare il thread in base al suo contesto]"
 }}
 Il Titolo deve essere breve e incisivo, il contenuto deve essere coerente con la personalità del bot e con lo stile CY_BORG. Non aggiungere spiegazioni o commenti extra.
 """
