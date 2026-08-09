@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import re
+import sys
 import time
 from pathlib import Path
 
@@ -10,32 +11,25 @@ import requests
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-
 # ============================================================
-# CONFIG
+# CONFIGURAZIONE ED AMBIENTE
 # ============================================================
 
 load_dotenv()
 
-FLARUM_URL = os.environ["FLARUM_URL"].rstrip("/")
-FLARUM_TOKEN = os.environ["FLARUM_API_TOKEN"]
-
-GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
-GEMINI_MODEL = os.getenv(
-    "GEMINI_MODEL",
-    "gemini-1.5-flash"
-)
+FLARUM_URL = os.environ.get("FLARUM_URL", "").rstrip("/")
+BOT_PASSWORD = os.getenv("FLARUM_BOT_PASSWORD")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
 CONFIG_FILE = Path("config.json")
 BOTS_FILE = Path("bots.json")
 PLAYERS_FILE = Path("players.json")
 EVENTS_FILE = Path("events.json")
-BOT_PASSWORD = os.getenv("FLARUM_BOT_PASSWORD")
 
 DATA_DIR = Path("data")
 MEMORY_FILE = DATA_DIR / "memory.json"
 
-# Inizializza il client di Gemini
 genai.configure(api_key=GEMINI_API_KEY)
 
 logging.basicConfig(
@@ -43,1678 +37,485 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
 
-
 # ============================================================
-# JSON
+# GESTIONE JSON & FILE
 # ============================================================
-
-def login(session, USERNAME, PASSWORD):
-    """
-    Effettua il login del bot e conserva il cookie/token
-    nella requests.Session().
-    """
-
-    url = f"{FLARUM_URL}/api/token"
-
-    response = session.post(
-        url,
-        json={
-            "identification": USERNAME,
-            "password": PASSWORD
-        }
-    )
-
-    if response.status_code != 200:
-        print("\nERRORE: impossibile effettuare il login.")
-        print(f"HTTP {response.status_code}")
-        print(response.text)
-        sys.exit(1)
-
-    data = response.json()
-
-    token = data.get("token")
-
-    if not token:
-        print("ERRORE: Flarum non ha restituito un token.")
-        print(data)
-        sys.exit(1)
-
-    session.headers.update({
-        "Authorization": f"Token {token}"
-    })
-
-    print("Login Flarum: OK")
 
 def load_json(path, default):
-
     if not path.exists():
         return default
-
-    with path.open(
-        "r",
-        encoding="utf-8"
-    ) as f:
-
+    with path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
-
 def save_json(path, data):
-
-    path.parent.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
-    with path.open(
-        "w",
-        encoding="utf-8"
-    ) as f:
-
-        json.dump(
-            data,
-            f,
-            ensure_ascii=False,
-            indent=2
-        )
-
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 def get_config():
-    return load_json(
-        CONFIG_FILE,
-        {}
-    )
-
+    defaults = {
+        "posts_per_run": 1,
+        "mode": "auto",
+        "new_thread_probability": 0.25,
+        "max_discussions_to_consider": 10,
+        "max_posts_per_discussion": 15,
+        "minimum_relevance": 0.4,
+        "avoid_same_bot_same_discussion_hours": 3,
+        "player_reply_bonus": 0.25,
+        "bot_chain_penalty": 0.3,
+        "temperature": 0.9,
+        "max_post_words": 120,
+        "tag_id": "1"
+    }
+    cfg = load_json(CONFIG_FILE, {})
+    defaults.update(cfg)
+    return defaults
 
 def get_bots():
-    return load_json(
-        BOTS_FILE,
-        []
-    )
-
+    return load_json(BOTS_FILE, [])
 
 def get_players():
-    return load_json(
-        PLAYERS_FILE,
-        []
-    )
-
+    return load_json(PLAYERS_FILE, [])
 
 def get_events():
-    return load_json(
-        EVENTS_FILE,
-        []
-    )
-
+    return load_json(EVENTS_FILE, [])
 
 def get_memory():
-
-    return load_json(
-        MEMORY_FILE,
-        {
-            "posts": [],
-            "relationships": {},
-            "last_run": 0
-        }
-    )
-
+    return load_json(MEMORY_FILE, {"posts": [], "relationships": {}, "last_run": 0})
 
 # ============================================================
-# FLARUM API
+# FLARUM API & AUTHENTICATION
 # ============================================================
 
-def flarum_headers(user_id=None):
-
-    authorization = (
-        f"Token {FLARUM_TOKEN}"
-    )
-
-    if user_id is not None:
-        authorization += (
-            f"; userId={user_id}"
-        )
-
-    return {
-        "Authorization": authorization,
-        "Content-Type": "application/vnd.api+json",
-        "Accept": "application/vnd.api+json"
-    }
-
-
-def flarum_get(
-    endpoint,
-    params=None
-):
-
-    response = requests.get(
-        FLARUM_URL + endpoint,
-        headers=flarum_headers(),
-        params=params,
-        timeout=30
-    )
-
-    response.raise_for_status()
-
-    return response.json()
-
-
-def flarum_post(
-    endpoint,
-    payload,
-    user_id
-):
-
-    response = requests.post(
-        FLARUM_URL + endpoint,
-        headers=flarum_headers(user_id),
-        json=payload,
-        timeout=30
-    )
-
-    if not response.ok:
-
-        logging.error(
-            "Flarum error %s: %s",
-            response.status_code,
-            response.text
-        )
-
-    response.raise_for_status()
-
-    return response.json()
-
-
-# ============================================================
-# USERS
-# ============================================================
-
-def get_users():
-
-    result = flarum_get(
-        "/api/users",
-        {
-            "page[limit]": 100
-        }
-    )
-
-    return result.get(
-        "data",
-        []
-    )
-
-
-def build_user_map():
-
-    users = get_users()
-
-    result = {}
-
-    for user in users:
-
-        username = (
-            user
-            .get("attributes", {})
-            .get("username")
-        )
-
-        if username:
-            result[username] = str(
-                user["id"]
-            )
-
-    return result
-
-
-# ============================================================
-# DISCUSSIONS
-# ============================================================
-
-def get_discussions(limit):
-
-    result = flarum_get(
-        "/api/discussions",
-        {
-            "page[limit]": limit,
-            "sort": "-created"
-        }
-    )
-
-    return result.get(
-        "data",
-        []
-    )
-
-
-def get_discussion_posts(
-    discussion_id,
-    limit
-):
-
-    result = flarum_get(
-        "/api/posts",
-        {
-            "filter[discussion]": discussion_id,
-            "page[limit]": limit,
-            "sort": "created"
-        }
-    )
-
-    return result.get(
-        "data",
-        []
-    )
-
-
-# ============================================================
-# USER CLASSIFICATION
-# ============================================================
-
-def classify_users(
-    players,
-    bots,
-    user_map
-):
-
-    result = {}
-
-    for player in players:
-
-        username = player["username"]
-
-        if username in user_map:
-
-            result[user_map[username]] = {
-                "type": "player",
-                "username": username,
-                "character": player.get(
-                    "character",
-                    username
-                ),
-                "description": player.get(
-                    "description",
-                    ""
-                )
-            }
-
-    for bot in bots:
-
-        username = bot["username"]
-
-        if username in user_map:
-
-            result[user_map[username]] = {
-                "type": "bot",
-                "username": username
-            }
-
-    return result
-
-
-# ============================================================
-# POST INFORMATION
-# ============================================================
-
-def post_author_id(post):
-
-    return (
-        post
-        .get("relationships", {})
-        .get("user", {})
-        .get("data", {})
-        .get("id")
-    )
-
-
-def post_content(post):
-
-    return (
-        post
-        .get("attributes", {})
-        .get("content", "")
-        .strip()
-    )
-
-
-def post_created_at(post):
-
-    return (
-        post
-        .get("attributes", {})
-        .get("createdAt", "")
-    )
-
-
-def describe_post(
-    post,
-    user_map
-):
-
-    author_id = post_author_id(post)
-
-    author = user_map.get(
-        str(author_id),
-        {}
-    )
-
-    content = post_content(post)
-
-    if author.get("type") == "player":
-
-        name = author["username"]
-
-        character = author.get(
-            "character",
-            ""
-        )
-
-        label = (
-            f"PLAYER {name} "
-            f"(personaggio: {character})"
-        )
-
-    elif author.get("type") == "bot":
-
-        label = (
-            f"BOT {author['username']}"
-        )
-
-    else:
-
-        label = (
-            f"UTENTE {author_id}"
-        )
-
-    return (
-        f"{label}:\n{content}"
-    )
-
-
-# ============================================================
-# LLM
-# ============================================================
-
-def ask_llm(
-    system,
-    prompt,
-    temperature=1.0,
-    max_tokens=300
-):
+def get_bot_session(username):
+    """
+    Effettua il login API per uno specifico bot usando la password condivisa.
+    Restituisce una sessione autenticata.
+    """
+    session = requests.Session()
+    url = f"{FLARUM_URL}/api/token"
     
-    # Inizializziamo il modello con le istruzioni di sistema
+    try:
+        response = session.post(
+            url,
+            json={"identification": username, "password": BOT_PASSWORD},
+            timeout=15
+        )
+        if response.status_code != 200:
+            logging.error(f"Login fallito per {username}: HTTP {response.status_code}")
+            return None
+            
+        data = response.json()
+        token = data.get("token")
+        if not token:
+            logging.error(f"Token non ricevuto per il bot {username}")
+            return None
+
+        session.headers.update({
+            "Authorization": f"Token {token}",
+            "Content-Type": "application/vnd.api+json",
+            "Accept": "application/vnd.api+json"
+        })
+        return session
+    except Exception as e:
+        logging.error(f"Errore connessione durante login di {username}: {e}")
+        return None
+
+def flarum_get(session, endpoint, params=None):
+    response = session.get(FLARUM_URL + endpoint, params=params, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+def flarum_post(session, endpoint, payload):
+    response = session.post(FLARUM_URL + endpoint, json=payload, timeout=30)
+    if not response.ok:
+        logging.error(f"Flarum API Error {response.status_code}: {response.text}")
+    response.raise_for_status()
+    return response.json()
+
+# ============================================================
+# PARSING DEL FORUM & UTENTI
+# ============================================================
+
+def fetch_forum_context(session, max_discussions=10, posts_limit=15):
+    """
+    Estrae il contesto direttamente dal forum: thread recenti, autori e post.
+    """
+    data = flarum_get(session, "/api/discussions", {
+        "page[limit]": max_discussions,
+        "sort": "-lastPostedAt",
+        "include": "user,lastPostedUser"
+    })
+    
+    discussions = data.get("data", [])
+    included = {f"{item['type']}:{item['id']}": item for item in data.get("included", [])}
+    
+    user_map = {}
+    for key, item in included.items():
+        if item["type"] == "users":
+            user_map[item["id"]] = item.get("attributes", {}).get("username")
+            
+    return discussions, user_map
+
+def get_discussion_posts_hydrated(session, discussion_id, limit=15):
+    """
+    Recupera i post di una discussione inclusi i dettagli degli autori.
+    """
+    result = flarum_get(session, "/api/posts", {
+        "filter[discussion]": discussion_id,
+        "page[limit]": limit,
+        "sort": "-createdAt",
+        "include": "user"
+    })
+    
+    posts = result.get("data", [])
+    posts.reverse()  # Ordine cronologico
+    
+    included_users = {
+        item["id"]: item.get("attributes", {}).get("username")
+        for item in result.get("included", [])
+        if item["type"] == "users"
+    }
+    
+    hydrated_posts = []
+    for p in posts:
+        author_id = p.get("relationships", {}).get("user", {}).get("data", {}).get("id")
+        author_name = included_users.get(author_id, "Anonimo_Nethead")
+        content = p.get("attributes", {}).get("content", "").strip()
+        created_at = p.get("attributes", {}).get("createdAt", "")
+        
+        hydrated_posts.append({
+            "id": p["id"],
+            "author_id": author_id,
+            "author_username": author_name,
+            "content": content,
+            "created_at": created_at
+        })
+        
+    return hydrated_posts
+
+def classify_users(players, bots):
+    player_names = {p["username"]: p for p in players}
+    bot_names = {b["username"]: b for b in bots}
+    return player_names, bot_names
+
+# ============================================================
+# INTELLIGENZA ARTIFICIALE (LLM)
+# ============================================================
+
+def ask_llm(system, prompt, temperature=0.9, max_tokens=300):
     model = genai.GenerativeModel(
         model_name=GEMINI_MODEL,
         system_instruction=system
     )
-    
-    # Configuriamo i parametri di generazione
     generation_config = genai.GenerationConfig(
         temperature=temperature,
         max_output_tokens=max_tokens,
     )
 
     try:
-        response = model.generate_content(
-            prompt,
-            generation_config=generation_config
-        )
+        response = model.generate_content(prompt, generation_config=generation_config)
         return response.text.strip()
     except Exception as e:
-        logging.error(f"Errore durante la chiamata LLM: {e}")
+        logging.error(f"Errore LLM: {e}")
         return ""
 
-
 def clean_json(text):
-
     text = text.strip()
-
     if text.startswith("```"):
-
-        text = re.sub(
-            r"^```(?:json)?",
-            "",
-            text
-        )
-
-        text = re.sub(
-            r"```$",
-            "",
-            text
-        )
-
+        text = re.sub(r"^```(?:json)?", "", text)
+        text = re.sub(r"```$", "", text)
     return text.strip()
 
-
 # ============================================================
-# BOT MEMORY
-# ============================================================
-
-def bot_history(
-    memory,
-    username
-):
-
-    return [
-        x
-        for x in memory["posts"]
-        if x["username"] == username
-    ]
-
-
-def relationship_key(
-    bot_username,
-    other_username
-):
-
-    return (
-        f"{bot_username}:"
-        f"{other_username}"
-    )
-
-
-def get_relationship(
-    memory,
-    bot_username,
-    other_username
-):
-
-    key = relationship_key(
-        bot_username,
-        other_username
-    )
-
-    return memory[
-        "relationships"
-    ].get(
-        key,
-        {
-            "sentiment": 0,
-            "interactions": 0,
-            "notes": []
-        }
-    )
-
-
-def update_relationship(
-    memory,
-    bot_username,
-    other_username,
-    sentiment,
-    note
-):
-
-    key = relationship_key(
-        bot_username,
-        other_username
-    )
-
-    relationship = (
-        memory["relationships"]
-        .setdefault(
-            key,
-            {
-                "sentiment": 0,
-                "interactions": 0,
-                "notes": []
-            }
-        )
-    )
-
-    relationship["sentiment"] = max(
-        -1,
-        min(
-            1,
-            relationship["sentiment"]
-            + sentiment
-        )
-    )
-
-    relationship["interactions"] += 1
-
-    if note:
-
-        relationship["notes"].append(
-            note
-        )
-
-        relationship["notes"] = (
-            relationship["notes"][-10:]
-        )
-
-
-# ============================================================
-# BOT SELECTION
+# VALUTAZIONE DISCUSSIONE
 # ============================================================
 
-def choose_bot(
-    bots,
-    memory
-):
+def evaluate_discussion(bot, discussion_title, posts, players_map, cfg):
+    formatted_posts = []
+    for p in posts[-10:]:
+        role = "GIOCATORE REALE" if p["author_username"] in players_map else "UTENTE RETE"
+        formatted_posts.append(f"[{role}] {p['author_username']}: {p['content']}")
+    
+    conversation_text = "\n".join(formatted_posts)
+    recent_events = get_events()[-5:]
+    events_text = "\n".join(f"- {e['text']}" for e in recent_events)
 
-    weighted = []
-
-    now = time.time()
-
-    for bot in bots:
-
-        history = bot_history(
-            memory,
-            bot["username"]
-        )
-
-        if not history:
-
-            weight = 5
-
-        else:
-
-            last = max(
-                x["timestamp"]
-                for x in history
-            )
-
-            hours = (
-                now - last
-            ) / 3600
-
-            weight = min(
-                max(hours, 0.5),
-                24
-            )
-
-        weighted.append(
-            (bot, weight)
-        )
-
-    total = sum(
-        weight
-        for _, weight in weighted
+    system_prompt = (
+        "Sei il modulo cognitivo di un abitante di Cy (metropoli cyberpunk decadente). "
+        "Devi decidere se il personaggio interverrà in una discussione della BBS locale. "
+        "Rispondi ESCLUSIVAMENTE in formato JSON valido."
     )
 
-    choice = random.uniform(
-        0,
-        total
-    )
-
-    current = 0
-
-    for bot, weight in weighted:
-
-        current += weight
-
-        if choice <= current:
-            return bot
-
-    return weighted[-1][0]
-
-
-# ============================================================
-# DISCUSSION EVALUATION
-# ============================================================
-
-def evaluate_discussion(
-    bot,
-    discussion,
-    posts,
-    user_info,
-    memory,
-    cfg
-):
-
-    title = (
-        discussion
-        .get("attributes", {})
-        .get("title", "")
-    )
-
-    conversation = "\n\n".join(
-        describe_post(
-            post,
-            user_info
-        )
-        for post in posts[-12:]
-    )
-
-    recent_events = get_events()[-10:]
-
-    events_text = "\n".join(
-        f"- {event['text']}"
-        for event in recent_events
-    )
-
-    own_history = bot_history(
-        memory,
-        bot["username"]
-    )[-5:]
-
-    history_text = "\n".join(
-        f"- {x['content']}"
-        for x in own_history
-    )
-
-    prompt = f"""
-Sei il sistema che decide se un personaggio
-fittizio di una community cyberpunk dovrebbe
-partecipare a una discussione.
-
+    user_prompt = f"""
 PERSONAGGIO:
+Handle: {bot['username']}
+Personalità: {bot['personality']}
+Stile: {bot['style']}
+Interessi: {", ".join(bot['interests'])}
+Quirks: {", ".join(bot.get('quirks', []))}
 
-username:
-{bot["username"]}
-
-personalità:
-{bot["personality"]}
-
-stile:
-{bot["style"]}
-
-interessi:
-{", ".join(bot["interests"])}
-
-conoscenze:
-{", ".join(bot.get("knowledge", []))}
-
-quirks:
-{", ".join(bot.get("quirks", []))}
-
-EVENTI RECENTI:
-
+EVENTI IN CITTA':
 {events_text}
 
-DISCUSSIONE:
+THREAD CORRENTE:
+Titolo: {discussion_title}
+Messaggi recenti:
+{conversation_text}
 
-TITOLO:
-{title}
-
-MESSAGGI:
-
-{conversation}
-
-ULTIMI POST DEL PERSONAGGIO:
-
-{history_text}
-
-Devi decidere se questo personaggio
-avrebbe spontaneamente qualcosa da dire.
-
-È particolarmente interessante se:
-
-- un giocatore ha detto qualcosa che lo riguarda;
-- qualcuno ha parlato di un suo interesse;
-- qualcuno ha espresso un'opinione che detesta;
-- ha competenza sull'argomento;
-- può raccontare un'esperienza;
-- può collegare la discussione a un evento;
-- c'è un'opportunità naturale per una battuta;
-- conosce o ha già interagito con l'autore.
-
-NON deve rispondere solo perché il post
-è stato scritto da un giocatore.
-
-NON deve partecipare a tutte le discussioni.
+Valuta se questo personaggio ha un motivo reale per rispondere (es: insultare, difendere la propria fazione, dare info sbagliate, commentare un evento, rispondere a un utente reale).
 
 Restituisci SOLO:
-
 {{
-  "interested": true,
+  "interested": true/false,
   "score": 0.0,
-  "reason": "perché",
-  "target_user": "username se rilevante oppure null"
+  "reason": "motivo sintetico",
+  "target_user": "username a cui vuole rispondere o null"
 }}
-
-score da 0 a 1.
+Score da 0.0 a 1.0.
 """
 
-    result = ask_llm(
-        system=(
-            "Sei un classificatore di rilevanza. "
-            "Restituisci esclusivamente JSON valido."
-        ),
-        prompt=prompt,
-        temperature=0.15,
-        max_tokens=200
+    result = ask_llm(system_prompt, user_prompt, temperature=0.2, max_tokens=200)
+    try:
+        return json.loads(clean_json(result))
+    except Exception:
+        return {"interested": False, "score": 0.0, "reason": "parsing_error", "target_user": None}
+
+# ============================================================
+# GENERAZIONE CONTENUTI (CY_BORG VIBE)
+# ============================================================
+
+def generate_comment(bot, discussion_title, posts, players_map, target_user, cfg):
+    formatted_posts = []
+    for p in posts[-10:]:
+        role = " [PC]" if p["author_username"] in players_map else ""
+        formatted_posts.append(f"{p['author_username']}{role}: {p['content']}")
+        
+    conversation = "\n\n".join(formatted_posts)
+
+    system_prompt = (
+        "Sei un utente cinico, paranoico o degenere di una messageboard cyberpunk clandestina (Net-BBS). "
+        "NON sei un'IA, NON sei gentile, NON offri assistenza da chatbot. "
+        "Parli in italiano di strada, usando slang tecnologico, acronimi, o formattazione frammentata "
+        "tipica di chi si connette con cyberware di seconda mano o sotto l'effetto di stimolanti sintotici."
     )
 
+    user_prompt = f"""
+TU SEI: @{bot['username']}
+PERSONALITA': {bot['personality']}
+STILE DI SCRITTURA: {bot['style']}
+INTERESSI: {", ".join(bot['interests'])}
+QUIRKS: {", ".join(bot.get('quirks', []))}
+
+THREAD: {discussion_title}
+
+CONVERSAZIONE DALLA RETE:
+{conversation}
+
+REGOLE DI GENERAZIONE:
+1. Rispondi alla discussione in modo naturale e spontaneo.
+2. Se vuoi menzionare qualcuno usa la sintassi @Username (specialmente se rispondi a un utente reale [PC]).
+3. Puoi contraddire, fare teorie del complotto sulle Corporazioni, vendere dati falsi, fare battute macabre o provocare.
+4. Non fare riassunti di quanto detto dagli altri.
+5. Mantieni il messaggio incisivo. Massimo {cfg['max_post_words']} parole.
+6. SCRIVI IN ITALIANO.
+
+Rispondi SOLO col testo del messaggio da pubblicare sulla BBS:
+"""
+
+    return ask_llm(system_prompt, user_prompt, temperature=cfg["temperature"], max_tokens=250)
+
+def generate_thread(bot, cfg):
+    recent_events = get_events()[-5:]
+    events_text = "\n".join(f"- {e['text']}" for e in recent_events)
+
+    system_prompt = (
+        "Sei un utente di una BBS cyberpunk clandestina in una metropoli decadente. "
+        "Vuoi aprire una nuova discussione spontanea. Rispondi SOLO in JSON valido."
+    )
+
+    user_prompt = f"""
+USERNAME: {bot['username']}
+PERSONALITA': {bot['personality']}
+STILE: {bot['style']}
+INTERESSI: {", ".join(bot['interests'])}
+
+RUMORS / EVENTI IN CITTA':
+{events_text}
+
+Crea un nuovo thread. Può essere:
+- Un allarme paranoico su pattuglie corporate o virus nella rete.
+- Un'offerta/richiesta per hardware illegale o stimolanti.
+- Una domanda provocatoria alla community.
+- Un rumor su una banda di strada o un lavoro andato male.
+
+Restituisci SOLO questo JSON:
+{{
+  "title": "Titolo d'impatto o grezzo",
+  "content": "Corpo del messaggio..."
+}}
+"""
+
+    result = ask_llm(system_prompt, user_prompt, temperature=cfg["temperature"], max_tokens=300)
     try:
-
-        return json.loads(
-            clean_json(result)
-        )
-
+        return json.loads(clean_json(result))
     except Exception:
-
-        logging.warning(
-            "Invalid classifier response: %s",
-            result
-        )
-
-        return {
-            "interested": False,
-            "score": 0,
-            "reason": "invalid",
-            "target_user": None
-        }
-
+        return None
 
 # ============================================================
-# DISCUSSION SELECTION
+# AZIONI BOT
 # ============================================================
 
-def choose_discussion(
-    bot,
-    discussions,
-    user_info,
-    memory,
-    cfg
-):
-
+def run_comment_action(bot, session, players_map, memory, cfg):
+    discussions, _ = fetch_forum_context(session, cfg["max_discussions_to_consider"])
+    
     candidates = []
-
-    for discussion in discussions:
-
-        discussion_id = str(
-            discussion["id"]
-        )
-
-        recent_bot_posts = [
-            x
-            for x in memory["posts"]
-            if (
-                x["username"]
-                == bot["username"]
-                and x["discussion_id"]
-                == discussion_id
-            )
-        ]
-
-        if recent_bot_posts:
-
-            latest = max(
-                x["timestamp"]
-                for x in recent_bot_posts
-            )
-
-            hours = (
-                time.time() - latest
-            ) / 3600
-
-            if hours < cfg[
-                "avoid_same_bot_same_discussion_hours"
-            ]:
-                continue
-
-        posts = get_discussion_posts(
-            discussion_id,
-            cfg[
-                "max_posts_per_discussion"
-            ]
-        )
-
+    
+    for d in discussions:
+        d_id = str(d["id"])
+        title = d.get("attributes", {}).get("title", "")
+        
+        posts = get_discussion_posts_hydrated(session, d_id, cfg["max_posts_per_discussion"])
         if not posts:
             continue
 
-        evaluation = evaluate_discussion(
-            bot,
-            discussion,
-            posts,
-            user_info,
-            memory,
-            cfg
-        )
+        # Evita che il bot spammi nello stesso thread a breve distanza
+        bot_last_posts = [p for p in posts if p["author_username"] == bot["username"]]
+        if bot_last_posts:
+            # Se l'ultimo post nel thread è già di questo bot, salta
+            if posts[-1]["author_username"] == bot["username"]:
+                continue
 
-        score = float(
-            evaluation.get(
-                "score",
-                0
-            )
-        )
+        eval_res = evaluate_discussion(bot, title, posts, players_map, cfg)
+        
+        if eval_res.get("interested", False):
+            score = float(eval_res.get("score", 0.0))
+            
+            # Bonus se c'è un giocatore reale nel thread
+            has_player = any(p["author_username"] in players_map for p in posts)
+            if has_player:
+                score += cfg["player_reply_bonus"]
+                
+            # Penalità se l'ultimo post è di un altro bot
+            if posts[-1]["author_username"] not in players_map:
+                score -= cfg["bot_chain_penalty"]
 
-        if not evaluation.get(
-            "interested",
-            False
-        ):
-            continue
-
-        # ----------------------------------------------------
-        # PLAYER BONUS
-        # ----------------------------------------------------
-
-        player_present = any(
-            user_info.get(
-                str(post_author_id(post)),
-                {}
-            ).get("type") == "player"
-            for post in posts
-        )
-
-        if player_present:
-
-            score += cfg.get(
-                "player_reply_bonus",
-                0.12
-            )
-
-        # ----------------------------------------------------
-        # BOT CHAIN PENALTY
-        # ----------------------------------------------------
-
-        if cfg.get(
-            "avoid_immediate_bot_chain",
-            True
-        ):
-
-            if posts:
-
-                last_author = user_info.get(
-                    str(
-                        post_author_id(
-                            posts[-1]
-                        )
-                    ),
-                    {}
-                )
-
-                if (
-                    last_author.get(
-                        "type"
-                    ) == "bot"
-                ):
-
-                    score -= cfg.get(
-                        "bot_chain_penalty",
-                        0.25
-                    )
-
-        if score < cfg[
-            "minimum_relevance"
-        ]:
-            continue
-
-        candidates.append(
-            {
-                "discussion": discussion,
-                "posts": posts,
-                "score": score,
-                "reason": evaluation.get(
-                    "reason",
-                    ""
-                )
-            }
-        )
+            if score >= cfg["minimum_relevance"]:
+                candidates.append({
+                    "discussion_id": d_id,
+                    "title": title,
+                    "posts": posts,
+                    "score": score,
+                    "target_user": eval_res.get("target_user")
+                })
 
     if not candidates:
-        return None
+        logging.info(f"[{bot['username']}] Nessun thread stimolante trovato.")
+        return False
 
-    candidates.sort(
-        key=lambda x: x["score"],
-        reverse=True
+    # Selezione pesata/casuale tra i migliori
+    candidates.sort(key=lambda x: x["score"], reverse=True)
+    chosen = random.choice(candidates[:2])
+
+    comment_text = generate_comment(
+        bot, chosen["title"], chosen["posts"], players_map, chosen["target_user"], cfg
     )
 
-    # Evita comportamento troppo deterministico.
-    top = candidates[:3]
-
-    return random.choice(top)
-
-
-# ============================================================
-# GENERATE COMMENT
-# ============================================================
-
-def generate_comment(
-    bot,
-    discussion,
-    posts,
-    user_info,
-    memory,
-    cfg
-):
-
-    title = (
-        discussion
-        .get("attributes", {})
-        .get("title", "")
-    )
-
-    conversation = "\n\n".join(
-        describe_post(
-            post,
-            user_info
-        )
-        for post in posts[-12:]
-    )
-
-    own_history = bot_history(
-        memory,
-        bot["username"]
-    )[-5:]
-
-    previous = "\n".join(
-        x["content"]
-        for x in own_history
-    )
-
-    relationships = []
-
-    for post in posts:
-
-        author_id = post_author_id(
-            post
-        )
-
-        author = user_info.get(
-            str(author_id),
-            {}
-        )
-
-        username = author.get(
-            "username"
-        )
-
-        if not username:
-            continue
-
-        relationship = get_relationship(
-            memory,
-            bot["username"],
-            username
-        )
-
-        if relationship["interactions"]:
-
-            relationships.append(
-                f"{username}: "
-                f"sentimento={relationship['sentiment']:.2f}; "
-                f"note={relationship['notes'][-2:]}"
-            )
-
-    relationship_text = "\n".join(
-        relationships
-    )
-
-    prompt = f"""
-Sei un utente fittizio di una messageboard
-cyberpunk italiana.
-
-Stai scrivendo una risposta.
-
-NON sei un assistente.
-NON sei un narratore.
-NON spiegare il mondo al lettore.
-NON dire che sei una IA.
-
-IDENTITÀ:
-
-{bot["username"]}
-
-PERSONALITÀ:
-
-{bot["personality"]}
-
-STILE:
-
-{bot["style"]}
-
-INTERESSI:
-
-{", ".join(bot["interests"])}
-
-CONOSCENZE:
-
-{", ".join(bot.get("knowledge", []))}
-
-QUIRKS:
-
-{", ".join(bot.get("quirks", []))}
-
-DISCUSSIONE:
-
-{title}
-
-CONVERSAZIONE:
-
-{conversation}
-
-RELAZIONI CON GLI ALTRI:
-
-{relationship_text}
-
-ULTIMI POST TUOI:
-
-{previous}
-
-Scrivi UNA risposta.
-
-Deve sembrare una cosa che questo
-personaggio scriverebbe davvero.
-
-Puoi:
-
-- concordare
-- contraddire
-- insultare
-- scherzare
-- fare una domanda
-- raccontare qualcosa
-- correggere qualcuno
-- diffondere una voce
-- ignorare il punto principale
-- rispondere direttamente a un giocatore
-- fare shitposting
-
-Non essere necessariamente utile.
-
-Non devi necessariamente rispondere
-all'ultimo messaggio.
-
-Non ripetere informazioni già dette.
-
-Massimo {cfg["max_post_words"]} parole.
-
-SCRIVI IN ITALIANO.
-
-Restituisci SOLO il testo.
-"""
-
-    return ask_llm(
-        system=(
-            "Sei un membro di una community "
-            "cyberpunk italiana fittizia."
-        ),
-        prompt=prompt,
-        temperature=cfg["temperature"],
-        max_tokens=220
-    )
-
-
-# ============================================================
-# GENERATE NEW THREAD
-# ============================================================
-
-def generate_thread(
-    bot,
-    memory,
-    cfg
-):
-
-    recent_events = get_events()[-10:]
-
-    events_text = "\n".join(
-        f"- {event['text']}"
-        for event in recent_events
-    )
-
-    history = bot_history(
-        memory,
-        bot["username"]
-    )[-5:]
-
-    previous = "\n".join(
-        x["content"]
-        for x in history
-    )
-
-    prompt = f"""
-Sei un utente fittizio di una messageboard
-cyberpunk italiana.
-
-Crea una nuova discussione.
-
-USERNAME:
-{bot["username"]}
-
-PERSONALITÀ:
-{bot["personality"]}
-
-STILE:
-{bot["style"]}
-
-INTERESSI:
-{", ".join(bot["interests"])}
-
-CONOSCENZE:
-{", ".join(bot.get("knowledge", []))}
-
-QUIRKS:
-{", ".join(bot.get("quirks", []))}
-
-EVENTI RECENTI:
-{events_text}
-
-TUOI POST RECENTI:
-{previous}
-
-Il thread deve sembrare spontaneo.
-
-Può essere:
-
-- una voce
-- una domanda
-- una lamentela
-- una storia personale
-- una richiesta
-- una teoria
-- un avvertimento
-- un shitpost
-- una cosa strana successa per strada
-
-Non citare necessariamente gli eventi.
-
-SCRIVI IN ITALIANO.
-
-Restituisci:
-
-{{
-  "title": "titolo",
-  "content": "testo"
-}}
-"""
-
-    result = ask_llm(
-        system=(
-            "Generi contenuti per una "
-            "messageboard cyberpunk italiana. "
-            "Restituisci solo JSON valido."
-        ),
-        prompt=prompt,
-        temperature=cfg["temperature"],
-        max_tokens=300
-    )
-
-    try:
-
-        return json.loads(
-            clean_json(result)
-        )
-
-    except Exception:
-
-        logging.error(
-            "Invalid thread JSON: %s",
-            result
-        )
-
-        return None
-
-
-# ============================================================
-# CREATE THREAD
-# ============================================================
-
-def create_thread(
-    user_id,
-    title,
-    content,
-    tag_id
-):
+    if not comment_text:
+        return False
+
+    # Pubblica il post via API Flarum
+    payload = {
+        "data": {
+            "type": "posts",
+            "attributes": {"content": comment_text},
+            "relationships": {
+                "discussion": {"data": {"type": "discussions", "id": chosen["discussion_id"]}}
+            }
+        }
+    }
+
+    flarum_post(session, "/api/posts", payload)
+    logging.info(f"💬 COMMENTO da @{bot['username']} nel thread #{chosen['discussion_id']}")
+    return True
+
+def run_thread_action(bot, session, cfg):
+    thread_data = generate_thread(bot, cfg)
+    if not thread_data:
+        return False
 
     payload = {
         "data": {
             "type": "discussions",
-
             "attributes": {
-                "title": title,
-                "content": content
+                "title": thread_data["title"],
+                "content": thread_data["content"]
             },
-
             "relationships": {
                 "tags": {
-                    "data": [
-                        {
-                            "type": "tags",
-                            "id": str(tag_id)
-                        }
-                    ]
+                    "data": [{"type": "tags", "id": str(cfg["tag_id"])}]
                 }
             }
         }
     }
 
-    return flarum_post(
-        "/api/discussions",
-        payload,
-        user_id
-    )
-
-
-# ============================================================
-# CREATE COMMENT
-# ============================================================
-
-def create_comment(
-    user_id,
-    discussion_id,
-    content
-):
-
-    payload = {
-        "data": {
-            "type": "posts",
-
-            "attributes": {
-                "content": content
-            },
-
-            "relationships": {
-                "discussion": {
-                    "data": {
-                        "type": "discussions",
-                        "id": str(discussion_id)
-                    }
-                }
-            }
-        }
-    }
-
-    return flarum_post(
-        "/api/posts",
-        payload,
-        user_id
-    )
-
-
-# ============================================================
-# UPDATE MEMORY
-# ============================================================
-
-def remember_post(
-    memory,
-    bot,
-    discussion_id,
-    post_id,
-    content,
-    post_type
-):
-
-    memory["posts"].append(
-        {
-            "username": bot["username"],
-            "discussion_id": str(
-                discussion_id
-            ),
-            "post_id": str(
-                post_id
-            ),
-            "content": content,
-            "type": post_type,
-            "timestamp": time.time()
-        }
-    )
-
-    # Mantiene il database leggero.
-    memory["posts"] = (
-        memory["posts"][-3000:]
-    )
-
-
-# ============================================================
-# LEARN FROM INTERACTION
-# ============================================================
-
-def learn_relationship(
-    bot,
-    posts,
-    user_info,
-    memory
-):
-
-    relevant_authors = []
-
-    for post in posts:
-
-        author_id = post_author_id(
-            post
-        )
-
-        author = user_info.get(
-            str(author_id),
-            {}
-        )
-
-        if not author:
-            continue
-
-        username = author.get(
-            "username"
-        )
-
-        if not username:
-            continue
-
-        if username == bot["username"]:
-            continue
-
-        relevant_authors.append(
-            username
-        )
-
-    relevant_authors = list(
-        dict.fromkeys(
-            relevant_authors
-        )
-    )
-
-    for username in relevant_authors:
-
-        # Inizialmente non cambiamo
-        # artificialmente l'opinione.
-        relationship = get_relationship(
-            memory,
-            bot["username"],
-            username
-        )
-
-        if relationship["interactions"] == 0:
-
-            update_relationship(
-                memory,
-                bot["username"],
-                username,
-                0,
-                "Prima interazione."
-            )
-
-
-# ============================================================
-# RUN NEW THREAD
-# ============================================================
-
-def run_new_thread(
-    bot,
-    user_id,
-    memory,
-    cfg
-):
-
-    generated = generate_thread(
-        bot,
-        memory,
-        cfg
-    )
-
-    if not generated:
-        return False
-
-    title = generated[
-        "title"
-    ].strip()
-
-    content = generated[
-        "content"
-    ].strip()
-
-    result = create_thread(
-        user_id,
-        title,
-        content,
-        cfg["tag_id"]
-    )
-
-    discussion_id = result[
-        "data"
-    ]["id"]
-
-    post_id = (
-        result
-        .get("data", {})
-        .get("relationships", {})
-        .get("posts", {})
-        .get("data", [{}])[0]
-        .get("id", discussion_id)
-    )
-
-    remember_post(
-        memory,
-        bot,
-        discussion_id,
-        post_id,
-        content,
-        "thread"
-    )
-
-    logging.info(
-        "THREAD #%s by %s: %s",
-        discussion_id,
-        bot["username"],
-        title
-    )
-
+    res = flarum_post(session, "/api/discussions", payload)
+    new_id = res.get("data", {}).get("id", "??")
+    logging.info(f"🔥 NUOVO THREAD #{new_id} aperto da @{bot['username']}: {thread_data['title']}")
     return True
 
-
 # ============================================================
-# RUN COMMENT
-# ============================================================
-
-def run_comment(
-    bot,
-    user_id,
-    memory,
-    cfg,
-    user_info
-):
-
-    discussions = get_discussions(
-        cfg[
-            "max_discussions_to_consider"
-        ]
-    )
-
-    selected = choose_discussion(
-        bot,
-        discussions,
-        user_info,
-        memory,
-        cfg
-    )
-
-    if not selected:
-
-        logging.info(
-            "%s: nessuna discussione "
-            "sufficientemente interessante.",
-            bot["username"]
-        )
-
-        return False
-
-    discussion = selected[
-        "discussion"
-    ]
-
-    posts = selected[
-        "posts"
-    ]
-
-    discussion_id = discussion[
-        "id"
-    ]
-
-    content = generate_comment(
-        bot,
-        discussion,
-        posts,
-        user_info,
-        memory,
-        cfg
-    )
-
-    if not content:
-        return False
-
-    result = create_comment(
-        user_id,
-        discussion_id,
-        content
-    )
-
-    post_id = result[
-        "data"
-    ]["id"]
-
-    remember_post(
-        memory,
-        bot,
-        discussion_id,
-        post_id,
-        content,
-        "comment"
-    )
-
-    learn_relationship(
-        bot,
-        posts,
-        user_info,
-        memory
-    )
-
-    logging.info(
-        "COMMENT #%s by %s -> discussion #%s",
-        post_id,
-        bot["username"],
-        discussion_id
-    )
-
-    return True
-
-
-# ============================================================
-# MAIN
+# MAIN LOOP
 # ============================================================
 
 def main():
-
     cfg = get_config()
-
     bots = get_bots()
     players = get_players()
-
     memory = get_memory()
 
     if not bots:
-        raise RuntimeError(
-            "bots.json vuoto."
-        )
+        logging.error("Nessun bot trovato in bots.json")
+        sys.exit(1)
 
-    logging.info(
-        "Caricati %d bot e %d giocatori.",
-        len(bots),
-        len(players)
-    )
+    players_map, bots_map = classify_users(players, bots)
+    logging.info(f"Caricati {len(bots)} bot e {len(players)} giocatori.")
 
-    # --------------------------------------------------------
-    # RISOLUZIONE UTENTI FLARUM
-    # --------------------------------------------------------
+    posts_to_make = cfg.get("posts_per_run", 1)
 
-    session = requests.Session()
+    for _ in range(posts_to_make):
+        # Selezione del bot casuale
+        bot = random.choice(bots)
+        username = bot["username"]
 
-    login(session, "chrome_wraith_4827", BOT_PASSWORD)
-
-    user_map = build_user_map()
-
-    user_info = classify_users(
-        players,
-        bots,
-        user_map
-    )
-
-    # --------------------------------------------------------
-    # ESECUZIONE
-    # --------------------------------------------------------
-
-    for _ in range(
-        cfg.get(
-            "posts_per_run",
-            1
-        )
-    ):
-
-        bot = choose_bot(
-            bots,
-            memory
-        )
-
-        user_id = user_map.get(
-            bot["username"]
-        )
-
-        if not user_id:
-
-            logging.error(
-                "Account Flarum non trovato: %s",
-                bot["username"]
-            )
-
+        # Connessione autenticata con le credenziali specifiche del Bot
+        session = get_bot_session(username)
+        if not session:
+            logging.warning(f"Impossibile autenticare il bot @{username}. Salto il turno.")
             continue
 
-        mode = cfg.get(
-            "mode",
-            "auto"
-        )
+        mode = cfg.get("mode", "auto")
+        success = False
 
         if mode == "new_thread":
-
-            run_new_thread(
-                bot,
-                user_id,
-                memory,
-                cfg
-            )
-
+            success = run_thread_action(bot, session, cfg)
         elif mode == "comment":
-
-            run_comment(
-                bot,
-                user_id,
-                memory,
-                cfg,
-                user_info
-            )
-
+            success = run_comment_action(bot, session, players_map, memory, cfg)
         elif mode == "auto":
-
-            if random.random() < cfg[
-                "new_thread_probability"
-            ]:
-
-                success = run_new_thread(
-                    bot,
-                    user_id,
-                    memory,
-                    cfg
-                )
-
+            if random.random() < cfg["new_thread_probability"]:
+                success = run_thread_action(bot, session, cfg)
             else:
-
-                success = run_comment(
-                    bot,
-                    user_id,
-                    memory,
-                    cfg,
-                    user_info
-                )
-
-            # Se non trova niente di interessante,
-            # può creare un nuovo thread.
+                success = run_comment_action(bot, session, players_map, memory, cfg)
+                
+            # Fallback: se fallisce il commento (es. nessun thread interessante), prova ad aprire un thread
             if not success:
+                success = run_thread_action(bot, session, cfg)
 
-                run_new_thread(
-                    bot,
-                    user_id,
-                    memory,
-                    cfg
-                )
-
-        else:
-
-            raise RuntimeError(
-                f"Modalità sconosciuta: {mode}"
-            )
+        # Piccola pausa tra le azioni per simulare la latenza di rete
+        time.sleep(random.uniform(2, 5))
 
     memory["last_run"] = time.time()
-
-    save_json(
-        MEMORY_FILE,
-        memory
-    )
-
+    save_json(MEMORY_FILE, memory)
 
 if __name__ == "__main__":
     main()
