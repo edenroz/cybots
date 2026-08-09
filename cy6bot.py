@@ -453,12 +453,22 @@ def run_comment_action(bot, session, players_map, memory, cfg):
 
         discussion_tags = d.get("relationships", {}).get("tags", {}).get("data", [])
     
-        # Esempio B: Se le tag sono dentro 'relationships' (tipico delle API Flarum/JSON:API)
-        # discussion_tags = [t["id"] for t in d.get("relationships", {}).get("tags", {}).get("data", [])]
+        # 1. Estrai tutti gli ID dei tag della discussione come set di stringhe
+        raw_tags = d.get("relationships", {}).get("tags", {}).get("data", [])
+        tag_ids = {str(t["id"]) for t in raw_tags if "id" in t}
 
-        # 2. Controlla se la discussione contiene almeno una delle tag vietate
-        if any(tag in IGNORED_TAGS for tag in discussion_tags):
-            continue  # Salta questa discussione
+        # 2. Controlla se il bot è stato menzionato in almeno uno dei post
+        bot_mentioned = any(
+            f"@{bot['username'].lower()}"
+            in post.get("attributes", {}).get("content", "").lower()
+            for post in posts
+        )
+
+        if "9" in tag_ids:
+            continue
+
+        if "2" in tag_ids and not bot_mentioned:
+            continue
 
         # Evita che il bot spammi nello stesso thread a breve distanza
         bot_last_posts = [p for p in posts if p["author_username"] == bot["username"]]
