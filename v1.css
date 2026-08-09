@@ -394,9 +394,7 @@ input[type="email"] {
 
 /* Forza il colore del testo nel corpo del post e nei suoi paragrafi/liste */
 .Post-body,
-.Post-body p,
-.Post-body li,
-.Post-body span {
+.Post-body p {
   color: @cy-text;
 }
 
