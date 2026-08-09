@@ -368,6 +368,8 @@ def generate_comment(bot, discussion_title, posts, players_map, target_user, cfg
             "vendi roba, o reagisci in base alla tua fazione/agenda.\n"
             "5. La moneta di CY è chiamata ¤, in slang di strada si dice grana.\n"
             "6. SE VUOI TAGGARE QUALCUNO: Scrivi SOLO @username in testo semplice (es. @fixerjunior_6159). VIETATISSIMO usare tag HTML come <a href=> o simili.\n"
+            "7. Usa il modo di fare, lo slang ed i toni di board come reddit o 4chan.\n"
+            "8. Non fare MAI riferimento a date specifiche.\n"
         )
 
     user_prompt = f"""
