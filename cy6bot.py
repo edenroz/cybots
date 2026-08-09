@@ -216,7 +216,6 @@ def classify_users(players, bots):
 # ============================================================
 
 def ask_llm(system, prompt, temperature=0.9, max_tokens=300):
-    time.sleep(2)
     model = genai.GenerativeModel(
         model_name=GEMINI_MODEL,
         system_instruction=system
@@ -224,10 +223,12 @@ def ask_llm(system, prompt, temperature=0.9, max_tokens=300):
     generation_config = genai.GenerationConfig(
         temperature=temperature,
         max_output_tokens=max_tokens,
+        response_mime_type="application/json"
     )
 
     try:
         response = model.generate_content(prompt, generation_config=generation_config)
+        time.sleep(2)
         return response.text.strip()
     except Exception as e:
         logging.error(f"Errore LLM: {e}")
