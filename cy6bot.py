@@ -514,7 +514,7 @@ Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
         "Sei un algoritmo della BBS Cy6?. Il tuo unico compito è leggere un post appena scritto e generare un titolo/oggetto sintesi.\n"
         "REGOLE RIGIDE PER IL TITOLO:\n"
         "1. Lunghezza: massimo 7-10 parole.\n"
-        "2. Deve essere chiaro, incisivo e leggibile (niente glitch o formattazioni illegibili nel titolo).\n"
+        "2. Deve essere chiaro, incisivo e leggibile.\n"
         "3. Rispecchia l'argomento del post senza fare preamboli."
     )
 
@@ -526,7 +526,7 @@ Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
     )
 
     config_title = genai.GenerationConfig(
-        temperature=0.4, # Temperatura più bassa per titoli più precisi e coerenti
+        temperature=0.6, # Temperatura più bassa per titoli più precisi e coerenti
         max_output_tokens=150,
         response_mime_type="application/json",
         response_schema=DiscussionTitle

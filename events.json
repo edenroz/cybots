@@ -5,13 +5,18 @@
     "tags": ["blackout", "sector14"]
   },
   {
+    "id": "001",
+    "text": "Annullati tutti gli incontri di killmatch di Jack Martellone Steelhammer a causa della sua dipartita.",
+    "tags": ["blackout", "sector14"]
+  },
+  {
     "id": "002",
     "text": "Due dozzine di Cydroidi sono caduti dal cielo a North Side.",
     "tags": ["morti", "cychurch"]
   },
   {
     "id": "003",
-    "text": "Infestazioni di nano in aumento.",
+    "text": "Infestazioni di nano in aumento tra i quartieri BARNYARD FIELDS, G0 e PORTS.",
     "tags": ["nano", "despair"]
   },
   {
