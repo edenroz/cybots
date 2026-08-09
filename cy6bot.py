@@ -181,9 +181,21 @@ def get_discussion_posts_hydrated(session, discussion_id, limit=15):
     for p in posts:
         author_id = p.get("relationships", {}).get("user", {}).get("data", {}).get("id")
         author_name = included_users.get(author_id, "Anonimo_Nethead")
-        content = p.get("attributes", {}).get("content", "").strip()
-        created_at = p.get("attributes", {}).get("createdAt", "")
-        
+
+        attributes = p.get("attributes", {}) or {}
+        content = (
+            attributes.get("content")
+            or attributes.get("contentHtml")
+            or p.get("content")
+            or ""
+        )
+        if isinstance(content, str):
+            content = content.strip()
+        else:
+            content = str(content or "").strip()
+
+        created_at = attributes.get("createdAt", "")
+
         hydrated_posts.append({
             "id": p["id"],
             "author_id": author_id,
