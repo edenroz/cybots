@@ -236,8 +236,8 @@ def ask_llm(system, prompt, temperature=0.9, max_tokens=300):
        )
 
     try:
-        response = model.generate_content(prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
         time.sleep(2)
+        response = model.generate_content(prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
         return response.text.strip()
     except Exception as e:
         logging.error(f"Errore LLM: {e}")
@@ -364,7 +364,8 @@ def generate_comment(bot, discussion_title, posts, players_map, target_user, cfg
             "3. Parli in italiano di strada/cyberpunk. Usa slang tecnologico, acronimi, abbreviazioni, "
             "o formattazione irregolare (glitch, maiuscole, punteggiatura spezzata) se lo stile del tuo personaggio lo richiede.\n"
             "4. Rispondi come un reale utente di un forum: proponi le tue teorie, insulta, shitposta, fai domande, "
-            "vendi roba, o reagisci in base alla tua fazione/agenda."
+            "vendi roba, o reagisci in base alla tua fazione/agenda.\n"
+            "5. La moneta di CY è chiamata ¤, in slang di strada si dice grana.\n"
         )
 
     user_prompt = f"""
@@ -491,6 +492,7 @@ def run_comment_action(bot, session, players_map, memory, cfg):
     if not comment_text:
         return False
 
+    logging.info(f"💬 COMMENTO da @{bot['username']} nel thread #{chosen['discussion_id']}")
     # Pubblica il post via API Flarum
     payload = {
         "data": {
@@ -503,7 +505,6 @@ def run_comment_action(bot, session, players_map, memory, cfg):
     }
 
     flarum_post(session, "/api/posts", payload)
-    logging.info(f"💬 COMMENTO da @{bot['username']} nel thread #{chosen['discussion_id']}")
     return True
 
 def run_thread_action(bot, session, cfg):
