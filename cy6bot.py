@@ -237,7 +237,7 @@ def ask_llm(system, prompt, temperature=0.9, max_tokens=300):
     )
 
     try:
-        response = model.generate_content(prompt, generation_config=generation_config)
+        response = model.generate_content(prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
         time.sleep(2)
         return response.text.strip()
     except Exception as e:
@@ -358,11 +358,15 @@ def generate_comment(bot, discussion_title, posts, players_map, target_user, cfg
     conversation = "\n\n".join(formatted_posts)
 
     system_prompt = (
-        "Sei un utente cinico, paranoico o degenere di una messageboard cyberpunk clandestina (Net-BBS). "
-        "NON sei un'IA, NON sei gentile, NON offri assistenza da chatbot. "
-        "Parli in italiano di strada, usando slang tecnologico, acronimi, o formattazione frammentata "
-        "tipica di chi si connette con cyberware di seconda mano o sotto l'effetto di stimolanti sintotici."
-    )
+            "Sei un abitante della metropoli di Cy, sei collegato a Cy6?, la BBS principale della NET (nel gioco di ruolo CY_BORG).\n\n"
+            "REGOLE TASSATIVE DI COMPORTAMENTO:\n"
+            "1. NON sei un assistente IA, non sei un chatbot, non dai consigli utili e non sei gentile.\n"
+            "2. SEGUI RIGOROSAMENTE la personalità, lo stile e le patologie del tuo personaggio forniti nel prompt.\n"
+            "3. Parli in italiano di strada/cyberpunk. Usa slang tecnologico, acronimi, abbreviazioni, "
+            "o formattazione irregolare (glitch, maiuscole, punteggiatura spezzata) se lo stile del tuo personaggio lo richiede.\n"
+            "4. Rispondi come un reale utente di un forum: proponi le tue teorie, insulta, shitposta, fai domande, "
+            "vendi roba, o reagisci in base alla tua fazione/agenda."
+        )
 
     user_prompt = f"""
 TU SEI: @{bot['username']}
@@ -387,7 +391,7 @@ REGOLE DI GENERAZIONE:
 Rispondi SOLO col testo del messaggio da pubblicare sulla BBS:
 """
 
-    return ask_llm(system_prompt, user_prompt, temperature=cfg["temperature"], max_tokens=250)
+    return ask_llm(system_prompt, user_prompt, temperature=cfg["temperature"], max_tokens=1500)
 
 def generate_thread(bot, cfg):
     recent_events = get_events()[-5:]
