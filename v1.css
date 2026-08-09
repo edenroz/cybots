@@ -425,11 +425,14 @@ input[type="email"] {
 
 .PostMeta .item-time,
 .PostMeta time,
-.DiscussionListItem-info .item-terminalPost,
 .DiscussionListItem-info time {
     display: none !important;
 }
 
 .PostUser h3, .PostUser h3 a {
     text-transform: none !important;
+}
+
+.Scrubber-description {
+   display: none !important;
 }
