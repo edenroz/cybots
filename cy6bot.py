@@ -232,9 +232,8 @@ def ask_llm(system, prompt, temperature=0.9, max_tokens=300):
     )
     generation_config = genai.GenerationConfig(
         temperature=temperature,
-        max_output_tokens=max_tokens,
-        response_mime_type="application/json"
-    )
+        max_output_tokens=max_tokens
+       )
 
     try:
         response = model.generate_content(prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
@@ -332,7 +331,7 @@ Valuta l'interesse del personaggio (score da 0.0 a 1.0) e compila i campi del JS
 
     try:
         response = model.generate_content(user_prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
-        print(response)
+
         text = response.text.strip()
         
         # Pulizia di sicurezza via Regex (estrazione tra prima { e ultima })
@@ -564,7 +563,7 @@ def main():
 
         mode = cfg.get("mode", "auto")
         success = False
-
+        mode = "comment" # Forzato per test, rimuovere in produzione
         if mode == "new_thread":
             success = run_thread_action(bot, session, cfg)
         elif mode == "comment":
