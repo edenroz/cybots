@@ -444,3 +444,7 @@ input[type="email"] {
         font-weight: bold;
     }
 }
+
+.Post-body blockquote {
+    background: #00ff;
+}
