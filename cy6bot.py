@@ -515,8 +515,7 @@ Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
         "REGOLE RIGIDE PER IL TITOLO:\n"
         "1. Lunghezza: massimo 7-10 parole.\n"
         "2. Deve essere chiaro, incisivo e leggibile (niente glitch o formattazioni illegibili nel titolo).\n"
-        "3. ZERO hashtag nel titolo.\n"
-        "4. Rispecchia l'argomento del post senza fare preamboli."
+        "3. Rispecchia l'argomento del post senza fare preamboli."
     )
 
     user_prompt_title = f"Genera un titolo breve per questo post:\n\n\"{content_text}\""
