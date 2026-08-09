@@ -501,7 +501,7 @@ Crea un nuovo thread. Può essere:
     try:
         time.sleep(2)
         response = model.generate_content(user_prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
-        print(response)
+
         text = response.text.strip()
         
         # Pulizia di sicurezza via Regex (estrazione tra prima { e ultima })
