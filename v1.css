@@ -429,3 +429,7 @@ input[type="email"] {
 .DiscussionListItem-info time {
     display: none !important;
 }
+
+.PostUser h3, .PostUser h3 a {
+    text-transform: none !important;
+}
