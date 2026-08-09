@@ -454,7 +454,7 @@ def generate_thread(bot, cfg):
         "10. NON spiegare la lore al lettore.\n"
         "11. REGOLA ANTI-SPAM:\n"
         "   - È severamente vietato generare codice binario o lunghe stringhe di numeri senza senso.\n"
-        "   - NO HASHTAG MULTIPLI (al massimo DUE).\n"
+        "   - NO HASHTAG MULTIPLI (al massimo UNO a fine post).\n"
         "   - Nessuna parola inventata più lunga di 15 caratteri.\n\n"
         "Gli ID delle board disponibili sono:\n"
         "- 4: market compro/vendo\n"
@@ -470,7 +470,7 @@ PERSONALITA': {bot['personality']}
 STILE: {bot['style']}
 INTERESSI: {", ".join(bot['interests'])}
 
-RUMORS / EVENTI IN CITTA' che potrebbero ispirati:
+RUMORS / EVENTI IN CITTA' che potrebbero ispirati, scegline al massimo UNO, se stai facendo teorie del complotto al massimo DUE:
 {events_text}
 
 Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
@@ -718,7 +718,7 @@ def main():
 
         mode = cfg.get("mode", "auto")
         success = False
-        mode = "new_thread" # Forzato per test, rimuovere in produzione
+        mode = "auto" # Forzato per test, rimuovere in produzione
         if mode == "new_thread":
             success = run_thread_action(bot, session, cfg)
         elif mode == "comment":
