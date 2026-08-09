@@ -493,7 +493,7 @@ def run_comment_action(bot, session, players_map, memory, cfg):
     if not comment_text:
         return False
 
-    logging.info(f"💬 COMMENTO da @{bot['username']} nel thread #{chosen['discussion_id']}")
+    logging.info(f"💬 COMMENTO da @{bot['username']} nel thread #{chosen['discussion_id']}: {comment_text}")
     # Pubblica il post via API Flarum
     payload = {
         "data": {
