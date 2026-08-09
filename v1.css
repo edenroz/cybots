@@ -63,7 +63,7 @@ body::after {
 /* --- ANIMAZIONI GLITCH SULLE SINGOLE LETTERE (.cy-char) --- */
 /* --- ANIMAZIONI GLITCH SULLE SINGOLE LETTERE (.cy-char) --- */
 .cy-char {
-  display: inline-block;
+  display: inline;
 }
 
 /* Durata impostata a 30s per ogni ciclo con ritardi (delay) sfalsati */
