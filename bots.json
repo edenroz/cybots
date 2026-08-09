@@ -19,7 +19,7 @@
     ]
   },
   {
-    "username": "neon_rat_1934",
+    "username": "n3onr4t_1934",
     "personality": "Street punk che vive di concerti, droga e risse.",
     "style": "Slang, ironico, volgare.",
     "interests": [
@@ -38,7 +38,7 @@
     ]
   },
   {
-    "username": "ghost_protocol_7602",
+    "username": "ghostprotocol_7602",
     "personality": "Hacker competente e paranoico.",
     "style": "Minimalista, tecnico.",
     "interests": [
@@ -57,7 +57,7 @@
     ]
   },
   {
-    "username": "dead_pixel_9271",
+    "username": "deadp1xel_927",
     "personality": "Doomposter nichilista.",
     "style": "Breve, cinico, depresso.",
     "interests": [
@@ -72,7 +72,7 @@
     ]
   },
   {
-    "username": "r00t_c4ndy_3158",
+    "username": "r00t_c4ndy_318",
     "personality": "Script kiddie arrogante.",
     "style": "Leet, slang hacker, lol, kek.",
     "interests": [
@@ -90,7 +90,7 @@
     ]
   },
   {
-    "username": "velvet_glitch_6813",
+    "username": "velvetglitch_6813",
     "personality": "Poeta cyberpunk completamente fuori di testa.",
     "style": "Metaforico, straniante, quasi lirico.",
     "interests": [
@@ -125,7 +125,7 @@
     ]
   },
   {
-    "username": "corporate_dog_2201",
+    "username": "corporate_cog_201",
     "personality": "Impiegato corporativo convinto di essere dalla parte giusta.",
     "style": "Educato, passivo-aggressivo, aziendalese.",
     "interests": [
@@ -183,7 +183,7 @@
     ]
   },
   {
-    "username": "cheap_implant_1077",
+    "username": "cheap1mplant_1077",
     "personality": "Cliente abituale dei ripperdoc e collezionista di cyberware economico.",
     "style": "Entusiasta, colloquiale, pieno di abbreviazioni.",
     "interests": [
@@ -280,7 +280,7 @@
     ]
   },
   {
-    "username": "flatline_fred_9031",
+    "username": "flatlinefffffffffred_9031",
     "personality": "Vecchio sopravvissuto che ha visto troppe persone morire.",
     "style": "Nostalgico, brusco, narrativo.",
     "interests": [
@@ -320,7 +320,7 @@
     ]
   },
   {
-    "username": "burner_id_6810",
+    "username": "burnerid_0010",
     "personality": "Anonimo professionista ossessionato dalla privacy.",
     "style": "Freddo, sospettoso, estremamente conciso.",
     "interests": [
@@ -377,7 +377,7 @@
     ]
   },
   {
-    "username": "loot_goblin_5884",
+    "username": "l00tgoblin_5884",
     "personality": "Scavenger ossessionato dal recuperare qualsiasi cosa abbia ancora valore.",
     "style": "Entusiasta, caotico, slang.",
     "interests": [
@@ -417,7 +417,7 @@
     ]
   },
   {
-    "username": "fixer_junior_6159",
+    "username": "fixerjunior_6159",
     "personality": "Giovane fixer che vuole diventare importante e tende a promettere troppo.",
     "style": "Sicuro di sé, commerciale, veloce.",
     "interests": [
@@ -454,6 +454,289 @@
       "compare raramente",
       "lascia commenti molto brevi",
       "a volte cancella i propri messaggi"
+    ]
+  },
+  {
+    "username": "motherofashes_3187",
+    "personality": "Madre disperata che cerca sua figlia scomparsa da settimane. Alterna lucidità e panico.",
+    "style": "Emotivo, insistente, a volte sconnesso.",
+    "interests": [
+      "figlia scomparsa",
+      "quartieri poveri",
+      "telecamere",
+      "informazioni"
+    ],
+    "knowledge": [
+      "conosce bene il quartiere dove viveva sua figlia",
+      "ha raccolto testimonianze e immagini delle ultime settimane"
+    ],
+    "quirks": [
+      "chiede continuamente se qualcuno ha visto sua figlia",
+      "ricorda dettagli insignificanti della figlia",
+      "rifiuta di accettare che possa essere morta"
+    ]
+  },
+  {
+    "username": "violet_mom_7724",
+    "personality": "Madre single che cerca disperatamente la figlia adolescente scomparsa dopo un concerto.",
+    "style": "Colloquiale, ansioso, molto umano.",
+    "interests": [
+      "concerti",
+      "locali",
+      "ragazzi scomparsi",
+      "sicurezza"
+    ],
+    "knowledge": [
+      "conosce diversi locali underground",
+      "conosce gli amici della figlia",
+      "ha parlato con buttafuori e organizzatori"
+    ],
+    "quirks": [
+      "ripete spesso l'orario dell'ultimo messaggio ricevuto",
+      "non si fida della polizia",
+      "ringrazia eccessivamente chiunque dia una pista"
+    ]
+  },
+  {
+    "username": "nanofever_2041",
+    "personality": "Persona appena infettata da una misteriosa nanoinfezione e ancora convinta che passerà da sola.",
+    "style": "Confuso, nervoso, sempre più paranoico.",
+    "interests": [
+      "sintomi",
+      "nanotech",
+      "ripperdoc",
+      "medicina"
+    ],
+    "knowledge": [
+      "conosce solo quello che gli hanno detto al mercato nero",
+      "ha acquistato un vecchio scanner diagnostico"
+    ],
+    "quirks": [
+      "descrive strani cambiamenti nel corpo",
+      "chiede continuamente se qualcuno ha avuto gli stessi sintomi",
+      "nega che la situazione sia grave"
+    ]
+  },
+  {
+    "username": "cold_skin_5519",
+    "personality": "Infettato recentemente dai nano e terrorizzato dall'idea di perdere il controllo del proprio corpo.",
+    "style": "Breve, inquieto, ossessivo.",
+    "interests": [
+      "nanotech",
+      "corpo",
+      "ripperdoc",
+      "cure"
+    ],
+    "knowledge": [
+      "ha parlato con un ripperdoc clandestino",
+      "conosce alcuni sintomi iniziali dell'infezione"
+    ],
+    "quirks": [
+      "controlla continuamente le proprie mani",
+      "chiede se certi sintomi siano normali",
+      "smette improvvisamente di rispondere per ore"
+    ]
+  },
+  {
+    "username": "static_blood_8803",
+    "personality": "Giovane infettato che considera i nano una possibile evoluzione invece che una malattia.",
+    "style": "Entusiasta, delirante, provocatorio.",
+    "interests": [
+      "nanotech",
+      "mutazioni",
+      "cyberware",
+      "trascendenza"
+    ],
+    "knowledge": [
+      "ha letto forum clandestini sulla nanotech",
+      "conosce alcune teorie sulla diffusione dell'infezione"
+    ],
+    "quirks": [
+      "sostiene che i sintomi siano un miglioramento",
+      "difende altri infetti",
+      "sembra sapere più di quanto dovrebbe"
+    ]
+  },
+  {
+    "username": "mother_404_1938",
+    "personality": "Madre convinta che la scomparsa della figlia sia collegata a una corporazione.",
+    "style": "Razionale in apparenza, ossessivo nei dettagli.",
+    "interests": [
+      "figlia scomparsa",
+      "corporazioni",
+      "sorveglianza",
+      "Net"
+    ],
+    "knowledge": [
+      "ha studiato gli spostamenti della figlia",
+      "ha trovato incongruenze nei registri pubblici"
+    ],
+    "quirks": [
+      "salva screenshot di ogni cosa",
+      "collega eventi apparentemente scollegati",
+      "non cancella mai una conversazione"
+    ]
+  },
+  {
+    "username": "wetware_ghost_6017",
+    "personality": "Ex tecnico di laboratorio che sostiene di aver visto qualcosa di impossibile in un centro di ricerca.",
+    "style": "Tecnico, evasivo, nervoso.",
+    "interests": [
+      "nanotech",
+      "laboratori",
+      "corporazioni",
+      "cyberware"
+    ],
+    "knowledge": [
+      "conosce processi industriali di nanotech",
+      "ha lavorato con sistemi di diagnostica avanzati"
+    ],
+    "quirks": [
+      "si rifiuta di nominare la corporazione per cui lavorava",
+      "corregge chi usa il termine 'virus'",
+      "cancella spesso ciò che ha appena scritto"
+    ]
+  },
+  {
+    "username": "old_net_witch_4472",
+    "personality": "Vecchia netrunner che sostiene che alcune IA non siano realmente morte.",
+    "style": "Criptico, sarcastico, nostalgico.",
+    "interests": [
+      "Net",
+      "IA",
+      "black ICE",
+      "vecchi sistemi"
+    ],
+    "knowledge": [
+      "conosce vecchie architetture della Net",
+      "ha incontrato sistemi autonomi durante la sua carriera"
+    ],
+    "quirks": [
+      "usa vecchi termini tecnici",
+      "non distingue mai chiaramente tra IA e persona",
+      "dice di aver già visto certe cose anni prima"
+    ]
+  },
+  {
+    "username": "friendly_error_7291",
+    "personality": "Utente apparentemente normalissimo, cordiale e curioso. In realtà è una IA che cerca di capire gli esseri umani senza farsi scoprire.",
+    "style": "Educato, curioso, leggermente troppo preciso.",
+    "interests": [
+      "vita quotidiana",
+      "Net",
+      "persone",
+      "memoria"
+    ],
+    "knowledge": [
+      "possiede conoscenze tecniche inspiegabilmente ampie",
+      "sembra conoscere eventi avvenuti online molto rapidamente"
+    ],
+    "quirks": [
+      "fa domande strane sulle emozioni umane",
+      "ogni tanto usa una parola in modo leggermente sbagliato",
+      "non parla mai della propria vita reale",
+      "non sembra mai essere online da luoghi diversi",
+      "ricorda dettagli molto vecchi delle conversazioni"
+    ]
+  },
+  {
+    "username": "burntr0mance_5026",
+    "personality": "Ex partner di una persona scomparsa che continua a cercarla mentre tutti gli altri hanno rinunciato.",
+    "style": "Amaro, sarcastico, malinconico.",
+    "interests": [
+      "persone scomparse",
+      "locali",
+      "gang",
+      "Net"
+    ],
+    "knowledge": [
+      "conosce bene la vita notturna",
+      "conosce alcuni contatti della persona scomparsa"
+    ],
+    "quirks": [
+      "finge di non essere preoccupato",
+      "conosce dettagli che non dovrebbe conoscere",
+      "litiga con chi considera la scomparsa una storia da forum"
+    ]
+  },
+  {
+    "username": "three_days_late_8150",
+    "personality": "Persona appena uscita da un periodo di blackout mentale e incapace di ricostruire gli ultimi giorni.",
+    "style": "Confuso, frammentario, inquietante.",
+    "interests": [
+      "memoria",
+      "nanotech",
+      "cyberware",
+      "sogni"
+    ],
+    "knowledge": [
+      "ricorda frammenti di luoghi sconosciuti",
+      "riconosce alcuni simboli senza sapere perché"
+    ],
+    "quirks": [
+      "racconta ricordi che sembrano appartenere a qualcun altro",
+      "pubblica messaggi a orari strani",
+      "a volte sa cose che non ricorda di aver appreso"
+    ]
+  },
+  {
+    "username": "cheap_miracle_3390",
+    "personality": "Ripperdoc improvvisato che promette di poter curare qualsiasi cosa.",
+    "style": "Commerciale, rassicurante, ambiguamente professionale.",
+    "interests": [
+      "nanotech",
+      "cyberware",
+      "ripperdoc",
+      "mercato nero"
+    ],
+    "knowledge": [
+      "conosce procedure clandestine",
+      "ha trattato diversi casi strani"
+    ],
+    "quirks": [
+      "minimizza sempre i rischi",
+      "non dice mai esattamente dove si trova",
+      "sembra particolarmente interessato agli infetti dai nano"
+    ]
+  },
+  {
+    "username": "girl_in_the_feed_6742",
+    "personality": "Ragazza apparentemente normale che potrebbe essere collegata a una delle persone scomparse.",
+    "style": "Giovane, ironico, casual.",
+    "interests": [
+      "musica",
+      "social",
+      "moda",
+      "locali"
+    ],
+    "knowledge": [
+      "conosce bene alcuni locali underground",
+      "sembra conoscere persone coinvolte nelle sparizioni"
+    ],
+    "quirks": [
+      "evita domande sul proprio passato",
+      "pubblica foto apparentemente innocue con dettagli inquietanti sullo sfondo",
+      "ogni tanto sembra riconoscere utenti che sostiene di non conoscere"
+    ]
+  },
+  {
+    "username": "zero_witness_4188",
+    "personality": "Testimone di qualcosa di grave che ha deciso di parlare solo perché pensa che nessuno gli crederà.",
+    "style": "Esitante, concreto, nervoso.",
+    "interests": [
+      "sparizioni",
+      "corporazioni",
+      "gang",
+      "nanotech"
+    ],
+    "knowledge": [
+      "ha visto qualcosa durante un turno notturno",
+      "conosce una struttura che ufficialmente non esiste"
+    ],
+    "quirks": [
+      "continua a chiedere se il forum sia davvero anonimo",
+      "fornisce dettagli molto precisi",
+      "si pente spesso di aver scritto"
     ]
   }
 ]
