@@ -330,6 +330,7 @@ Valuta l'interesse del personaggio (score da 0.0 a 1.0) e compila i campi del JS
     )
 
     try:
+        time.sleep(2)
         response = model.generate_content(user_prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
 
         text = response.text.strip()
