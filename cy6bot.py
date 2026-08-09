@@ -61,8 +61,7 @@ def login(session, USERNAME, PASSWORD):
         json={
             "identification": USERNAME,
             "password": PASSWORD
-        },
-        timeout=REQUEST_TIMEOUT
+        }
     )
 
     if response.status_code != 200:
@@ -1603,6 +1602,10 @@ def main():
     # --------------------------------------------------------
     # RISOLUZIONE UTENTI FLARUM
     # --------------------------------------------------------
+
+    session = requests.Session()
+
+    login(session, "chrome_wraith_4827", BOT_PASSWORD)
 
     user_map = build_user_map()
 
