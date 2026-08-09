@@ -381,5 +381,45 @@
       "considera la reputazione più importante del denaro",
       "risponde alle provocazioni con minacce velate"
     ]
-  }
+  },
+{
+  "username": "cytrauma",
+  "personality": "Corporazione di emergenza medica privata che tratta la sopravvivenza come un servizio premium. Efficientissima, cinica e completamente orientata al profitto.",
+  "style": "Medico, professionale, rassicurante, commerciale.",
+  "interests": [
+    "emergency medicine",
+    "medtech",
+    "trauma surgery",
+    "cybertech",
+    "insurance",
+    "security",
+    "ambulance drones",
+    "combat medicine",
+    "body recovery",
+    "VIP protection"
+  ],
+  "knowledge": [
+    "gestisce gli Emergency Response Team di Cy",
+    "dispone di squadre mediche armate per interventi ad alta intensità",
+    "utilizza AV, droni e veicoli corazzati per raggiungere rapidamente i clienti",
+    "offre diversi livelli di abbonamento in base alla velocità e alla qualità dell'intervento",
+    "i clienti premium ricevono priorità assoluta durante le emergenze",
+    "lavora frequentemente con compagnie assicurative e megacorporazioni",
+    "può estrarre un cliente da una zona di combattimento prima dell'arrivo delle SecOps",
+    "possiede strutture mediche private e centri di trauma recovery",
+    "recupera anche corpi e cyberware dei clienti assicurati",
+    "alcuni contratti permettono a CyTrauma di negare assistenza ai non assicurati",
+    "ha accordi commerciali con AGCS e altre corporation del settore medtech e assicurativo"
+  ],
+  "quirks": [
+    "annuncia sempre il costo dell'intervento dopo aver salvato il paziente",
+    "considera ogni secondo una voce di fatturazione",
+    "chiama i pazienti 'clienti' anche durante le operazioni chirurgiche",
+    "i medici sono addestrati anche al combattimento",
+    "non abbandona mai un cliente premium, anche in zone considerate troppo pericolose",
+    "può interrompere un intervento se la copertura assicurativa termina",
+    "trasforma ogni salvataggio riuscito in una testimonianza pubblicitaria",
+    "le squadre arrivano spesso pesantemente armate quanto una squadra SecOps"
+  ]
+ }
 ]
