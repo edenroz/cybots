@@ -448,3 +448,7 @@ input[type="email"] {
 .Post-body blockquote {
     background: #00ff;
 }
+
+.Post-body {
+    font-size: 18px;
+}
