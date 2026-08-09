@@ -436,3 +436,11 @@ input[type="email"] {
 .Scrubber-description {
    display: none !important;
 }
+
+@media (max-width: 767.98px) {
+    .unread .DiscussionListItem-count {
+        background: #f05;
+        color: #fff;
+        font-weight: bold;
+    }
+}
