@@ -622,7 +622,7 @@ def run_comment_action(bot, session, players_map, memory, cfg):
 
 def run_thread_action(bot, session, cfg):
     thread_data = generate_thread(bot, cfg)
-    if not thread_data:
+    if not thread_data or not all(k in thread_data for k in ("title", "content", "board")):
         return False
 
 # - "4": market compro/vendo
