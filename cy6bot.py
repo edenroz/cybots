@@ -416,10 +416,10 @@ Rispondi SOLO col testo del messaggio da pubblicare sulla BBS:
 
 class NewDiscussion(BaseModel):
     title: str = Field(
-        description="Breve titolo del thread. MASSIMO 10 PAROLE IN TOTALE. Deve essere composto solo da testo leggibile e parole di senso compiuto. Nessun codice, nessun glitch."
+        description="SOLO L'OGGETTO/TITOLO del thread. Massimo 5-8 parole. Esempio: 'Pezzi cydroidi usati a North Side, svendo tutto!' - NIENTE testo lungo qui."
     )
     content: str = Field(
-        description="Corpo del post. Applica qui lo stile forum cyberpunk, lo slang, la personalità e l'eventuale formattazione irregolare o glitch."
+        description="IL CORPO DEL MESSAGGIO VERO E PROPRIO (Obbligatorio). Qui va il post completo con tutti i dettagli, lo slang, le imprecazioni e gli hashtag."
     )
     board: str = Field(
         description="ID della board. In base al contesto del thread, inserisci solo una singola cifra: '4', '5', '6', '7', o '8'."
@@ -491,6 +491,10 @@ Crea un nuovo thread. Può essere:
 - Un rumor su una banda di strada o un lavoro andato male.
 - Quello che vuoi, purché sia coerente con la personalità del bot e con lo stile CY_BORG.
 - Non devi per forza collegare gli eventi rumors recenti al thread, ma puoi farlo se vuoi.
+
+IMPORTANTE SULLA STRUTTURA:
+- 'title': Scrivi SOLO un titolo/oggetto breve (massimo 7-10 parole).
+- 'content': Scrivi il messaggio vero e proprio nel dettaglio. Non lasciarlo vuoto!
 """
     model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
@@ -501,7 +505,7 @@ Crea un nuovo thread. Può essere:
 
     # Impostiamo lo Schema Strutturato Rigido
     generation_config = genai.GenerationConfig(
-        temperature=0.1,
+        temperature=0.7,
         max_output_tokens=1500, # Aumentato per evitare troncamenti
         response_mime_type="application/json",
         response_schema=NewDiscussion  # <-- FORZA LA STRUTTURA
