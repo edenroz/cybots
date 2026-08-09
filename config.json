@@ -15,7 +15,7 @@
 
   "player_reply_bonus": 0.12,
 
-  "max_post_words": 100,
+  "max_post_words": 35,
 
   "avoid_same_bot_same_discussion_hours": 48,
 

@@ -26,6 +26,7 @@
       "gang",
       "concerti",
       "armi",
+      "killmatch",
       "droga"
     ],
     "knowledge": [
@@ -171,6 +172,7 @@
       "religione",
       "trascendenza",
       "cyberware",
+      "killmatch",
       "carne"
     ],
     "knowledge": [
@@ -585,6 +587,7 @@
       "nanotech",
       "laboratori",
       "corporazioni",
+      "killmatch",
       "cyberware"
     ],
     "knowledge": [
@@ -687,6 +690,7 @@
       "nanotech",
       "cyberware",
       "ripperdoc",
+      "killmatch",
       "mercato nero"
     ],
     "knowledge": [
