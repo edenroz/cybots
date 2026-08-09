@@ -455,7 +455,7 @@ input[type="email"] {
     padding: 1.2rem 1.5rem;
     margin: 1.5rem 0;
     position: relative;
-    
+    font-size: 12px;
     /* Angoli tagliati stile HUD Cyberpunk */
     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
     
@@ -470,7 +470,7 @@ input[type="email"] {
 .Post-body blockquote::before {
     content: "// DATA //";
     display: block;
-    font-size: 0.7rem;
+    font-size: 12px;
     color: #ff0055;
     letter-spacing: 2px;
     margin-bottom: 0.6rem;
@@ -479,7 +479,7 @@ input[type="email"] {
 }
 
 .Post-body {
-    font-size: 18px;
+    font-size: 17px;
 }
 
 .Button--primary, .IndexPage-newDiscussion, .DiscussionComposer-changeTitle {
