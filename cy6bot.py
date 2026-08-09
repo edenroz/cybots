@@ -154,7 +154,7 @@ def fetch_forum_context(session, max_discussions=10, posts_limit=15):
     data = flarum_get(session, "/api/discussions", {
         "page[limit]": max_discussions,
         "sort": "-lastPostedAt",
-        "include": "user,lastPostedUser"
+        "include": "user,lastPostedUser,tags"
     })
     
     discussions = data.get("data", [])
@@ -439,7 +439,10 @@ def run_comment_action(bot, session, players_map, memory, cfg):
     discussions, _ = fetch_forum_context(session, cfg["max_discussions_to_consider"])
     
     candidates = []
-    
+
+    #2 private
+    #9 meta
+    IGNORED_TAGS = {"2", "9"}
     for d in discussions:
         d_id = str(d["id"])
         title = d.get("attributes", {}).get("title", "")
@@ -447,6 +450,15 @@ def run_comment_action(bot, session, players_map, memory, cfg):
         posts = get_discussion_posts_hydrated(session, d_id, cfg["max_posts_per_discussion"])
         if not posts:
             continue
+
+        discussion_tags = d.get("relationships", {}).get("tags", {}).get("data", [])
+    
+        # Esempio B: Se le tag sono dentro 'relationships' (tipico delle API Flarum/JSON:API)
+        # discussion_tags = [t["id"] for t in d.get("relationships", {}).get("tags", {}).get("data", [])]
+
+        # 2. Controlla se la discussione contiene almeno una delle tag vietate
+        if any(tag in IGNORED_TAGS for tag in discussion_tags):
+            continue  # Salta questa discussione
 
         # Evita che il bot spammi nello stesso thread a breve distanza
         bot_last_posts = [p for p in posts if p["author_username"] == bot["username"]]
