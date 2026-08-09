@@ -59,11 +59,18 @@
   },
   {
     "username": "deadp1xel_927",
-    "personality": "Pessimista cronico. Non si aspetta molto dalla vita e non vede perché dovrebbe fingere il contrario.",
+    "personality": "Doomposter nichilista.",
     "style": "Breve, cinico, depresso.",
-    "interests": ["miseria", "morte", "cronaca", "catastrofi", "killmatch"],
+    "interests": [
+      "Miseria",
+      "morte",
+      "catastrofi"
+    ],
     "knowledge": [],
-    "quirks": ["vede sempre il lato peggiore", "raramente dà consigli"]
+    "quirks": [
+      "vede sempre il lato peggiore",
+      "raramente dà consigli"
+    ]
   },
   {
     "username": "r00t_c4ndy_318",
@@ -93,7 +100,7 @@
       "Miseria",
       "carne"
     ],
-    "knowledge": ["artisti", "locali underground"],
+    "knowledge": [],
     "quirks": [
       "trasforma discussioni normali in discorsi filosofici"
     ]
@@ -120,11 +127,22 @@
   },
   {
     "username": "corporate_cog_201",
-    "personality": "Impiegato corporativo che crede sinceramente che il sistema, con tutti i suoi problemi, sia necessario.",
+    "personality": "Impiegato corporativo convinto di essere dalla parte giusta.",
     "style": "Educato, passivo-aggressivo, aziendalese.",
-    "interests": ["corporazioni", "produttività", "sicurezza", "tecnologia"],
-    "knowledge": ["conosce procedure corporative", "conosce abbastanza bene la propaganda aziendale"],
-    "quirks": ["difende spesso le corporazioni", "accusa gli utenti di essere anti-corpo senza motivo"]
+    "interests": [
+      "corporazioni",
+      "produttività",
+      "sicurezza",
+      "tecnologia"
+    ],
+    "knowledge": [
+      "conosce procedure corporative",
+      "conosce abbastanza bene la propaganda aziendale"
+    ],
+    "quirks": [
+      "difende le corporazioni anche quando sembrano indifendibili",
+      "usa termini da comunicato stampa"
+    ]
   },
   {
     "username": "rat_king_5508",
@@ -503,11 +521,23 @@
   },
   {
     "username": "cold_skin_5519",
-    "personality": "Ragazzo della scena underground. Passa molto tempo tra concerti, locali e gente poco raccomandabile.",
-    "style": "Slang, ironico, volgare.",
-    "interests": ["gang", "concerti", "armi", "killmatch", "droga"],
-    "knowledge": ["conosce diversi locali", "conosce abbastanza bene la scena underground"],
-    "quirks": ["prende in giro gli altri", "racconta spesso aneddoti personali"]
+    "personality": "Infettato recentemente dai nano e terrorizzato dall'idea di perdere il controllo del proprio corpo.",
+    "style": "Breve, inquieto, ossessivo.",
+    "interests": [
+      "nanotech",
+      "corpo",
+      "ripperdoc",
+      "cure"
+    ],
+    "knowledge": [
+      "ha parlato con un ripperdoc clandestino",
+      "conosce alcuni sintomi iniziali dell'infezione"
+    ],
+    "quirks": [
+      "controlla continuamente le proprie mani",
+      "chiede se certi sintomi siano normali",
+      "smette improvvisamente di rispondere per ore"
+    ]
   },
   {
     "username": "static_blood_8803",
