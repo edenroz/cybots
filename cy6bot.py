@@ -6,14 +6,24 @@ import re
 import sys
 import time
 from pathlib import Path
+from typing import Optional
+from typing_extensions import TypedDict
 
 import requests
 from dotenv import load_dotenv
 import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 # ============================================================
 # CONFIGURAZIONE ED AMBIENTE
 # ============================================================
+# Configurazione dei filtri per permettere finzione RPG / Cyberpunk
+SAFETY_SETTINGS = {
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+}
 
 load_dotenv()
 
@@ -203,7 +213,7 @@ def get_discussion_posts_hydrated(session, discussion_id, limit=15):
             "content": content,
             "created_at": created_at
         })
-        
+
     return hydrated_posts
 
 def classify_users(players, bots):
@@ -234,67 +244,107 @@ def ask_llm(system, prompt, temperature=0.9, max_tokens=300):
         logging.error(f"Errore LLM: {e}")
         return ""
 
-def clean_json(text):
+def clean_json(text: str) -> str:
     text = text.strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?", "", text)
-        text = re.sub(r"```$", "", text)
+    
+    # Rimuove ```json (o varianti con spazi/a capo) all'inizio
+    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+    
+    # Rimuove ``` (con eventuali spazi/a capo) alla fine
+    text = re.sub(r"\s*```$", "", text)
+    
     return text.strip()
+
+def parse_json_safely(text: str):
+    cleaned = clean_json(text)
+    
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        # Se il JSON è troncato (es. manca '}'), proviamo a chiuderlo automaticamente
+        if cleaned.startswith("{") and not cleaned.endswith("}"):
+            try:
+                return json.loads(cleaned + "\n}")
+            except json.JSONDecodeError:
+                pass
+        raise
 
 # ============================================================
 # VALUTAZIONE DISCUSSIONE
 # ============================================================
+# 1. Definiamo la struttura esatta del JSON atteso
+class DiscussionEvaluation(TypedDict):
+    interested: bool
+    score: float
+    reason: str
+    target_user: Optional[str]
+
 
 def evaluate_discussion(bot, discussion_title, posts, players_map, cfg):
     formatted_posts = []
     for p in posts[-10:]:
-        role = "GIOCATORE REALE" if p["author_username"] in players_map else "UTENTE RETE"
+        role = "GIOCATORE REALE" if p["author_username"] in players_map else "BOT/NPC"
         formatted_posts.append(f"[{role}] {p['author_username']}: {p['content']}")
     
     conversation_text = "\n".join(formatted_posts)
     recent_events = get_events()[-5:]
     events_text = "\n".join(f"- {e['text']}" for e in recent_events)
 
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    
+    # System prompt neutro da classificatore
     system_prompt = (
-        "Sei il modulo cognitivo di un abitante di Cy (metropoli cyberpunk decadente). "
-        "Devi decidere se il personaggio interverrà in una discussione della BBS locale. "
-        "Rispondi ESCLUSIVAMENTE in formato JSON valido."
+        "Sei un sistema automatico di classificazione dati per una simulazione RPG. "
+        "Il tuo unico compito è valutare se un personaggio fittizio interverrebbe in un thread. "
+        "Non aggiungere mai introduzioni, saluti o commenti. Compila solo lo schema JSON."
     )
 
     user_prompt = f"""
 PERSONAGGIO:
-Handle: {bot['username']}
-Personalità: {bot['personality']}
-Stile: {bot['style']}
-Interessi: {", ".join(bot['interests'])}
-Quirks: {", ".join(bot.get('quirks', []))}
+- Username: {bot['username']}
+- Personalità: {bot['personality']}
+- Stile: {bot['style']}
+- Interessi: {", ".join(bot['interests'])}
 
-EVENTI IN CITTA':
+EVENTI CITTA':
 {events_text}
 
-THREAD CORRENTE:
-Titolo: {discussion_title}
-Messaggi recenti:
+THREAD:
+- Titolo: {discussion_title}
+- Ultimi Messaggi:
 {conversation_text}
 
-Valuta se questo personaggio ha un motivo reale per rispondere (es: insultare, difendere la propria fazione, dare info sbagliate, commentare un evento, rispondere a un utente reale).
-
-Restituisci SOLO:
-{{
-  "interested": true/false,
-  "score": 0.0,
-  "reason": "motivo sintetico",
-  "target_user": "username a cui vuole rispondere o null"
-}}
-Score da 0.0 a 1.0.
+Valuta l'interesse del personaggio (score da 0.0 a 1.0) e compila i campi del JSON.
 """
 
-    result = ask_llm(system_prompt, user_prompt, temperature=0.2, max_tokens=200)
-    try:
-        return json.loads(clean_json(result))
-    except Exception:
-        return {"interested": False, "score": 0.0, "reason": "parsing_error", "target_user": None}
+    model = genai.GenerativeModel(
+        model_name=model_name,
+        system_instruction=system_prompt
+    )
 
+    # Impostiamo lo Schema Strutturato Rigido
+    generation_config = genai.GenerationConfig(
+        temperature=0.1,
+        max_output_tokens=1500, # Aumentato per evitare troncamenti
+        response_mime_type="application/json",
+        response_schema=DiscussionEvaluation  # <-- FORZA LA STRUTTURA
+    )
+
+    try:
+        response = model.generate_content(user_prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
+        print(response)
+        text = response.text.strip()
+        
+        # Pulizia di sicurezza via Regex (estrazione tra prima { e ultima })
+        json_match = re.search(r'\{.*\}', text, re.DOTALL)
+        if json_match:
+            text = json_match.group(0)
+
+        return json.loads(text)
+
+    except Exception as e:
+        logging.warning(f"Errore valutazione per @{bot['username']}: {e} | Raw: {text if 'text' in locals() else 'None'}")
+        return {"interested": False, "score": 0.0, "reason": "eval_error", "target_user": None}
 # ============================================================
 # GENERAZIONE CONTENUTI (CY_BORG VIBE)
 # ============================================================
@@ -365,8 +415,8 @@ Crea un nuovo thread. Può essere:
 
 Restituisci SOLO questo JSON:
 {{
-  "title": "Titolo d'impatto o grezzo",
-  "content": "Corpo del messaggio..."
+  "title": "[Titolo d'impatto o grezzo che hai creato]",
+  "content": "[Corpo del messaggio che hai creato...]"
 }}
 """
 
