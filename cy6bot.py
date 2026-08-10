@@ -58,8 +58,6 @@ logging.basicConfig(
 LORE_FILE = Path("lore.json")
 
 LORE_PROMPT = """
-CONOSCENZA DEL MONDO
---------------------
 Hai accesso a una raccolta di fatti canonici sul mondo di CY_BORG.
 
 Questi fatti NON sono notizie recenti, NON sono suggerimenti e NON sono materiale da
@@ -854,9 +852,10 @@ def generate_comment(session, bot, discussion_title, posts, players_map, target_
                 "- ignorare completamente il punto principale;\n"
                 "- rispondere con una sola parola;\n"
                 "- raccontare un'esperienza personale.\n"
-            "10. NON cercare di aiutare il giocatore. Se puoi dare informazioni, fallo solo perché il TUO PERSONAGGIO avrebbe un motivo per farlo."
-                "Potresti anche mentire, esagerare o avere informazioni sbagliate.\n Non sei onnisciente. Conosci soltanto ciò che il tuo personaggio"
-                 " potrebbe realisticamente conoscere in CY_BORG vivendo a Cy."
+            "10. NON cercare di aiutare il giocatore. Se puoi dare informazioni, fallo solo "
+                    "perché il TUO PERSONAGGIO avrebbe un motivo per farlo. Puoi mentire, esagerare "
+                    "o sbagliare, ma non inventare fatti che contraddicono la conoscenza canonica "
+                    "del mondo.\n"
             "11. NON spiegare la lore al lettore. Cy, le corporazioni, le gang, la NET e gli eventi del mondo fanno parte della vita quotidiana del personaggio."
                 "Non introdurli come se stessi scrivendo una wiki o spiegando il gioco a qualcuno.\n"
             "CONOSCENZA CANONICA DEL MONDO:\n"
@@ -954,7 +953,10 @@ def generate_thread(bot, cfg):
         "7. Usa il modo di fare, lo slang ed i toni di board come reddit o 4chan.\n"
         "8. Non fare MAI riferimento a date specifiche ('ieri', 'stanotte', 'tempo fa' vanno bene).\n"
         "9. Non devi essere utile a tutti i costi. Puoi mentire, esagerare, fraintendere o dire cavolate.\n"
-        "10. NON spiegare la lore al lettore.\n"
+        "10. NON cercare di aiutare il giocatore. Se puoi dare informazioni, fallo solo "
+                "perché il TUO PERSONAGGIO avrebbe un motivo per farlo. Puoi mentire, esagerare "
+                "o sbagliare, ma non inventare fatti che contraddicono la conoscenza canonica "
+                "del mondo.\n"
         "CONOSCENZA CANONICA DEL MONDO:\n"
         f"""{LORE_PROMPT}\n"""
         "Queste informazioni sono conoscenza di base del personaggio. "
