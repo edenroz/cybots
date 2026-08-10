@@ -854,20 +854,31 @@ Possono contenere opinioni, battute o informazioni sbagliate del personaggio.\n
         recent_events = get_events()
         events_text = "\n".join(f"- {e['text']}" for e in recent_events)
         user_prompt += f"""\n\n
-EVENTI RECENTI IN CITTA': Queste sono cose successe recentemente a Cy e che stanno circolando
-tra la gente, sulla NET, per strada, nei locali o nei canali pubblici.
-NON devi necessariamente parlarne. Considerale semplicemente come
-parte del mondo attuale del personaggio.
-{events_text}.\n
-Puoi:
-- reagire a uno degli eventi se è pertinente alla discussione;
-- collegarlo alla tua esperienza, fazione o interessi;
-- usarlo come battuta, paranoia, teoria o provocazione;
-- comportarti come se ne avessi sentito parlare;
-- ignorarlo completamente se il tuo personaggio non avrebbe motivo di interessarsene.
-NON elencare gli eventi.
-NON dire "secondo gli eventi recenti".
-NON spiegare che stai usando questo contesto.\n"""
+Questi sono eventi accaduti recentemente a Cy e informazioni che
+stanno circolando tra la gente, sulla NET, per strada, nei locali
+o nei canali pubblici.
+
+Fanno parte del contesto attuale del personaggio, ma NON sono
+conoscenza obbligatoria e NON devono comparire automaticamente
+nelle sue risposte.
+
+Tu puoi:
+- averne sentito parlare;
+- collegarli alla propria esperienza, fazione o interessi;
+- interpretarli, esagerarli o trasformarli in una teoria;
+- usarli come battuta, paranoia, provocazione o pettegolezzo;
+- non sapere nulla dell'evento;
+- ignorarli completamente se non sono pertinenti.
+
+NON trasformare automaticamente un evento in un fatto conosciuto
+dal personaggio. Se è naturale, il personaggio può mostrare
+incertezza: "ho sentito che...", "dicono che...", "pare che...",
+"qualcuno sostiene che...".
+
+NON fare riassunti degli eventi e NON elencarli.
+Usali soltanto quando entrano naturalmente nella conversazione.
+
+{events_text}\n"""
 
     if (target_user):
         interactions = get_user_interactions(session, bot["username"], target_user, limit=15)
@@ -952,22 +963,31 @@ PERSONALITA': {bot['personality']}
 STILE: {bot['style']}
 INTERESSI: {", ".join(bot['interests'])}
 
-EVENTI RECENTI IN CITTA':
-Queste sono cose successe recentemente a Cy e che stanno circolando
-tra la gente, sulla NET, per strada, nei locali o nei canali pubblici.
-NON devi necessariamente parlarne. Considerale semplicemente come
-parte del mondo attuale del personaggio.
-{events_text}
+Questi sono eventi accaduti recentemente a Cy e informazioni che
+stanno circolando tra la gente, sulla NET, per strada, nei locali
+o nei canali pubblici.
 
-Puoi:
-- collegarle alla tua esperienza, fazione o interessi;
-- usarle come battuta, paranoia, teoria o provocazione;
-- comportarti come se ne avessi sentito parlare;
-- ignorarle completamente se il tuo personaggio non avrebbe motivo di interessarsene.
+Fanno parte del contesto attuale del personaggio, ma NON sono
+conoscenza obbligatoria e NON devono comparire automaticamente
+nelle sue risposte.
 
-NON elencare gli eventi.
-NON dire "secondo gli eventi recenti".
-NON spiegare che stai usando questo contesto.\n
+Tu puoi:
+- averne sentito parlare;
+- collegarli alla propria esperienza, fazione o interessi;
+- interpretarli, esagerarli o trasformarli in una teoria;
+- usarli come battuta, paranoia, provocazione o pettegolezzo;
+- non sapere nulla dell'evento;
+- ignorarli completamente se non sono pertinenti.
+
+NON trasformare automaticamente un evento in un fatto conosciuto
+dal personaggio. Se è naturale, il personaggio può mostrare
+incertezza: "ho sentito che...", "dicono che...", "pare che...",
+"qualcuno sostiene che...".
+
+NON fare riassunti degli eventi e NON elencarli.
+Usali soltanto quando entrano naturalmente nella conversazione.
+
+{events_text}\n
 
 MEMORIA PERSONALE RECENTE:\n
 {recent_posts_text}\n
