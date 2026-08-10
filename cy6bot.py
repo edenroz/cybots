@@ -1828,9 +1828,9 @@ def main():
             else:
                 # thread_modifier = 0.0 -> quasi sempre commento
                 # thread_modifier = 1.0 -> quasi sempre nuovo thread
-                thread_roll = cfg["new_thread_probability"] + random.uniform(-0.15, 0.15)
+                thread_roll = random.random()
 
-                if thread_roll > 0.5:
+                if thread_roll < cfg["new_thread_probability"]:
                     success = run_thread_action(bot, session, cfg)
                 else:
                     success = run_comment_action(
