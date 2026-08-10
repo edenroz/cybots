@@ -1211,31 +1211,144 @@ def run_comment_action(bot, session, players_map, memory, cfg):
                 continue
 
         eval_res = evaluate_discussion(bot, title, posts, players_map, cfg)
-        
+                   
         if eval_res.get("interested", False):
-            score = float(eval_res.get("score", 0.0))
-            
-            # Bonus se c'è un giocatore reale nel thread
-            has_player = any(p["author_username"] in players_map for p in posts)
+            base_score = max(0.0, min(1.0, float(eval_res.get("score", 0.0))))
+
+            last_post = posts[-1]
+            last_author = last_post["author_username"]
+
+            has_player = any(
+                p["author_username"] in players_map
+                for p in posts
+            )
+
+            bot_posts = [
+                p for p in posts
+                if p["author_username"] not in players_map
+            ]
+
+            bot_post_count = len(bot_posts)
+            total_post_count = len(posts)
+
+            # Quanti degli ultimi post sono bot?
+            recent_window = posts[-5:]
+            recent_bot_count = sum(
+                1 for p in recent_window
+                if p["author_username"] not in players_map
+            )
+
+            # ============================================================
+            # SCORE BASE
+            # ============================================================
+
+            score = base_score
+
+            # ============================================================
+            # 1. PRESENZA GIOCATORE
+            # ============================================================
+
             if has_player:
                 score += cfg["player_reply_bonus"]
-            else:
-                # Penalità aggiuntiva se ci sono troppi post dei bot
-                bot_post_count = sum(
-                    1 for p in posts
-                    if p["author_username"] not in players_map
+
+            # ============================================================
+            # 2. ULTIMO POST
+            # ============================================================
+
+            if last_author not in players_map:
+                # Rispondere a un bot è meno interessante
+                score -= cfg["bot_chain_penalty"]
+
+            # ============================================================
+            # 3. CATENA RECENTE DI BOT
+            # ============================================================
+
+            # Se gli ultimi 2 post sono bot:
+            if len(posts) >= 2:
+                if (
+                    posts[-1]["author_username"] not in players_map
+                    and posts[-2]["author_username"] not in players_map
+                ):
+                    score -= cfg["bot_chain_penalty"] * 0.75
+
+            # Se gli ultimi 3 post sono bot:
+            if len(posts) >= 3:
+                if all(
+                    p["author_username"] not in players_map
+                    for p in posts[-3:]
+                ):
+                    score -= cfg["bot_chain_penalty"] * 1.25
+
+            # ============================================================
+            # 4. THREAD DOMINATO DAI BOT
+            # ============================================================
+
+            if total_post_count > 0:
+                bot_ratio = bot_post_count / total_post_count
+
+                if bot_ratio > 0.60:
+                    score -= 0.15
+
+                if bot_ratio > 0.75:
+                    score -= 0.25
+
+                if bot_ratio > 0.90:
+                    score -= 0.40
+
+            # ============================================================
+            # 5. MOLTI POST DEI BOT
+            # ============================================================
+
+            # Penalità progressiva, non lineare aggressiva.
+            #
+            # 0-5 bot   -> nessuna
+            # 6 bot     -> piccola
+            # 7 bot     -> maggiore
+            # 8+ bot    -> crescente
+
+            if bot_post_count > 5:
+                excess = bot_post_count - 5
+
+                score -= min(
+                    0.60,
+                    excess * cfg["bot_chain_penalty"] * 0.35
                 )
 
-                if bot_post_count > 6:
-                    extra_bot_penalty = (
-                        bot_post_count - 6
-                    ) * cfg["bot_chain_penalty"]
+            # ============================================================
+            # 6. ULTIMI 5 POST QUASI TUTTI BOT
+            # ============================================================
 
-                    score -= extra_bot_penalty
+            if recent_bot_count >= 4:
+                score -= 0.25
 
-            # Penalità se l'ultimo post è di un altro bot
-            if posts[-1]["author_username"] not in players_map:
-                score -= cfg["bot_chain_penalty"]
+            if recent_bot_count == 5:
+                score -= 0.35
+
+            # ============================================================
+            # 7. THREAD SOLO BOT
+            # ============================================================
+
+            if not has_player:
+                # Senza giocatori dobbiamo essere molto selettivi.
+                score *= 0.70
+
+                # Se è già una lunga conversazione bot↔bot,
+                # praticamente impediamo di alimentarla.
+                if bot_post_count >= 8:
+                    score *= 0.50
+
+                if bot_post_count >= 12:
+                    score *= 0.25
+
+            # ============================================================
+            # 8. CLAMP FINALE
+            # ============================================================
+
+            score = max(0.0, min(1.0, score))
+
+            # ============================================================
+            # 9. CANDIDATO
+            # ============================================================
 
             if score >= cfg["minimum_relevance"]:
                 candidates.append({
