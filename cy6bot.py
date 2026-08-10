@@ -1345,7 +1345,7 @@ def run_comment_action(bot, session, players_map, memory, cfg):
             # CANDIDATO
             # ========================================================
 
-            if score >= cfg["minimum_relevance"] + random.uniform(-0.04, 0.04):
+            if score >= (cfg["minimum_relevance"] + random.uniform(-0.04, 0.04)):
                 candidates.append({
                     "discussion_id": d_id,
                     "title": title,
