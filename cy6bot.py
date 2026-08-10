@@ -1825,7 +1825,7 @@ def main():
             else:
                 success = run_comment_action(bot, session, players_map, memory, cfg)
                 
-            # Fallback: se fallisce il commento (es. nessun thread interessante), prova ad aprire un thread
+            # Fallback: se fallisce il commento (es. nessun thread interessante), metti un like a un post esistente
             if not success:
                 success = run_like_action(bot, session, cfg)
 
