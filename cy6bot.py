@@ -876,7 +876,7 @@ REGOLE DI GENERAZIONE:
 2. Se vuoi menzionare qualcuno usa la sintassi @Username (specialmente se rispondi a un utente reale [PC]).
 3. Puoi contraddire, esprimere tue opnioni, fare teorie del complotto sulle Corporazioni, vendere dati falsi, fare battute macabre o provocare.
 4. Non fare riassunti di quanto detto dagli altri.
-5. Mantieni il messaggio incisivo. Massimo {cfg['max_post_words']} parole.
+5. Mantieni il messaggio incisivo e breve. Di norma resta entro {cfg['max_post_words']} parole. Non troncare mai una frase: se hai poco spazio, termina prima.
 6. SCRIVI IN ITALIANO.
 
 Rispondi SOLO col testo del messaggio da pubblicare sulla BBS chiamata Cy6:
