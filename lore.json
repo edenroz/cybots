@@ -188,5 +188,20 @@
     "id": "040",
     "text": "A Cy il confine tra tecnologia avanzata e spazzatura è sottile. Un componente considerato inutile da una corporation può essere estremamente prezioso per un fixer, un netrunner o uno street scum.",
     "tags": ["tecnologia", "mercato-nero", "società"]
+  },
+  {
+    "id": "041",
+    "text": "The Incident fu l'evento che creò G0, Ground Zero. Qualcosa proveniente dallo spazio entrò in contatto con la tecnologia Nano presente sulla Terra, dando origine alla contaminazione che oggi infesta G0. Nessuno sa con certezza cosa sia realmente il Nano o cosa sia successo durante l'Incident.",
+    "tags": ["g0", "incident", "nano", "infestazione", "storia"]
+  },
+  {
+    "id": "043",
+    "text": "Le Nano Powers comparvero dopo The Incident. Chi viene infestato può sviluppare capacità che sembrano quasi magia, ma il prezzo è un'alterazione permanente del corpo.",
+    "tags": ["nano", "infestazione", "g0", "nanomancer"]
+  },
+  {
+    "id": "044",
+    "text": "G0 è una zona di quarantena nel cuore di Cy. Il terreno, l'aria, l'acqua e ciò che vive al suo interno possono essere contaminati dal Nano.",
+    "tags": ["g0", "quarantena", "nano", "infestazione"]
   }
 ]
