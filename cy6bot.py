@@ -392,79 +392,40 @@ def normalize_mentions(text: str) -> str:
 
     return text
 
-def build_forum_memory(
-    session,
-    bot,
-    discussion_title,
-    posts,
-    players_map
-):
-    """
-    Costruisce la memoria rilevante del bot usando
-    esclusivamente il contenuto storico di Flarum.
-    """
+from datetime import datetime
 
-    memory = {
-        "own_history": [],
-        "relevant_threads": [],
-        "user_history": [],
-        "current_thread_history": []
-    }
+def format_recent_posts(posts):
+    if not posts:
+        return "Nessun post recente."
 
-    username = bot["username"]
-
-    # --------------------------------------------------
-    # 1. Post precedenti del bot
-    # --------------------------------------------------
-
-    own_history = get_bot_history(
-        session,
-        username,
-        limit=25
-    )
-
-    memory["own_history"] = own_history
-
-    # --------------------------------------------------
-    # 2. Storia nel thread corrente
-    # --------------------------------------------------
+    formatted = []
 
     for post in posts:
-        if post["author_username"] == username:
-            memory["current_thread_history"].append({
-                "content": post["content"],
-                "created_at": post["created_at"]
-            })
+        content = post.get("content", "")
 
-    # --------------------------------------------------
-    # 3. Utenti presenti nel thread
-    # --------------------------------------------------
+        # Rimuove semplicemente i tag HTML più comuni di Flarum
+        content = content.replace("<p>", "").replace("</p>", "")
+        content = content.strip()
 
-    participants = {
-        p["author_username"]
-        for p in posts
-        if p["author_username"] != username
-    }
+        created_at = post.get("created_at", "")
+        if created_at:
+            try:
+                dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                date_str = dt.strftime("%d/%m/%Y %H:%M")
+            except ValueError:
+                date_str = created_at
+        else:
+            date_str = "data sconosciuta"
 
-    # --------------------------------------------------
-    # 4. Interazioni storiche
-    # --------------------------------------------------
+        thread = post.get("thread") or {}
+        title = thread.get("title", "Discussione sconosciuta")
 
-    for user in participants:
-        interactions = get_user_interactions(
-            session,
-            username,
-            user,
-            limit=10
+        formatted.append(
+            f'[{date_str}] Discussione: "{title}"\n'
+            f'{content}'
         )
 
-        if interactions:
-            memory["user_history"].append({
-                "username": user,
-                "interactions": interactions
-            })
-
-    return memory
+    return "\n\n".join(formatted)
 
 def save_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1329,18 +1290,25 @@ def main():
 
     for _ in range(posts_to_make):
         # Selezione del bot casuale
-        bot = random.choice(bots)
+        bot = bots[34]  # Example index, replace with actual random selection
+        # bot = bots[random.choice(bots)
+        
         username = bot["username"]
 
         # Connessione autenticata con le credenziali specifiche del Bot
         session = get_bot_session(username)
+        #hhhhh
+        h = get_bot_history(session, username, 10)
+        print(format_recent_posts(h))
+        #hhhhh
+
         if not session:
             logging.warning(f"Impossibile autenticare il bot @{username}. Salto il turno.")
             continue
 
         mode = cfg.get("mode", "auto")
         success = False
-        mode = "auto" # Forzato per test, rimuovere in produzione
+        mode = "comment" # Forzato per test, rimuovere in produzione
         if mode == "new_thread":
             success = run_thread_action(bot, session, cfg)
         elif mode == "comment":
