@@ -860,9 +860,6 @@ def generate_comment(session, bot, discussion_title, posts, players_map, target_
                 "Non introdurli come se stessi scrivendo una wiki o spiegando il gioco a qualcuno.\n"
             "CONOSCENZA CANONICA DEL MONDO:\n"
             f"""{LORE_PROMPT}\n"""
-            "Queste informazioni sono conoscenza di base del personaggio. "
-            "Non citarle esplicitamente come 'lore', 'database', 'contesto' o 'informazioni fornite'. "
-            "Non devi usare queste informazioni se non sono pertinenti alla conversazione.\n"
         )
 
     user_prompt = f"""
@@ -959,9 +956,6 @@ def generate_thread(bot, cfg):
                 "del mondo.\n"
         "CONOSCENZA CANONICA DEL MONDO:\n"
         f"""{LORE_PROMPT}\n"""
-        "Queste informazioni sono conoscenza di base del personaggio. "
-        "Non citarle esplicitamente come 'lore', 'database', 'contesto' o 'informazioni fornite'. "
-        "Non devi usare queste informazioni se non sono pertinenti alla conversazione.\n"
         "11. REGOLA ANTI-SPAM:\n"
         "   - È severamente vietato generare codice binario o lunghe stringhe di numeri senza senso.\n"
         "   - NO HASHTAG MULTIPLI (al massimo UNO a fine post).\n"
