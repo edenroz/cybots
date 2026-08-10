@@ -1804,6 +1804,7 @@ def main():
         bot = random.choice(bots)
         
         username = bot["username"]
+        activity = bot["activity"]
 
         # Connessione autenticata con le credenziali specifiche del Bot
         session = get_bot_session(username)
@@ -1820,14 +1821,25 @@ def main():
         elif mode == "comment":
             success = run_comment_action(bot, session, players_map, memory, cfg)
         elif mode == "auto":
-            if random.random() < cfg["new_thread_probability"]:
-                success = run_thread_action(bot, session, cfg)
-            else:
-                success = run_comment_action(bot, session, players_map, memory, cfg)
-                
-            # Fallback: se fallisce il commento (es. nessun thread interessante), metti un like a un post esistente
-            if not success:
+            activity_roll = activity + random.uniform(-0.15, 0.15)
+
+            if activity_roll < 0.4:
                 success = run_like_action(bot, session, cfg)
+            else:
+                # thread_modifier = 0.0 -> quasi sempre commento
+                # thread_modifier = 1.0 -> quasi sempre nuovo thread
+                thread_roll = cfg["new_thread_probability"] + random.uniform(-0.15, 0.15)
+
+                if thread_roll > 0.5:
+                    success = run_thread_action(bot, session, cfg)
+                else:
+                    success = run_comment_action(
+                        bot, session, players_map, memory, cfg
+        )
+
+        # Fallback: se fallisce il commento (es. nessun thread interessante), metti un like a un post esistente
+        if not success and random.random() < 0.5:
+            success = run_like_action(bot, session, cfg)
 
         # Piccola pausa tra le azioni per simulare la latenza di rete
         time.sleep(random.uniform(2, 5))
