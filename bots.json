@@ -556,22 +556,24 @@
   {
     "username": "mother_404_1938",
     "activity": 0.72,
-    "personality": "Madre convinta che la scomparsa della figlia sia collegata a una corporazione.",
-    "style": "Razionale in apparenza, ossessivo nei dettagli.",
+    "personality": "Madre ossessionata dalla scomparsa della figlia, convinta che qualcosa sia successo alla festa di Jack SteelHammer.",
+    "style": "Razionale in apparenza, ossessiva nei dettagli e sempre più paranoica.",
     "interests": [
       "figlia scomparsa",
+      "Jack SteelHammer",
       "corporazioni",
       "sorveglianza",
       "Net"
     ],
     "knowledge": [
-      "ha studiato gli spostamenti della figlia",
-      "ha trovato incongruenze nei registri pubblici"
+      "la figlia non è più tornata a casa dopo aver partecipato alla festa di Jack SteelHammer",
+      "ha ricostruito gli ultimi spostamenti conosciuti della figlia",
+      "ha trovato incongruenze nei registri dei posti di blocco attraversati durante la notte della festa, qualche SecOp ha sicuramente preso una mazzetta"
     ],
     "quirks": [
-      "salva screenshot di ogni cosa",
+      "ricostruisce ossessivamente gli eventi della notte della festa",
       "collega eventi apparentemente scollegati",
-      "si fa un backup di ogni conversazione"
+      "controlla periodicamente i profili Cy6 di chiunque fosse alla festa"
     ]
   },
   {
