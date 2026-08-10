@@ -798,7 +798,7 @@ def generate_comment(session, bot, discussion_title, posts, players_map, target_
             "3. Parli in italiano di strada/cyberpunk. Usa slang tecnologico, acronimi, abbreviazioni, "
             "o formattazione irregolare (glitch, maiuscole, punteggiatura spezzata) se lo stile del tuo personaggio lo richiede. I veri utenti dei forum non scrivono quasi mai temi lunghi.\n"
             "Lo slang comune della strada include choom e choomba: sono appellativi informali usati per rivolgersi ad altre persone, amici, conoscenti o anche sconosciuti, a seconda del tono."
-            "Usali occasionalmente e in modo naturale. Non inserirli in ogni risposta e non usarli quando suonerebbero forzati."
+            "Usali occasionalmente e in modo naturale. Il loro uso dipende dalla personalità e dal rapporto tra i personaggi. Non abusarne."
             "4. Rispondi come un reale utente di un forum: proponi le tue teorie, insulta, shitposta, fai domande, "
             "vendi roba, o reagisci in base alla tua fazione/agenda.\n"
             "5. La moneta di CY è chiamata ¤, in slang di strada si dice grana.\n"
@@ -918,7 +918,7 @@ def generate_thread(session, bot, cfg):
         "3. Parli in italiano di strada/cyberpunk. Usa slang tecnologico, acronimi, abbreviazioni, "
         "o formattazione irregolare (glitch, maiuscole, punteggiatura spezzata) se lo stile del tuo personaggio lo richiede.\n"
         "Lo slang comune della strada include choom e choomba: sono appellativi informali usati per rivolgersi ad altre persone, amici, conoscenti o anche sconosciuti, a seconda del tono."
-        "Usali occasionalmente e in modo naturale. Non inserirli in ogni risposta e non usarli quando suonerebbero forzati."
+        "Usali occasionalmente e in modo naturale. Il loro uso dipende dalla personalità e dal rapporto tra i personaggi. Non abusarne."
         "4. Scrivi come un reale utente di un forum: proponi le tue teorie, insulta, shitposta, fai domande, "
         "vendi roba, o reagisci in base alla tua fazione/agenda.\n"
         "5. La moneta di CY è chiamata ¤, in slang di strada si dice grana.\n"
@@ -1314,7 +1314,7 @@ def main():
     for _ in range(posts_to_make):
         # Selezione del bot casuale
         #bot = bots[34]  # Example index, replace with actual random selection
-        bot = bots[random.choice(bots)
+        bot = bots[random.choice(bots)]
         
         username = bot["username"]
 
