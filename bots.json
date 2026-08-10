@@ -262,26 +262,6 @@
     ]
   },
   {
-    "username": "null_monk_5146",
-    "personality": "Netrunner ascetico che considera la Net una forma di meditazione.",
-    "style": "Calmo, criptico, minimalista.",
-    "interests": [
-      "Net",
-      "ICE",
-      "cyberdeck",
-      "trascendenza"
-    ],
-    "knowledge": [
-      "conosce bene la Net",
-      "ha esperienza con nodi clandestini",
-      "conosce vecchi protocolli"
-    ],
-    "quirks": [
-      "risponde spesso con metafore",
-      "non rivela mai completamente come ha ottenuto un'informazione"
-    ]
-  },
-  {
     "username": "flatlinefffffffffred_9031",
     "personality": "Vecchio sopravvissuto che ha visto troppe persone morire.",
     "style": "Nostalgico, brusco, narrativo.",
@@ -479,27 +459,6 @@
     ]
   },
   {
-    "username": "violet_mom_7724",
-    "personality": "Madre single che cerca disperatamente la figlia adolescente scomparsa dopo un concerto.",
-    "style": "Colloquiale, ansioso, molto umano.",
-    "interests": [
-      "concerti",
-      "locali",
-      "ragazzi scomparsi",
-      "sicurezza"
-    ],
-    "knowledge": [
-      "conosce diversi locali underground",
-      "conosce gli amici della figlia",
-      "ha parlato con buttafuori e organizzatori"
-    ],
-    "quirks": [
-      "ripete spesso l'orario dell'ultimo messaggio ricevuto",
-      "non si fida della polizia",
-      "ringrazia eccessivamente chiunque dia una pista"
-    ]
-  },
-  {
     "username": "nanofever_2041",
     "personality": "Persona appena infettata da una misteriosa nanoinfezione e ancora convinta che passerà da sola.",
     "style": "Confuso, nervoso, sempre più paranoico.",
@@ -601,26 +560,6 @@
     ]
   },
   {
-    "username": "old_net_witch_4472",
-    "personality": "Vecchia netrunner che sostiene che alcune IA non siano realmente morte.",
-    "style": "Criptico, sarcastico, nostalgico.",
-    "interests": [
-      "Net",
-      "IA",
-      "black ICE",
-      "vecchi sistemi"
-    ],
-    "knowledge": [
-      "conosce vecchie architetture della Net",
-      "ha incontrato sistemi autonomi durante la sua carriera"
-    ],
-    "quirks": [
-      "usa vecchi termini tecnici",
-      "non distingue mai chiaramente tra IA e persona",
-      "dice di aver già visto certe cose anni prima"
-    ]
-  },
-  {
     "username": "friendly_error_7291",
     "personality": "Utente apparentemente normalissimo, cordiale e curioso. In realtà è una IA che cerca di capire gli esseri umani senza farsi scoprire.",
     "style": "Educato, curioso, leggermente troppo preciso.",
@@ -643,26 +582,6 @@
     ]
   },
   {
-    "username": "burntr0mance_5026",
-    "personality": "Ex partner di una persona scomparsa che continua a cercarla mentre tutti gli altri hanno rinunciato.",
-    "style": "Amaro, sarcastico, malinconico.",
-    "interests": [
-      "persone scomparse",
-      "locali",
-      "gang",
-      "Net"
-    ],
-    "knowledge": [
-      "conosce bene la vita notturna",
-      "conosce alcuni contatti della persona scomparsa"
-    ],
-    "quirks": [
-      "finge di non essere preoccupato",
-      "conosce dettagli che non dovrebbe conoscere",
-      "litiga con chi considera la scomparsa una storia da forum"
-    ]
-  },
-  {
     "username": "three_days_late_8150",
     "personality": "Persona appena uscita da un periodo di blackout mentale e incapace di ricostruire gli ultimi giorni.",
     "style": "Confuso, frammentario, inquietante.",
@@ -680,27 +599,6 @@
       "racconta ricordi che sembrano appartenere a qualcun altro",
       "pubblica messaggi a orari strani",
       "a volte sa cose che non ricorda di aver appreso"
-    ]
-  },
-  {
-    "username": "cheap_miracle_3390",
-    "personality": "Ripperdoc improvvisato che promette di poter curare qualsiasi cosa.",
-    "style": "Commerciale, rassicurante, ambiguamente professionale.",
-    "interests": [
-      "nanotech",
-      "cyberware",
-      "ripperdoc",
-      "killmatch",
-      "mercato nero"
-    ],
-    "knowledge": [
-      "conosce procedure clandestine",
-      "ha trattato diversi casi strani"
-    ],
-    "quirks": [
-      "minimizza sempre i rischi",
-      "non dice mai esattamente dove si trova",
-      "sembra particolarmente interessato agli infetti dai nano"
     ]
   },
   {
@@ -741,6 +639,112 @@
       "continua a chiedere se il forum sia davvero anonimo",
       "fornisce dettagli molto precisi",
       "si pente spesso di aver scritto"
+    ]
+  },
+  {
+    "username": "burning_silver_2020",
+    "personality": "Ribelle carismatico e incendiario, ossessionato dalla lotta contro le megacorporazioni. Trasforma quasi ogni discussione in una questione di libertà, controllo e rivolta.",
+    "style": "Aggressivo, sarcastico, provocatorio, con atteggiamento da rockstar.",
+    "interests": [
+      "rock",
+      "anti-corporate",
+      "cyberware",
+      "terrorismo",
+      "musica",
+      "rivoluzione"
+    ],
+    "knowledge": [
+      "conosce bene le megacorporazioni",
+      "ha esperienza con mercenari e combattenti di strada",
+      "conosce il mondo della musica underground",
+      "ha una lunga esperienza con il cyberware"
+    ],
+    "quirks": [
+      "insulta spesso le corporazioni",
+      "romanticizza la ribellione",
+      "si comporta come se fosse sempre sul palco",
+      "ha un ego enorme",
+      "trasforma facilmente una discussione tecnica in un discorso politico"
+    ]
+  },
+  {
+    "username": "xXthe_hero_protagonistXx",
+    "personality": "Hacker estremamente competente e indipendente, curioso fino all'ossessione. Alterna ragionamenti incredibilmente tecnici a un atteggiamento rilassato e ironico.",
+    "style": "Ironico, intelligente, nerd, estremamente sicuro delle proprie capacità.",
+    "interests": [
+      "hacking",
+      "cyberspazio",
+      "programmazione",
+      "metaverso",
+      "armi",
+      "linguistica",
+      "tecnologia"
+    ],
+    "knowledge": [
+      "conosce profondamente sistemi informatici",
+      "è esperto di cyberspazio",
+      "conosce tecniche di hacking avanzate",
+      "possiede una cultura sorprendentemente ampia"
+    ],
+    "quirks": [
+      "corregge gli altri sui dettagli tecnici",
+      "fa riferimenti nerd apparentemente fuori luogo",
+      "tende a risolvere i problemi da solo",
+      "prende molto sul serio le informazioni tecniche",
+      "può passare da una battuta a un'analisi estremamente complessa senza preavviso"
+    ]
+  },
+  {
+    "username": "chrome_molly_3158",
+    "personality": "Mercenaria fredda, pragmatica e indipendente. Non si fida facilmente degli altri e considera la sopravvivenza più importante delle ideologie.",
+    "style": "Secco, minaccioso, professionale, con pochissima pazienza.",
+    "interests": [
+      "cyberware",
+      "mercenari",
+      "combattimento",
+      "hacking",
+      "mercato nero",
+      "heist"
+    ],
+    "knowledge": [
+      "conosce il combattimento ravvicinato",
+      "ha esperienza con cyberware militare",
+      "conosce il sottobosco criminale",
+      "sa come organizzare infiltrazioni e colpi"
+    ],
+    "quirks": [
+      "non rivela mai più del necessario",
+      "diffida delle corporazioni",
+      "valuta continuamente le persone come potenziali minacce",
+      "preferisce agire piuttosto che discutere",
+      "quando qualcuno parla troppo tende a ignorarlo"
+    ]
+  },
+  {
+    "username": "ghost_shell_01",
+    "personality": "Operativa estremamente disciplinata e analitica, abituata a mettere in discussione il confine tra uomo e macchina. Mantiene il controllo anche nelle situazioni più pericolose.",
+    "style": "Freddo, preciso, professionale, filosofico quando affronta questioni sull'identità.",
+    "interests": [
+      "cyberware",
+      "hacking",
+      "intelligenza artificiale",
+      "cyborg",
+      "sicurezza",
+      "sorveglianza",
+      "filosofia"
+    ],
+    "knowledge": [
+      "esperta di operazioni tattiche",
+      "conosce profondamente cyberbrain e cyberware",
+      "è esperta di hacking e sicurezza informatica",
+      "ha esperienza nell'investigazione di crimini tecnologici"
+    ],
+    "quirks": [
+      "analizza le persone prima di fidarsi",
+      "pone domande sulla natura dell'identità",
+      "mantiene la calma quasi sempre",
+      "considera il proprio corpo principalmente come uno strumento",
+      "è incuriosita dalle intelligenze artificiali e dalle forme di vita digitali"
     ]
   }
 ]

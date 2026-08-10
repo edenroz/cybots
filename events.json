@@ -21,7 +21,97 @@
   },
   {
     "id": "004",
-    "text": "La pizza Napoli in offerta nella pizzeria di Zio Ugo ha fatto venire la diarrea a molti.",
+    "text": "La pizza Napoli in offerta da PIZZABOT3000 ha fatto venire la diarrea a molti.",
     "tags": ["food", "cyber"]
+  },
+  {
+    "id": "001",
+    "text": "Lo sapevi? ACGS non paga tasse.",
+    "tags": ["acgs", "corruzione", "corporazioni"]
+  },
+  {
+    "id": "002",
+    "text": "Lo sapevi? ACGS monta antincendio buggati che bloccano comodamente qualsiasi arma puntata contro bersagli classificati C.",
+    "tags": ["acgs", "armi", "sabotaggio"]
+  },
+  {
+    "id": "003",
+    "text": "Lo sapevi? La 'cura' BF-C di ACGS ha ucciso più pazienti dell'attacco vero e proprio.",
+    "tags": ["acgs", "bf-c", "morti"]
+  },
+  {
+    "id": "006",
+    "text": "Perché permettiamo a Royal West di controllare il 34% delle strade e delle ferrovie di Cy?",
+    "tags": ["royalwest", "infrastrutture", "potere"]
+  },
+  {
+    "id": "008",
+    "text": "Dobbiamo ritenerli responsabili. Ma ogni volta che proviamo a farlo, qualcuno ci mette a tacere.",
+    "tags": ["corruzione", "censura", "corporazioni"]
+  },
+  {
+    "id": "009",
+    "text": "La strage di Low Meadow è stata un'operazione di pulizia. I 'terroristi' erano sul libro paga di TG.",
+    "tags": ["lowmeadow", "tg", "terrorismo"]
+  },
+  {
+    "id": "010",
+    "text": "Quanto devi aver combinato male le cose per arrivare a uccidere 142 tuoi dipendenti pur di impedire che la verità venga fuori?",
+    "tags": ["tg", "morti", "insabbiamento"]
+  },
+  {
+    "id": "012",
+    "text": "STRAGE SENZA FINE SUI MARI. Il pesce che mangiamo contiene più plastica che carne.",
+    "tags": ["mare", "inquinamento", "plastica"]
+  },
+  {
+    "id": "014",
+    "text": "Perché i Barnyard Fields sono stati invasi dai Kroks?",
+    "tags": ["barnyardfields", "kroks", "invasione"]
+  },
+  {
+    "id": "015",
+    "text": "LA GUERRA TRA UNITED CITADEL SECURITY E ALLIANSEN INC. NON È FINITA.",
+    "tags": ["ucs", "alliansen", "guerra"]
+  },
+  {
+    "id": "016",
+    "text": "Gli scandali di quest'anno soltanto: il leak di IDVault, le sussidiarie Eclipse, la purga dei mech di CyBanks.",
+    "tags": ["ucs", "scandali", "cybanks"]
+  },
+  {
+    "id": "018",
+    "text": "Tre motivi per odiare UCS, se pestaggi e omicidi continui non bastano.",
+    "tags": ["ucs", "violenza", "corruzione"]
+  },
+  {
+    "id": "019",
+    "text": "Ancora nessuna giustizia per il massacro di North Remembrance Plaza.",
+    "tags": ["ucs", "northremembrance", "massacro"]
+  },
+  {
+    "id": "022",
+    "text": "Perché dobbiamo pagare per l'aria che respiriamo?",
+    "tags": ["ucs", "aria", "corporazioni"]
+  },
+  {
+    "id": "024",
+    "text": "Che cazzo stanno RILASCIANDO nell'acqua?",
+    "tags": ["ucs", "acqua", "inquinamento"]
+  },
+  {
+    "id": "026",
+    "text": "Vi ricordate lo scandalo dei tubi contaminati dal nanomuffa?",
+    "tags": ["ucs", "nanomuffa", "acqua"]
+  },
+  {
+    "id": "028",
+    "text": "Dove sono finiti i soldi?",
+    "tags": ["ucs", "corruzione", "soldi"]
+  },
+  {
+    "id": "029",
+    "text": "Oltre 2.000 morti sul lavoro negli ultimi due anni. Sette giornalisti morti mentre indagavano proprio su quegli incidenti.",
+    "tags": ["ucs", "morti", "giornalisti"]
   }
 ]

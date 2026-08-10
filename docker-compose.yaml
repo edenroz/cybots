@@ -1,0 +1,107 @@
+services:
+
+  flarum:
+    image: mondedie/flarum:stable
+    container_name: cy6-flarum
+    restart: unless-stopped
+
+    ports:
+      - "8080:8888"
+
+    environment:
+      DEBUG: "false"
+      FORUM_URL: ${FORUM_URL}
+
+      FLARUM_ADMIN_USER: ${FLARUM_ADMIN_USER}
+      FLARUM_ADMIN_PASS: ${FLARUM_ADMIN_PASS}
+      FLARUM_ADMIN_MAIL: ${FLARUM_ADMIN_MAIL}
+      SIE_NAME: CY6
+      DB_HOST: db
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_PREF: fl_
+      DB_PORT: 3306
+
+    volumes:
+      - flarum_data:/flarum/app
+
+      # Volumi già esistenti del container attuale
+      - flarum_nginx:/etc/nginx/flarum
+      - flarum_extensions:/flarum/app/extensions
+      - flarum_assets:/flarum/app/public/assets
+      - flarum_logs:/flarum/app/storage/logs
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    networks:
+      - cy6
+
+
+  db:
+    image: mariadb:10.11
+    container_name: cy6-db
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+
+    volumes:
+      - db_data:/var/lib/mysql
+
+    healthcheck:
+      test:
+        - CMD
+        - healthcheck.sh
+        - --connect
+        - --innodb_initialized
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - cy6
+      
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cy6-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - cy6
+
+networks:
+  cy6:
+
+
+volumes:
+
+  flarum_data:
+    external: true
+    name: cy6_flarum_data
+
+  db_data:
+    external: true
+    name: cy6_db_data
+
+  flarum_nginx:
+    external: true
+    name: f083230794982a95ecd6889c4a6b07f43d08815eaa8dd400cbaab00bd02f870d
+
+  flarum_extensions:
+    external: true
+    name: 6d2fd4ddba4ec467595291f0913b5ce7f3cc388f3cc36b1a43a15715e02aa056
+
+  flarum_assets:
+    external: true
+    name: b9437b9a6f572fec6d4778bc6a348a6ca439c1cf7018c4cff4323c6de9aebb2c
+
+  flarum_logs:
+    external: true
+    name: fb8f1d88f82261dc18038826c816f693fdc057837bdb23f152144f955fea6ef0

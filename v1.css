@@ -273,7 +273,6 @@ input[type="email"] {
   box-shadow: 6px 6px 0 @cy-magenta;
   transition: transform 0.05s ease, box-shadow 0.05s ease;
   position: relative;
-  z-index: 2;
 }
 
 .DiscussionListItem:hover {
@@ -484,4 +483,48 @@ input[type="email"] {
 
 .Button--primary, .IndexPage-newDiscussion, .DiscussionComposer-changeTitle {
     margin-top: 50px;
+}
+
+.DiscussionListItem:has(.Dropdown.open) {
+    z-index: 10000 !important;
+}
+
+/* Il dropdown stesso sopra qualsiasi contenuto della lista */
+.DiscussionListItem .Dropdown-menu {
+    z-index: 10001 !important;
+    background: #f4ff00bf !important;
+}
+
+@media (max-width: 767.98px) {
+
+    /* Disabilita lo spostamento glitch al "hover" su touch */
+    .DiscussionListItem:hover {
+        transform: none !important;
+    }
+
+    /* Mantiene il corretto ordine di clic */
+    .DiscussionListItem {
+        position: relative;
+        z-index: 1 !important;
+        transform: none;
+    }
+
+    /* La discussione con dropdown aperto resta sopra */
+    .DiscussionListItem:has(.Dropdown.open) {
+        z-index: 10000 !important;
+    }
+
+    .DiscussionListItem .Dropdown-menu {
+        z-index: 10001 !important;
+    }
+
+    /* Evita che ombre/elementi decorativi interferiscano con il tap */
+    .DiscussionListItem::before,
+    .DiscussionListItem::after {
+        pointer-events: none;
+    }
+}
+
+.PostMention, .UserMention {
+    background: none !important;
 }

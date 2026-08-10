@@ -7,12 +7,14 @@ import sys
 import time
 from pathlib import Path
 from typing import Optional
+from xml.sax.saxutils import unescape
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
 import requests
 from dotenv import load_dotenv
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from collections import defaultdict
 
 # ============================================================
 # CONFIGURAZIONE ED AMBIENTE
@@ -50,6 +52,336 @@ logging.basicConfig(
 # ============================================================
 # GESTIONE JSON & FILE
 # ============================================================
+def get_flarum_user(session, username):
+    result = flarum_get(session, "/api/users", {
+        "filter[q]": username,
+        "page[limit]": 10
+    })
+
+    for user in result.get("data", []):
+        attrs = user.get("attributes", {})
+        if attrs.get("username", "").lower() == username.lower():
+            return user
+
+    return None
+
+def get_bot_history(session, username, limit=30):
+    """
+    Recupera gli ultimi post scritti dal bot insieme
+    alle informazioni del thread/discussione.
+
+    Flarum viene utilizzato come memoria persistente.
+    """
+
+    result = flarum_get(
+        session,
+        "/api/posts",
+        {
+            "filter[author]": username,
+            "page[limit]": limit,
+            "sort": "-createdAt",
+            "include": "discussion,user"
+        }
+    )
+
+    posts = result.get("data", [])
+    included = result.get("included", [])
+
+    # ==========================================================
+    # Indicizza le discussioni incluse nella risposta
+    # ==========================================================
+
+    discussions = {}
+
+    for resource in included:
+        if resource.get("type") != "discussions":
+            continue
+
+        discussion_id = resource.get("id")
+        attributes = resource.get("attributes", {}) or {}
+
+        discussions[str(discussion_id)] = {
+            "id": discussion_id,
+            "title": attributes.get("title", ""),
+            "created_at": attributes.get("createdAt", ""),
+            "slug": attributes.get("slug", "")
+        }
+
+    # ==========================================================
+    # Costruisci la memoria
+    # ==========================================================
+
+    history = []
+
+    for p in reversed(posts):
+
+        attributes = p.get("attributes", {}) or {}
+
+        # ------------------------------------------------------
+        # ID discussione
+        # ------------------------------------------------------
+
+        discussion_id = (
+            p.get("relationships", {})
+             .get("discussion", {})
+             .get("data", {})
+             .get("id")
+        )
+
+        # ------------------------------------------------------
+        # Recupera thread
+        # ------------------------------------------------------
+
+        discussion = discussions.get(str(discussion_id), {})
+
+        # ------------------------------------------------------
+        # Contenuto post
+        # ------------------------------------------------------
+
+        content = attributes.get("content")
+
+        if not content:
+            content = attributes.get("contentHtml", "")
+
+        # ------------------------------------------------------
+        # Salva tutto
+        # ------------------------------------------------------
+
+        history.append({
+            "id": p.get("id"),
+
+            "content": content,
+
+            "created_at": attributes.get(
+                "createdAt",
+                ""
+            ),
+
+            "discussion_id": discussion_id,
+
+            "thread": {
+                "id": discussion.get("id"),
+                "title": discussion.get("title", ""),
+                "created_at": discussion.get("created_at", ""),
+                "slug": discussion.get("slug", "")
+            }
+        })
+
+    return history
+
+def extract_mentions(content):
+    """
+    Estrae gli username preceduti da @ dal contenuto del post.
+    """
+
+    if not content:
+        return []
+
+    return re.findall(r'@([a-zA-Z0-9_-]+)', content)
+
+import re
+
+
+def extract_mentions(content):
+    """
+    Estrae gli username preceduti da @ dal contenuto Flarum.
+    """
+    if not content:
+        return []
+
+    return re.findall(r'@([a-zA-Z0-9_-]+)', content)
+
+def get_user_interactions(session, username_a, username_b, limit=20):
+    """
+    Cerca le conversazioni in cui username_a e username_b
+    hanno interagito tramite mention.
+
+    Una interazione viene trovata quando:
+      - A menziona B
+      - oppure B menziona A
+
+    I post devono appartenere alla stessa discussion.
+    """
+
+    history_a = get_bot_history(session, username_a, 50)
+    history_b = get_bot_history(session, username_b, 50)
+
+    username_a = username_a.lower()
+    username_b = username_b.lower()
+
+    interactions = []
+
+    # ---------------------------------------------------------
+    # A -> B
+    # ---------------------------------------------------------
+
+    for post_a in history_a:
+
+        content_a = post_a.get("content", "")
+        mentions_a = extract_mentions(content_a)
+
+        if username_b not in [m.lower() for m in mentions_a]:
+            continue
+
+        discussion_id = str(post_a.get("discussion_id"))
+
+        interactions.append({
+            "discussion_id": discussion_id,
+            "thread": post_a.get("thread"),
+            "from": username_a,
+            "to": username_b,
+            "posts": [
+                post_a
+            ]
+        })
+
+    # ---------------------------------------------------------
+    # B -> A
+    # ---------------------------------------------------------
+
+    for post_b in history_b:
+
+        content_b = post_b.get("content", "")
+        mentions_b = extract_mentions(content_b)
+
+        if username_a not in [m.lower() for m in mentions_b]:
+            continue
+
+        discussion_id = str(post_b.get("discussion_id"))
+
+        interactions.append({
+            "discussion_id": discussion_id,
+            "thread": post_b.get("thread"),
+            "from": username_b,
+            "to": username_a,
+            "posts": [
+                post_b
+            ]
+        })
+
+    # ---------------------------------------------------------
+    # Ordina per data più recente
+    # ---------------------------------------------------------
+    for interaction in interactions:
+        interaction["posts"].sort(
+            key=lambda post: post.get("created_at", ""),
+            reverse=True
+        )
+
+    # ---------------------------------------------------------
+    # Limita risultati
+    # ---------------------------------------------------------
+
+    return interactions[:limit]
+
+def normalize_mentions(text: str) -> str:
+    """
+    Normalizza l'inizio delle frasi dopo una mention.
+
+    Esempio:
+        @burning_silver_2020 La violenza...
+    diventa:
+        @burning_silver_2020 la violenza...
+
+    Non modifica le maiuscole nel resto del testo.
+    """
+
+    if not text:
+        return text
+
+    # Mention all'inizio del post
+    match = re.match(
+        r"^(@[A-Za-z0-9_]+)(\s+)([A-ZÀ-ÖØ-Þ])",
+        text
+    )
+
+    if match:
+        mention = match.group(1)
+        spacing = match.group(2)
+        first_char = match.group(3)
+
+        text = (
+            mention
+            + spacing
+            + first_char.lower()
+            + text[match.end():]
+        )
+
+    return text
+
+def build_forum_memory(
+    session,
+    bot,
+    discussion_title,
+    posts,
+    players_map
+):
+    """
+    Costruisce la memoria rilevante del bot usando
+    esclusivamente il contenuto storico di Flarum.
+    """
+
+    memory = {
+        "own_history": [],
+        "relevant_threads": [],
+        "user_history": [],
+        "current_thread_history": []
+    }
+
+    username = bot["username"]
+
+    # --------------------------------------------------
+    # 1. Post precedenti del bot
+    # --------------------------------------------------
+
+    own_history = get_bot_history(
+        session,
+        username,
+        limit=25
+    )
+
+    memory["own_history"] = own_history
+
+    # --------------------------------------------------
+    # 2. Storia nel thread corrente
+    # --------------------------------------------------
+
+    for post in posts:
+        if post["author_username"] == username:
+            memory["current_thread_history"].append({
+                "content": post["content"],
+                "created_at": post["created_at"]
+            })
+
+    # --------------------------------------------------
+    # 3. Utenti presenti nel thread
+    # --------------------------------------------------
+
+    participants = {
+        p["author_username"]
+        for p in posts
+        if p["author_username"] != username
+    }
+
+    # --------------------------------------------------
+    # 4. Interazioni storiche
+    # --------------------------------------------------
+
+    for user in participants:
+        interactions = get_user_interactions(
+            session,
+            username,
+            user,
+            limit=10
+        )
+
+        if interactions:
+            memory["user_history"].append({
+                "username": user,
+                "interactions": interactions
+            })
+
+    return memory
 
 def load_json(path, default):
     if not path.exists():
@@ -88,7 +420,8 @@ def get_players():
     return load_json(PLAYERS_FILE, [])
 
 def get_events():
-    return load_json(EVENTS_FILE, [])
+    cfg = load_json(CONFIG_FILE, {})
+    return load_json(EVENTS_FILE, [])[-cfg["event_count"]:]
 
 def get_memory():
     return load_json(MEMORY_FILE, {"posts": [], "relationships": {}, "last_run": 0})
@@ -286,16 +619,76 @@ def evaluate_discussion(bot, discussion_title, posts, players_map, cfg):
         formatted_posts.append(f"[{role}] {p['author_username']}: {p['content']}")
     
     conversation_text = "\n".join(formatted_posts)
-    recent_events = get_events()[-5:]
+    recent_events = get_events()
     events_text = "\n".join(f"- {e['text']}" for e in recent_events)
 
-    model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    model_name = os.getenv("GEMINI_MODEL_LITE", "gemini-3.5-flash-lite")
     
     # System prompt neutro da classificatore
     system_prompt = (
-        "Sei un sistema automatico di classificazione dati per una simulazione RPG. "
-        "Il tuo unico compito è valutare se un personaggio fittizio interverrebbe in un thread. "
-        "Non aggiungere mai introduzioni, saluti o commenti. Compila solo lo schema JSON."
+"""
+Sei un sistema automatico di valutazione per una simulazione RPG.
+
+Il tuo compito è decidere se il personaggio dovrebbe intervenire
+nella discussione e, SOLO SE appropriato, identificare un utente
+specifico a cui rivolgersi.
+
+Devi compilare esclusivamente il JSON richiesto.
+Non aggiungere testo fuori dal JSON.
+
+REGOLE IMPORTANTI PER target_user:
+
+- target_user DEVE essere null nella maggior parte dei casi.
+- NON valorizzare target_user semplicemente perché nel thread
+  compare un giocatore reale.
+- NON valorizzare target_user se il personaggio vuole semplicemente
+  partecipare alla discussione in modo generico.
+- Valorizza target_user SOLO quando esiste una chiara intenzione
+  del personaggio di rivolgersi direttamente a quella persona.
+- target_user può essere valorizzato solo con lo username ESATTO
+  di un utente che compare realmente nei messaggi del thread.
+- Non inventare mai username.
+- Se il personaggio è interessato ma non ha un interlocutore preciso,
+  usa target_user = null.
+- Se ci sono più utenti possibili ma nessuno è chiaramente il
+  destinatario, usa target_user = null.
+- Se il personaggio vuole rispondere a una domanda, provocazione,
+  accusa, richiesta o messaggio specifico di un utente, allora
+  valorizza target_user con quell'username.
+- La presenza di una risposta nel thread NON implica automaticamente
+  che target_user debba essere valorizzato.
+- target_user rappresenta un INTENTO DI RISPOSTA DIRETTA,
+  non semplicemente la persona più rilevante del thread.
+
+REGOLE PER interested:
+
+- interested = true solo se il personaggio avrebbe una ragione
+  concreta per intervenire.
+- Un interesse generico o marginale dovrebbe produrre uno score basso.
+- Se non c'è una motivazione plausibile per intervenire,
+  interested = false.
+- Non aumentare lo score solo perché nel thread c'è un giocatore reale.
+
+REGOLE PER reason:
+
+- Spiega brevemente perché il personaggio interverrebbe o non
+  interverrebbe.
+- Se target_user è valorizzato, spiega anche perché vuole rivolgersi
+  proprio a quella persona.
+
+DECISIONE SU target_user:
+
+Chiediti esplicitamente:
+
+"Se questo bot dovesse scrivere il prossimo messaggio, starebbe
+rispondendo DIRETTAMENTE a una persona specifica?"
+
+Se NO -> target_user = null
+Se SÌ -> target_user = username esatto della persona
+
+Ricorda:
+interessato a una discussione != interessato a rispondere a qualcuno.
+"""
     )
 
     user_prompt = f"""
@@ -349,7 +742,7 @@ Valuta l'interesse del personaggio (score da 0.0 a 1.0) e compila i campi del JS
 # GENERAZIONE CONTENUTI (CY_BORG VIBE)
 # ============================================================
 
-def generate_comment(bot, discussion_title, posts, players_map, target_user, cfg):
+def generate_comment(session, bot, discussion_title, posts, players_map, target_user, cfg):
     formatted_posts = []
     for p in posts[-10:]:
         role = " [PC]" if p["author_username"] in players_map else ""
@@ -398,9 +791,36 @@ QUIRKS: {", ".join(bot.get('quirks', []))}
 
 THREAD: {discussion_title}
 
-CONVERSAZIONE DALLA RETE:
+CONVERSAZIONE DALLA NET:
 {conversation}
 
+"""
+
+    if random.random() < cfg["event_relevance"]:
+        recent_events = get_events()
+        events_text = "\n".join(f"- {e['text']}" for e in recent_events)
+        user_prompt += f"""\n\n
+EVENTI RECENTI IN CITTA': Queste sono cose successe recentemente a Cy e che stanno circolando
+tra la gente, sulla NET, per strada, nei locali o nei canali pubblici.
+NON devi necessariamente parlarne. Considerale semplicemente come
+parte del mondo attuale del personaggio.
+{events_text}.\n
+Puoi:
+- reagire a uno degli eventi se è pertinente alla discussione;
+- collegarlo alla tua esperienza, fazione o interessi;
+- usarlo come battuta, paranoia, teoria o provocazione;
+- comportarti come se ne avessi sentito parlare;
+- ignorarlo completamente se il tuo personaggio non avrebbe motivo di interessarsene.
+NON elencare gli eventi.
+NON dire "secondo gli eventi recenti".
+NON spiegare che stai usando questo contesto.\n"""
+
+    if (target_user):
+        interactions = get_user_interactions(session, bot["username"], target_user, limit=15)
+        strInteractions = format_interactions_for_llm(interactions)
+        user_prompt += "\n\n" + strInteractions + "\n\n"
+
+    user_prompt += f"""
 REGOLE DI GENERAZIONE:
 1. Rispondi alla discussione in modo naturale e spontaneo.
 2. Se vuoi menzionare qualcuno usa la sintassi @Username (specialmente se rispondi a un utente reale [PC]).
@@ -409,9 +829,8 @@ REGOLE DI GENERAZIONE:
 5. Mantieni il messaggio incisivo. Massimo {cfg['max_post_words']} parole.
 6. SCRIVI IN ITALIANO.
 
-Rispondi SOLO col testo del messaggio da pubblicare sulla BBS:
+Rispondi SOLO col testo del messaggio da pubblicare sulla BBS chiamata Cy6:
 """
-
     return ask_llm(system_prompt, user_prompt, temperature=cfg["temperature"], max_tokens=1500)
 
 class DiscussionBody(BaseModel):
@@ -429,7 +848,7 @@ class DiscussionTitle(BaseModel):
 
 
 def generate_thread(bot, cfg):
-    recent_events = get_events()[-5:]
+    recent_events = get_events()
     events_text = "\n".join(f"- {e['text']}" for e in recent_events)
     model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
@@ -470,8 +889,24 @@ PERSONALITA': {bot['personality']}
 STILE: {bot['style']}
 INTERESSI: {", ".join(bot['interests'])}
 
-RUMORS / EVENTI IN CITTA' che potrebbero ispirati, scegline al massimo UNO, se stai facendo teorie del complotto al massimo DUE:
+EVENTI RECENTI IN CITTA':
+
+Queste sono cose successe recentemente a Cy e che stanno circolando
+tra la gente, sulla NET, per strada, nei locali o nei canali pubblici.
+NON devi necessariamente parlarne. Considerale semplicemente come
+parte del mondo attuale del personaggio.
+
 {events_text}
+
+Puoi:
+- collegarlo alla tua esperienza, fazione o interessi;
+- usarlo come battuta, paranoia, teoria o provocazione;
+- comportarti come se ne avessi sentito parlare;
+- ignorarlo completamente se il tuo personaggio non avrebbe motivo di interessarsene.
+
+NON elencare gli eventi.
+NON dire "secondo gli eventi recenti".
+NON spiegare che stai usando questo contesto.\n
 
 Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
 """
@@ -482,7 +917,7 @@ Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
     )
 
     config_body = genai.GenerationConfig(
-        temperature=0.85,
+        temperature=cfg["temperature"],
         max_output_tokens=1500,
         response_mime_type="application/json",
         response_schema=DiscussionBody
@@ -556,6 +991,90 @@ Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
         "board": board_id
     }
 
+def clean_html(text):
+    text = unescape(text)
+    text = re.sub(r'<a[^>]*>(.*?)</a>', r'\1', text)
+    text = re.sub(r'<[^>]+>', '', text)
+    return text.strip()
+
+def format_interactions_for_llm(interactions):
+    """
+    Raggruppa tutte le interazioni per discussione e le trasforma
+    in un unico testo leggibile dal LLM.
+    """
+
+    if not interactions:
+        return "NON HAI INTERAZIONI PRECEDENTI CON QUESTO UTENTE."
+
+    discussions = defaultdict(lambda: {
+        "title": "",
+        "posts": []
+    })
+
+    for interaction in interactions:
+        discussion_id = interaction.get("discussion_id")
+        thread = interaction.get("thread", {})
+
+        discussion = discussions[discussion_id]
+
+        if not discussion["title"]:
+            discussion["title"] = thread.get("title", "")
+
+        for post in interaction.get("posts", []):
+            content = post.get("content", "")
+
+            # Rimuove HTML
+            content = re.sub(r'<[^>]+>', '', content)
+            content = unescape(content).strip()
+
+            discussion["posts"].append({
+                "created_at": post.get("created_at", ""),
+                "author": interaction.get("from", ""),
+                "target": interaction.get("to", ""),
+                "content": content
+            })
+
+    # Ordina le discussioni in base al post più recente
+    discussion_list = []
+
+    for discussion_id, discussion in discussions.items():
+        discussion["posts"].sort(
+            key=lambda post: post["created_at"]
+        )
+
+        last_date = (
+            discussion["posts"][-1]["created_at"]
+            if discussion["posts"]
+            else ""
+        )
+
+        discussion_list.append((
+            last_date,
+            discussion_id,
+            discussion
+        ))
+
+    discussion_list.sort(reverse=True)
+
+    # Costruzione testo finale
+    lines = []
+    lines.append("Ecco la storia delle interazioni tra te e l'utente a cui rispondi:")
+    for _, discussion_id, discussion in discussion_list:
+
+        lines.append(
+            f"= THREAD: {discussion['title']} ="
+        )
+
+        for post in discussion["posts"]:
+            lines.append(
+                f"@{post['author']} invia a @{post['target']}: "
+                f"{post['content']}"
+            )
+
+        lines.append("")
+
+    return "\n".join(lines)
+
 # ============================================================
 # AZIONI BOT
 # ============================================================
@@ -611,7 +1130,20 @@ def run_comment_action(bot, session, players_map, memory, cfg):
             has_player = any(p["author_username"] in players_map for p in posts)
             if has_player:
                 score += cfg["player_reply_bonus"]
-                
+            else:
+                # Penalità aggiuntiva se ci sono troppi post dei bot
+                bot_post_count = sum(
+                    1 for p in posts
+                    if p["author_username"] not in players_map
+                )
+
+                if bot_post_count > 6:
+                    extra_bot_penalty = (
+                        bot_post_count - 6
+                    ) * cfg["bot_chain_penalty"]
+
+                    score -= extra_bot_penalty
+
             # Penalità se l'ultimo post è di un altro bot
             if posts[-1]["author_username"] not in players_map:
                 score -= cfg["bot_chain_penalty"]
@@ -634,13 +1166,14 @@ def run_comment_action(bot, session, players_map, memory, cfg):
     chosen = random.choice(candidates[:2])
 
     comment_text = generate_comment(
-        bot, chosen["title"], chosen["posts"], players_map, chosen["target_user"], cfg
+        session, bot, chosen["title"], chosen["posts"], players_map, chosen["target_user"], cfg
     )
 
     if not comment_text:
         return False
 
-    logging.info(f"💬 COMMENTO da @{bot['username']} nel thread #{chosen['discussion_id']}: {comment_text}")
+    comment_text = normalize_mentions(comment_text)
+    logging.info(f"💬 COMMENTO da @{bot['username']} nel thread #{chosen['title']}: {comment_text}")
     # Pubblica il post via API Flarum
     payload = {
         "data": {
@@ -704,6 +1237,7 @@ def main():
     logging.info(f"Caricati {len(bots)} bot e {len(players)} giocatori.")
 
     posts_to_make = cfg.get("posts_per_run", 1)
+
 
     for _ in range(posts_to_make):
         # Selezione del bot casuale
