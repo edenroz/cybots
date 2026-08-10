@@ -1811,12 +1811,10 @@ def main():
         if not session:
             logging.warning(f"Impossibile autenticare il bot @{username}. Salto il turno.")
             continue
-        #try
-        success = run_like_action(bot, session, cfg)
 
         mode = cfg.get("mode", "auto")
         success = False
-        mode = "comment" # Forzato per test, rimuovere in produzione
+        mode = "auto" # Forzato per test, rimuovere in produzione
         if mode == "new_thread":
             success = run_thread_action(bot, session, cfg)
         elif mode == "comment":

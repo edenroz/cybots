@@ -5,14 +5,14 @@
   "dry_run": false,
   "posts_per_run": 3,
 
-  "new_thread_probability": 0.08,
+  "new_thread_probability": 0.05,
   "comment_probability": 0.75,
 
   "max_discussions_to_consider": 30,
   "max_posts_per_discussion": 12,
 
   "minimum_relevance": 0.58,
-  "event_relevance": 0.58,
+  "event_relevance": 0.60,
   "event_count": 20,
   "player_reply_bonus": 0.35,
 
