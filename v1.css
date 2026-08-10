@@ -533,3 +533,124 @@ input[type="email"] {
     padding-left: 32px !important;
     padding-right: 32px !important;
 }
+
+li.item-joined {
+  position: relative;
+  color: transparent !important;
+  font-family: "VT323", monospace !important;
+  font-weight: bold;
+  text-shadow:
+    2px 0 #ff0055,
+    -2px 0 #0000ff,
+    0 0 3px #ff0055,
+    0 0 6px #0000ff;
+  animation:
+    cy-joined-jitter 0.11s infinite steps(2),
+    cy-joined-flicker 2.7s infinite steps(1);
+}
+
+/* Scanline / distorsione */
+li.item-joined::before {
+  content: "///// DATA_CORRUPTED /////";
+  position: absolute;
+  left: -3px;
+  top: 0;
+  width: calc(100% + 6px);
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+
+  color: #ff0055;
+  opacity: 0.75;
+
+  text-shadow:
+    2px 0 #0000ff,
+    -2px 0 #ff0055;
+
+  clip-path: inset(0 0 45% 0);
+
+  animation: cy-joined-glitch-a 0.17s infinite steps(2);
+}
+
+/* Second RGB layer */
+li.item-joined::after {
+  content: "/// SYS_TIME: 0xERROR ///";
+  position: absolute;
+  left: 2px;
+  top: 0;
+  width: calc(100% + 4px);
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+
+  color: #0000ff;
+  opacity: 0.7;
+
+  text-shadow:
+    -2px 0 #ff0055;
+
+  clip-path: inset(55% 0 0 0);
+
+  animation: cy-joined-glitch-b 0.13s infinite steps(2);
+}
+
+
+/* Violento tremolio */
+@keyframes cy-joined-jitter {
+  0%   { transform: translate(0, 0) skewX(0deg); }
+  10%  { transform: translate(-2px, 1px) skewX(-4deg); }
+  20%  { transform: translate(3px, -1px) skewX(5deg); }
+  30%  { transform: translate(-1px, 2px) skewX(0deg); }
+  40%  { transform: translate(2px, 0) skewX(-6deg); }
+  50%  { transform: translate(-3px, -1px) skewX(4deg); }
+  60%  { transform: translate(1px, 2px) skewX(-2deg); }
+  70%  { transform: translate(-2px, 0) skewX(6deg); }
+  80%  { transform: translate(3px, 1px) skewX(-5deg); }
+  90%  { transform: translate(-1px, -2px) skewX(2deg); }
+  100% { transform: translate(0, 0) skewX(0deg); }
+}
+
+
+/* Layer superiore che salta */
+@keyframes cy-joined-glitch-a {
+  0%   { transform: translate(0); clip-path: inset(0 0 80% 0); }
+  20%  { transform: translate(-6px, 1px); clip-path: inset(15% 0 55% 0); }
+  40%  { transform: translate(5px, -1px); clip-path: inset(40% 0 35% 0); }
+  60%  { transform: translate(-3px, 2px); clip-path: inset(5% 0 70% 0); }
+  80%  { transform: translate(7px, 0); clip-path: inset(55% 0 10% 0); }
+  100% { transform: translate(0); clip-path: inset(0 0 80% 0); }
+}
+
+
+/* Layer inferiore che salta */
+@keyframes cy-joined-glitch-b {
+  0%   { transform: translate(0); clip-path: inset(70% 0 0 0); }
+  25%  { transform: translate(5px, -1px); clip-path: inset(45% 0 20% 0); }
+  50%  { transform: translate(-7px, 1px); clip-path: inset(75% 0 0 0); }
+  75%  { transform: translate(3px, 0); clip-path: inset(30% 0 50% 0); }
+  100% { transform: translate(0); clip-path: inset(70% 0 0 0); }
+}
+
+
+/* Lampeggio / perdita di segnale */
+@keyframes cy-joined-flicker {
+  0%, 89%, 94%, 100% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 0;
+  }
+
+  91% {
+    opacity: 0.2;
+  }
+
+  92% {
+    opacity: 0;
+  }
+
+  93% {
+    opacity: 1;
+  }
+}
