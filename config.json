@@ -3,7 +3,7 @@
   "manual_check": true,
   "mode": "auto",
   "dry_run": false,
-  "posts_per_run": 3,
+  "posts_per_run": 1,
 
   "new_thread_probability": 0.08,
   "comment_probability": 0.75,
