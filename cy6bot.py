@@ -609,7 +609,7 @@ def ask_llm(system, prompt, temperature=0.9, max_tokens=300):
        )
 
     try:
-        time.sleep(2)
+        time.sleep(random.uniform(2, 5))
         response = model.generate_content(prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
         return response.text.strip()
     except Exception as e:
@@ -763,7 +763,7 @@ Valuta l'interesse del personaggio (score da 0.0 a 1.0) e compila i campi del JS
     )
 
     try:
-        time.sleep(2)
+        time.sleep(random.uniform(2, 5))
         response = model.generate_content(user_prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
 
         text = response.text.strip()
@@ -1013,7 +1013,7 @@ Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
     )
 
     try:
-        time.sleep(1)
+        time.sleep(random.uniform(2, 5))
         res_body = model_body.generate_content(
             user_prompt_body, 
             generation_config=config_body, 
@@ -1057,7 +1057,7 @@ Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
     )
 
     try:
-        time.sleep(1)
+        time.sleep(random.uniform(2, 5))
         res_title = model_title.generate_content(
             user_prompt_title, 
             generation_config=config_title, 
@@ -1365,8 +1365,8 @@ def main():
         # Piccola pausa tra le azioni per simulare la latenza di rete
         time.sleep(random.uniform(2, 5))
 
-    memory["last_run"] = time.time()
-    save_json(MEMORY_FILE, memory)
+    #memory["last_run"] = time.time()
+    #save_json(MEMORY_FILE, memory)
 
 if __name__ == "__main__":
     main()
