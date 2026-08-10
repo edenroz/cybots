@@ -528,3 +528,8 @@ input[type="email"] {
 .PostMention, .UserMention {
     background: none !important;
 }
+
+.Search-input input {
+    padding-left: 32px !important;
+    padding-right: 32px !important;
+}
