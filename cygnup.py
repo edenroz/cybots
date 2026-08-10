@@ -374,7 +374,7 @@ def main():
     # SAVE
     # --------------------------------------------------------
 
-    save_results(results, args.output)
+    #save_results(results, args.output)
 
     # --------------------------------------------------------
     # SUMMARY
