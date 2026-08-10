@@ -1167,6 +1167,248 @@ def format_interactions_for_llm(interactions):
 # ============================================================
 # AZIONI BOT
 # ============================================================
+def run_like_action(bot, session, cfg):
+    discussions, _ = fetch_forum_context(session, cfg["max_discussions_to_consider"])
+    
+    like = []
+
+    #2 private
+    #9 meta
+    IGNORED_TAGS = {"2", "9"}
+    for d in discussions:
+        d_id = str(d["id"])
+        title = d.get("attributes", {}).get("title", "")
+        
+        posts = get_discussion_posts_hydrated(session, d_id, cfg["max_posts_per_discussion"])
+        if not posts:
+            continue
+
+        discussion_tags = d.get("relationships", {}).get("tags", {}).get("data", [])
+    
+        # 1. Estrai tutti gli ID dei tag della discussione come set di stringhe
+        raw_tags = d.get("relationships", {}).get("tags", {}).get("data", [])
+        tag_ids = {str(t["id"]) for t in raw_tags if "id" in t}
+
+        # 2. Controlla se il bot è stato menzionato in almeno uno dei post
+        bot_mentioned = any(
+            f"@{bot['username'].lower()}"
+            in post.get("attributes", {}).get("content", "").lower()
+            for post in posts
+        )
+
+        if "9" in tag_ids:
+            continue
+
+        if "2" in tag_ids and not bot_mentioned:
+            continue
+
+        like.extend(evaluate_post_likes(bot, title, posts, get_events(), cfg))
+
+    print(like)
+
+class PostLike(BaseModel):
+    post_id: int
+    score: float
+    reason: str
+
+
+class PostLikeEvaluation(BaseModel):
+    likes: list[PostLike]
+
+def evaluate_post_likes(bot, discussion_title, posts, recent_events, cfg):
+    """
+    Decide quali post del thread meritano un like da parte del bot.
+
+    Il bot mette like quando è genuinamente d'accordo con il contenuto
+    del post, in base a personalità, interessi, stile e conoscenze.
+
+    Ritorna:
+    {
+        "likes": [
+            {
+                "post_id": 123,
+                "score": 0.87,
+                "reason": "Condivide completamente il punto di vista."
+            }
+        ]
+    }
+    """
+
+    formatted_posts = []
+
+    for p in posts[-10:]:
+
+        formatted_posts.append(
+            f"[POST_ID: {p['id']}] "
+            f"{p['author_username']}: {p['content']}"
+        )
+
+    conversation_text = "\n".join(formatted_posts)
+
+    events_text = "\n".join(
+        f"- {e['text']}" for e in recent_events
+    )
+
+    model_name = os.getenv(
+        "GEMINI_MODEL_LITE",
+        "gemini-3.5-flash-lite"
+    )
+
+    system_prompt = """
+Sei un sistema automatico che simula il comportamento sociale
+di un personaggio in un forum RPG.
+
+Il tuo compito è decidere quali post riceverebbero un LIKE
+da parte del personaggio.
+
+Il LIKE rappresenta APPROVAZIONE o ACCORDO con ciò che è stato
+scritto nel post.
+
+REGOLE IMPORTANTI:
+
+- Non devi decidere se il personaggio parteciperebbe alla discussione.
+- Devi valutare INDIVIDUALMENTE ogni post.
+- Un post deve ricevere un like solo se il personaggio ha una
+  ragione concreta per apprezzarne o condividerne il contenuto.
+- Il bot NON deve mettere like automaticamente ai post dei giocatori reali.
+- Il bot NON deve mettere like automaticamente ai post degli utenti
+  con cui ha già interagito.
+- Il bot NON deve mettere like semplicemente perché un post è ben scritto.
+- Il bot NON deve mettere like semplicemente perché un post è interessante.
+- "Interessante" non significa necessariamente "d'accordo".
+- Il bot può mettere like anche a un'opinione impopolare se è coerente
+  con la sua personalità.
+- Il bot può mettere like a un post sarcastico, cinico, aggressivo
+  o assurdo se il contenuto è compatibile con il personaggio.
+- Il bot può NON mettere like a un post con cui concorderebbe solo
+  parzialmente.
+- Se il personaggio è fortemente in disaccordo, lo score deve essere basso.
+- Se il personaggio non ha abbastanza informazioni per capire se
+  sarebbe d'accordo, lo score deve essere basso.
+- Non devi cercare di bilanciare artificialmente i like.
+- È perfettamente valido non mettere like a nessun post.
+- È perfettamente valido mettere like a più post.
+- È perfettamente valido mettere like a un solo post.
+
+VALUTA L'ACCORDO, NON LA QUALITÀ:
+
+Un post può essere:
+- molto interessante ma non meritevole di like;
+- scritto male ma perfettamente condivisibile dal personaggio;
+- provocatorio ma comunque condivisibile;
+- corretto secondo il personaggio ma non necessariamente secondo
+  la realtà.
+
+CONSIDERA:
+
+- Personalità del personaggio
+- Interessi
+- Stile e valori impliciti
+- Eventi recenti in città
+- Contesto della discussione
+- Contenuto specifico del singolo post
+
+SCORE:
+
+0.00 - 0.29:
+nessun accordo / probabilmente non metterebbe like
+
+0.30 - 0.59:
+accordo debole, ambiguo o insufficiente
+
+0.60 - 0.79:
+probabile accordo
+
+0.80 - 1.00:
+forte accordo / il personaggio apprezzerebbe chiaramente
+quel contenuto
+
+IMPORTANTE:
+
+Restituisci SOLO i post per i quali esiste una concreta probabilità
+che il personaggio metta LIKE.
+
+Non restituire post con score basso solo per spiegare perché
+non ricevono un like.
+
+Usa SEMPRE il post_id esatto fornito nel thread.
+Non inventare post_id.
+
+Non mettere like allo stesso post più volte.
+"""
+
+    user_prompt = f"""
+PERSONAGGIO:
+
+- Username: {bot['username']}
+- Personalità: {bot['personality']}
+- Stile: {bot['style']}
+- Interessi: {", ".join(bot['interests'])}
+
+EVENTI RECENTI IN CITTÀ:
+{events_text}
+
+DISCUSSIONE:
+
+Titolo:
+{discussion_title}
+
+ULTIMI POST:
+{conversation_text}
+
+Decidi quali post riceverebbero un LIKE da questo personaggio.
+
+Ricorda:
+LIKE = "sono d'accordo / condivido / approvo quello che hai scritto"
+
+Non significa:
+"questo post è interessante"
+"questo post è divertente"
+"questa persona mi piace"
+"voglio rispondere a questo post"
+"""
+
+    model = genai.GenerativeModel(
+        model_name=model_name,
+        system_instruction=system_prompt
+    )
+
+    generation_config = genai.GenerationConfig(
+        temperature=0.15,
+        max_output_tokens=1200,
+        response_mime_type="application/json",
+        response_schema=PostLikeEvaluation
+    )
+
+    text = ""
+
+    try:
+        time.sleep(random.uniform(1, 3))
+
+        response = model.generate_content(
+            user_prompt,
+            generation_config=generation_config,
+            safety_settings=SAFETY_SETTINGS
+        )
+
+        text = response.text.strip()
+
+        json_match = re.search(r'\{.*\}', text, re.DOTALL)
+
+        if json_match:
+            text = json_match.group(0)
+
+        return json.loads(text)
+
+    except Exception as e:
+        logging.warning(
+            f"Errore valutazione like per @{bot['username']}: "
+            f"{e} | Raw: {text if text else 'None'}"
+        )
+
+        return {
+            "likes": []
+        }
 
 def run_comment_action(bot, session, players_map, memory, cfg):
     discussions, _ = fetch_forum_context(session, cfg["max_discussions_to_consider"])
@@ -1465,6 +1707,8 @@ def main():
         if not session:
             logging.warning(f"Impossibile autenticare il bot @{username}. Salto il turno.")
             continue
+        #try
+        success = run_like_action(bot, session, cfg)
 
         mode = cfg.get("mode", "auto")
         success = False
@@ -1480,8 +1724,8 @@ def main():
                 success = run_comment_action(bot, session, players_map, memory, cfg)
                 
             # Fallback: se fallisce il commento (es. nessun thread interessante), prova ad aprire un thread
-            #if not success:
-            #    success = run_thread_action(bot, session, cfg)
+            if not success:
+                success = run_like_action(bot, session, cfg)
 
         # Piccola pausa tra le azioni per simulare la latenza di rete
         time.sleep(random.uniform(2, 5))
