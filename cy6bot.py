@@ -519,6 +519,96 @@ def flarum_post(session, endpoint, payload):
 # ============================================================
 # PARSING DEL FORUM & UTENTI
 # ============================================================
+import random
+
+
+def choose_and_like_post(session, evaluations, cfg):
+    """
+    evaluations:
+        [
+            {"likes": [{"post_id": 12, "score": 0.85}]},
+            {"likes": [{"post_id": 27, "score": 0.85}]},
+            {"likes": [{"post_id": 32, "score": 0.95}, {"post_id": 38, "score": 0.85}]},
+            ...
+        ]
+
+    Sceglie casualmente uno dei 3 post con score più alto
+    e mette like tramite API Flarum.
+    """
+
+    # Appiattiamo tutti i like
+    candidates = []
+
+    for evaluation in evaluations:
+        for like in evaluation.get("likes", []):
+            if "post_id" in like and "score" in like:
+                candidates.append({
+                    "post_id": int(like["post_id"]),
+                    "score": float(like["score"])
+                })
+
+    if not candidates:
+        logging.info("Nessun post candidato per il like.")
+        return None
+
+    # Ordina dal punteggio più alto al più basso
+    candidates.sort(
+        key=lambda x: x["score"],
+        reverse=True
+    )
+
+    # Prendiamo i primi 3
+    top_candidates = candidates[:3]
+
+    # Uno a caso tra i primi 3
+    chosen = random.choice(top_candidates)
+
+    post_id = chosen["post_id"]
+    score = chosen["score"]
+
+    logging.info(
+        f"Like scelto: post_id={post_id}, score={score:.2f} "
+        f"(tra i migliori {len(top_candidates)})"
+    )
+
+    # Dry run
+    if cfg.get("dry_run", False):
+        logging.info(
+            f"[DRY RUN] Non metto like al post {post_id}."
+        )
+        return chosen
+
+    # Controllo manuale
+    if cfg.get("manual_check", False):
+        answer = input(
+            f"Mettere LIKE al post {post_id} "
+            f"(score {score:.2f})? [y/n]: "
+        ).strip().lower()
+
+        if answer != "y":
+            print("Like non applicato.")
+            return None
+
+    # API Flarum
+    payload = {
+        "data": {
+            "attributes": {
+                "isLiked": True
+            }
+        }
+    }
+
+    flarum_post(
+        session,
+        f"/api/posts/{post_id}",
+        payload
+    )
+
+    logging.info(
+        f"Like applicato al post {post_id}."
+    )
+
+    return chosen
 
 def fetch_forum_context(session, max_discussions=10, posts_limit=15):
     """
@@ -1204,7 +1294,7 @@ def run_like_action(bot, session, cfg):
 
         like.append(evaluate_post_likes(bot, title, posts, get_events(), cfg))
 
-    print(like)
+    choose_and_like_post(session, like, cfg)
 
 class PostLike(BaseModel):
     post_id: int
