@@ -1853,7 +1853,7 @@ def main():
         )
 
         # Fallback: se fallisce il commento (es. nessun thread interessante) o ogni tanto, metti un like a un post esistente
-        if (not success and random.random() < 0.5) or random.random() < 0.35:
+        if (not success and random.random() < 0.5) or random.random() < 0.25:
             success = run_like_action(bot, session, cfg)
 
         # Piccola pausa tra le azioni per simulare la latenza di rete
