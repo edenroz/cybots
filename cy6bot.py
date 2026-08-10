@@ -1238,6 +1238,16 @@ def run_comment_action(bot, session, players_map, memory, cfg):
             )
 
             # ========================================================
+            # PRESENZA RECENTE DEI BOT
+            # ========================================================
+
+            if recent_bot_count >= 3:
+                chain_penalty += cfg["bot_chain_penalty"] * 0.5
+
+            if recent_bot_count == 4:
+                chain_penalty += cfg["bot_chain_penalty"] * 0.5
+
+            # ========================================================
             # CATENA CONSECUTIVA DI BOT
             # ========================================================
 
