@@ -1,0 +1,192 @@
+[
+  {
+    "id": "001",
+    "text": "I supporti di memoria fisica sono estremamente rari e costosi. Hard disk, SSD, schede di memoria e altri dispositivi di archiviazione vengono recuperati, riparati e rivenduti per anni.",
+    "tags": ["memoria", "tecnologia", "economia"]
+  },
+  {
+    "id": "002",
+    "text": "La Prima Guerra Corporativa scoppiò a causa della scarsità globale di indirizzi IP. Le megacorp iniziarono a combattere per il controllo delle infrastrutture e degli spazi di rete disponibili.",
+    "tags": ["prima-guerra-corporativa", "ip", "storia"]
+  },
+  {
+    "id": "003",
+    "text": "La Seconda Guerra Corporativa scoppiò a causa della scarsità globale di SSD. La capacità di archiviazione divenne una risorsa strategica e le megacorp combatterono per controllare fabbriche, materiali e scorte.",
+    "tags": ["seconda-guerra-corporativa", "ssd", "storia"]
+  },
+  {
+    "id": "004",
+    "text": "Dopo le guerre corporative, il controllo delle infrastrutture digitali passò quasi completamente nelle mani delle megacorp. La maggior parte delle persone non possiede realmente i dati che utilizza.",
+    "tags": ["corpo", "net", "economia"]
+  },
+  {
+    "id": "005",
+    "text": "La NET è una gigantesca infrastruttura globale frammentata, pericolosa e piena di sistemi abbandonati. Accedere alla rete non significa necessariamente sapere dove si sta andando.",
+    "tags": ["net", "hacking", "tecnologia"]
+  },
+  {
+    "id": "006",
+    "text": "Il vecchio Internet è praticamente morto. Quello che rimane è una rete di infrastrutture corporate, nodi privati, sistemi militari, reti clandestine e tecnologia dimenticata.",
+    "tags": ["net", "blackout", "storia"]
+  },
+  {
+    "id": "007",
+    "text": "Il Blackout distrusse enormi quantità di infrastrutture digitali e rese inaccessibili archivi, banche dati e sistemi automatizzati. Molti dati perduti non sono mai stati recuperati.",
+    "tags": ["blackout", "storia", "net"]
+  },
+  {
+    "id": "008",
+    "text": "Il Blackout non distrusse tutta la tecnologia. Molti sistemi continuarono a funzionare senza che nessuno ricordasse più chi li avesse costruiti o come fermarli.",
+    "tags": ["blackout", "tecnologia", "storia"]
+  },
+  {
+    "id": "009",
+    "text": "La tecnologia pre-Blackout è considerata estremamente preziosa. Vecchi computer, server, supporti di memoria e componenti industriali vengono recuperati e venduti come reliquie tecnologiche.",
+    "tags": ["blackout", "tecnologia", "mercato-nero"]
+  },
+  {
+    "id": "010",
+    "text": "Il cyberware è comune nella società di Cy. Gli impianti possono sostituire arti, migliorare i sensi, aumentare le capacità fisiche o modificare il corpo in modi estremi.",
+    "tags": ["cyberware", "tecnologia", "cy"]
+  },
+  {
+    "id": "011",
+    "text": "Il cyberware non è necessariamente sicuro. Gli impianti difettosi, illegali o mal installati possono causare danni permanenti, malfunzionamenti e dipendenza dalla manutenzione.",
+    "tags": ["cyberware", "corpo", "tecnologia"]
+  },
+  {
+    "id": "012",
+    "text": "Le megacorp controllano gran parte della produzione e della distribuzione del cyberware. Gli impianti migliori sono costosi e spesso disponibili soltanto a chi può permetterseli.",
+    "tags": ["cyberware", "corpo", "corpo"]
+  },
+  {
+    "id": "013",
+    "text": "La medicina è fortemente privatizzata. La qualità delle cure dipende dal denaro, dall'assicurazione e dal contratto sottoscritto con la megacorp che fornisce il servizio.",
+    "tags": ["medicina", "corpo", "economia"]
+  },
+  {
+    "id": "014",
+    "text": "Il CyTrauma è uno dei principali servizi di emergenza privata. Il suo scopo è recuperare e stabilizzare i clienti abbastanza importanti da giustificare il costo dell'intervento.",
+    "tags": ["cytrauma", "medicina", "corpo"]
+  },
+  {
+    "id": "015",
+    "text": "A Cy la vita umana ha un prezzo. Assicurazioni, abbonamenti, contratti e valutazioni aziendali determinano quanto una persona valga per il sistema.",
+    "tags": ["cy", "corpo", "società"]
+  },
+  {
+    "id": "016",
+    "text": "Le megacorp svolgono funzioni che un tempo appartenevano ai governi: sicurezza, sanità, infrastrutture, strade, comunicazioni, trasporti e distribuzione delle risorse.",
+    "tags": ["corpo", "governo", "società"]
+  },
+  {
+    "id": "017",
+    "text": "La pubblicità è onnipresente. Le megacorp utilizzano schermi, impianti, reti pubbliche, droni e dispositivi personali per vendere prodotti e influenzare il comportamento delle persone.",
+    "tags": ["corpo", "pubblicità", "cy"]
+  },
+  {
+    "id": "018",
+    "text": "La Cy è enorme, sovraffollata e verticale. Interi quartieri possono esistere sopra o sotto altri quartieri, separati da enormi differenze economiche. Fuori dalla città ci sono deserti e zone industriali abbandonate.",
+    "tags": ["cy", "città", "società"]
+  },
+  {
+    "id": "019",
+    "text": "La povertà convive direttamente con una tecnologia estremamente avanzata. È normale vedere persone che vivono tra rifiuti elettronici mentre sopra di loro passano infrastrutture miliardarie.",
+    "tags": ["cy", "povertà", "tecnologia"]
+  },
+  {
+    "id": "020",
+    "text": "I rifiuti tecnologici sono una risorsa. Componenti elettronici, cyberware, batterie, metalli e vecchi dispositivi vengono recuperati e rivenduti nei mercati clandestini.",
+    "tags": ["mercato-nero", "tecnologia", "cy"]
+  },
+  {
+    "id": "021",
+    "text": "La tecnologia proprietaria è ovunque. Molti dispositivi funzionano soltanto con software, licenze, firmware e servizi controllati dalla corporation che li produce.",
+    "tags": ["corpo", "tecnologia", "software"]
+  },
+  {
+    "id": "022",
+    "text": "Le licenze software possono essere più importanti dell'hardware. Un dispositivo perfettamente funzionante può diventare inutile quando la corporation interrompe il supporto.",
+    "tags": ["software", "corpo", "tecnologia"]
+  },
+  {
+    "id": "023",
+    "text": "I netrunner sono specialisti capaci di infiltrarsi nella NET, aggirare sistemi di sicurezza e manipolare infrastrutture digitali. Sono ricercati dalle megacorp e dai gruppi criminali.",
+    "tags": ["netrunner", "net", "hacking"]
+  },
+  {
+    "id": "024",
+    "text": "La NET contiene sistemi di sicurezza, programmi ostili, dati perduti, intelligenze artificiali, malware e infrastrutture abbandonate. Entrarci senza preparazione può essere letale.",
+    "tags": ["net", "netrunner", "hacking"]
+  },
+  {
+    "id": "025",
+    "text": "La Filth è una contaminazione digitale che infesta alcune parti della DARKNET. I suoi effetti possono essere imprevedibili e non sempre è chiaro dove finisca il software e inizi qualcosa di diverso.",
+    "tags": ["filth", "net", "hacking"]
+  },
+  {
+    "id": "026",
+    "text": "I Cydroidi sono macchine e sistemi cibernetici avanzati. Possono essere utilizzati come lavoratori, soldati, guardie, assistenti o strumenti di sorveglianza.",
+    "tags": ["cydroidi", "cyberware", "corpo"]
+  },
+  {
+    "id": "027",
+    "text": "Molti Cydroidi appartengono legalmente a una corporation. La distinzione tra macchina, proprietà e individuo è diventata sempre più difficile da definire.",
+    "tags": ["cydroidi", "corpo", "società"]
+  },
+  {
+    "id": "030",
+    "text": "Le bande controllano molte parti della città dove le megacorp hanno poca presenza diretta. Alcune sono criminali, altre funzionano come comunità, milizie o gruppi di autodifesa.",
+    "tags": ["bande", "cy", "società"]
+  },
+  {
+    "id": "031",
+    "text": "Gli street scum sono persone che vivono ai margini della società corporate. Mercenari, criminali, disoccupati, drogati, hacker e sopravvissuti formano una parte enorme della popolazione urbana.",
+    "tags": ["street-scum", "cy", "società"]
+  },
+  {
+    "id": "032",
+    "text": "I mercati neri sono fondamentali per l'economia di Cy. Qualunque cosa abbia valore può essere comprata, venduta, rubata o scambiata, inclusi dati, cyberware, organi e identità.",
+    "tags": ["mercato-nero", "economia", "cy"]
+  },
+  {
+    "id": "033",
+    "text": "L'identità digitale è una risorsa. Credenziali, profili, reputazioni, accessi e dati personali possono essere rubati e venduti come qualsiasi altra merce.",
+    "tags": ["identità", "net", "mercato-nero"]
+  },
+  {
+    "id": "034",
+    "text": "Le megacorp raccolgono enormi quantità di dati sui propri clienti. Privacy e anonimato sono beni di lusso difficili da ottenere.",
+    "tags": ["sorveglianza", "corpo", "privacy"]
+  },
+  {
+    "id": "035",
+    "text": "La sorveglianza automatizzata è normale. Telecamere, droni, sensori biometrici, sistemi predittivi e reti di riconoscimento monitorano gran parte della popolazione. é illegale usare i faceblockers, ma molti lo fanno comunque.",
+    "tags": ["sorveglianza", "corpo", "tecnologia"]
+  },
+  {
+    "id": "036",
+    "text": "La propaganda corporate presenta Cy come una società efficiente, sicura e prospera. La realtà quotidiana per gran parte della popolazione è molto diversa.",
+    "tags": ["propaganda", "corpo", "cy"]
+  },
+  {
+    "id": "037",
+    "text": "La pubblicità e la propaganda sono spesso indistinguibili. Le corporation vendono prodotti, servizi, ideologie e stili di vita attraverso gli stessi canali.",
+    "tags": ["propaganda", "pubblicità", "corpo"]
+  },
+  {
+    "id": "038",
+    "text": "La violenza è una parte normale della vita urbana. Le persone imparano presto a distinguere tra una sparatoria casuale, un regolamento di conti e una guerra corporate.",
+    "tags": ["violenza", "cy", "società"]
+  },
+  {
+    "id": "039",
+    "text": "Le guerre corporative non sono considerate guerre nel linguaggio ufficiale. Le corporation le descrivono come dispute commerciali, operazioni di sicurezza o ristrutturazioni territoriali.",
+    "tags": ["guerre-corporative", "corpo", "propaganda"]
+  },
+  {
+    "id": "040",
+    "text": "A Cy il confine tra tecnologia avanzata e spazzatura è sottile. Un componente considerato inutile da una corporation può essere estremamente prezioso per un fixer, un netrunner o uno street scum.",
+    "tags": ["tecnologia", "mercato-nero", "società"]
+  }
+]
