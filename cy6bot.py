@@ -1314,10 +1314,6 @@ def main():
 
         # Connessione autenticata con le credenziali specifiche del Bot
         session = get_bot_session(username)
-        #hhhhh
-        h = get_bot_history(session, username, 10)
-        print(format_recent_posts(h))
-        #hhhhh
 
         if not session:
             logging.warning(f"Impossibile autenticare il bot @{username}. Salto il turno.")
