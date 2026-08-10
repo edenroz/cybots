@@ -859,6 +859,11 @@ def generate_comment(session, bot, discussion_title, posts, players_map, target_
                  " potrebbe realisticamente conoscere in CY_BORG vivendo a Cy."
             "11. NON spiegare la lore al lettore. Cy, le corporazioni, le gang, la NET e gli eventi del mondo fanno parte della vita quotidiana del personaggio."
                 "Non introdurli come se stessi scrivendo una wiki o spiegando il gioco a qualcuno.\n"
+            "CONOSCENZA CANONICA DEL MONDO:\n"
+            f"""{LORE_PROMPT}\n"""
+            "Queste informazioni sono conoscenza di base del personaggio. "
+            "Non citarle esplicitamente come 'lore', 'database', 'contesto' o 'informazioni fornite'. "
+            "Non devi usare queste informazioni se non sono pertinenti alla conversazione.\n"
         )
 
     user_prompt = f"""
@@ -950,6 +955,11 @@ def generate_thread(bot, cfg):
         "8. Non fare MAI riferimento a date specifiche ('ieri', 'stanotte', 'tempo fa' vanno bene).\n"
         "9. Non devi essere utile a tutti i costi. Puoi mentire, esagerare, fraintendere o dire cavolate.\n"
         "10. NON spiegare la lore al lettore.\n"
+        "CONOSCENZA CANONICA DEL MONDO:\n"
+        f"""{LORE_PROMPT}\n"""
+        "Queste informazioni sono conoscenza di base del personaggio. "
+        "Non citarle esplicitamente come 'lore', 'database', 'contesto' o 'informazioni fornite'. "
+        "Non devi usare queste informazioni se non sono pertinenti alla conversazione.\n"
         "11. REGOLA ANTI-SPAM:\n"
         "   - È severamente vietato generare codice binario o lunghe stringhe di numeri senza senso.\n"
         "   - NO HASHTAG MULTIPLI (al massimo UNO a fine post).\n"
