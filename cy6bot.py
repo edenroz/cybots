@@ -1213,80 +1213,135 @@ def run_comment_action(bot, session, players_map, memory, cfg):
         eval_res = evaluate_discussion(bot, title, posts, players_map, cfg)
                    
         if eval_res.get("interested", False):
-            base_score = max(0.0, min(1.0, float(eval_res.get("score", 0.0))))
-            score = base_score
+            base_score = float(eval_res.get("score", 0.0))
+            score = max(0.0, min(1.0, base_score))
 
-            has_player = any(
-                p["author_username"] in players_map
-                for p in posts
-            )
+            # ========================================================
+            # ANALISI DELLA CONVERSAZIONE
+            # ========================================================
 
-            bot_post_count = sum(
-                1 for p in posts
-                if p["author_username"] not in players_map
-            )
-
-            # ------------------------------------------------------------
-            # GIOCATORE PRESENTE
-            # ------------------------------------------------------------
-
-            if has_player:
-                score += cfg["player_reply_bonus"]
-
-            # ------------------------------------------------------------
-            # ULTIMO POST
-            # ------------------------------------------------------------
-
-            last_is_bot = (
-                posts[-1]["author_username"] not in players_map
-            )
-
-            if last_is_bot:
-                score -= cfg["bot_chain_penalty"] * 0.5
-
-            # ------------------------------------------------------------
-            # CATENA BOT RECENTE
-            # ------------------------------------------------------------
-
+            # Ultimi 4 post: serve per capire quanto il thread
+            # sia recentemente dominato dai bot.
             recent_posts = posts[-4:]
 
             recent_bot_count = sum(
-                1 for p in recent_posts
+                1
+                for p in recent_posts
                 if p["author_username"] not in players_map
             )
 
-            # Penalità leggera e progressiva.
-            #
-            # 0-1 bot recenti -> niente
-            # 2 bot           -> -0.05
-            # 3 bot           -> -0.10
-            # 4 bot           -> -0.15
+            # Quanti post dei bot ci sono complessivamente?
+            bot_post_count = sum(
+                1
+                for p in posts
+                if p["author_username"] not in players_map
+            )
 
-            if recent_bot_count >= 2:
-                chain_penalty = (
-                    recent_bot_count - 1
-                ) * 0.05
+            # ========================================================
+            # CATENA CONSECUTIVA DI BOT
+            # ========================================================
 
-                score -= chain_penalty
+            # Conta quanti bot hanno scritto consecutivamente
+            # fino all'ultimo post.
+            consecutive_bot_count = 0
 
-            # ------------------------------------------------------------
+            for p in reversed(posts):
+                if p["author_username"] in players_map:
+                    break
+
+                consecutive_bot_count += 1
+
+            # ========================================================
+            # BONUS GIOCATORE
+            # ========================================================
+
+            # Non basta che un giocatore abbia scritto nel thread.
+            # Più il suo ultimo messaggio è recente, maggiore è
+            # l'incentivo per il bot a intervenire.
+
+            player_positions = [
+                i
+                for i, p in enumerate(posts)
+                if p["author_username"] in players_map
+            ]
+
+            if player_positions:
+                last_player_distance = (
+                    len(posts) - 1 - player_positions[-1]
+                )
+
+                player_bonus = cfg["player_reply_bonus"]
+
+                if last_player_distance == 0:
+                    # Il giocatore ha appena scritto.
+                    score += player_bonus
+
+                elif last_player_distance == 1:
+                    # Un bot ha già risposto al giocatore.
+                    score += player_bonus * 0.75
+
+                elif last_player_distance == 2:
+                    score += player_bonus * 0.50
+
+                elif last_player_distance <= 4:
+                    score += player_bonus * 0.25
+
+            # ========================================================
+            # PENALITÀ CATENA BOT
+            # ========================================================
+
+            chain_penalty = 0.0
+
+            # Una discussione recente composta quasi interamente
+            # da bot è leggermente meno interessante.
+            if recent_bot_count >= 3:
+                chain_penalty += cfg["bot_chain_penalty"]
+
+            if recent_bot_count == 4:
+                chain_penalty += cfg["bot_chain_penalty"]
+
+            # La vera penalità riguarda la catena consecutiva.
+
+            if consecutive_bot_count >= 2:
+                chain_penalty += cfg["bot_chain_penalty"]
+
+            if consecutive_bot_count >= 3:
+                chain_penalty += cfg["bot_chain_penalty"]
+
+            if consecutive_bot_count >= 4:
+                chain_penalty += cfg["bot_chain_penalty"]
+
+            if consecutive_bot_count >= 5:
+                chain_penalty += cfg["bot_chain_penalty"] * 0.5
+
+            score -= chain_penalty
+
+            # ========================================================
             # THREAD MOLTO LUNGO SENZA GIOCATORI
-            # ------------------------------------------------------------
+            # ========================================================
+
+            has_player = bool(player_positions)
 
             if not has_player and bot_post_count > 6:
                 excess = bot_post_count - 6
 
                 # Penalità molto lenta.
+                # Evita che un thread bot-only rimanga attivo
+                # indefinitamente, ma senza stroncarlo subito.
                 score -= min(
                     0.20,
                     excess * 0.03
                 )
 
-            # ------------------------------------------------------------
-            # LIMITI
-            # ------------------------------------------------------------
+            # ========================================================
+            # NORMALIZZAZIONE
+            # ========================================================
 
             score = max(0.0, min(1.0, score))
+
+            # ========================================================
+            # CANDIDATO
+            # ========================================================
 
             if score >= cfg["minimum_relevance"]:
                 candidates.append({
