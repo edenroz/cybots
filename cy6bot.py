@@ -422,7 +422,7 @@ def format_recent_posts(posts):
 
         formatted.append(
             f'[{date_str}] Discussione: "{title}"\n'
-            f'{content}'
+            f'- {content}'
         )
 
     return "\n\n".join(formatted)
