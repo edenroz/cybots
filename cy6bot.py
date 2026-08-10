@@ -1313,8 +1313,8 @@ def main():
 
     for _ in range(posts_to_make):
         # Selezione del bot casuale
-        bot = bots[34]  # Example index, replace with actual random selection
-        # bot = bots[random.choice(bots)
+        #bot = bots[34]  # Example index, replace with actual random selection
+        bot = bots[random.choice(bots)
         
         username = bot["username"]
 
