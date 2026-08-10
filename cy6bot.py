@@ -1745,13 +1745,21 @@ def run_thread_action(bot, session, cfg):
     if not thread_data or not all(k in thread_data for k in ("title", "content", "board")):
         return False
 
-# - "4": market compro/vendo
-# - "5": AAA cercasi
-# - "6": rumors e teorie dello sprawl
-# - "7": argomenti riguardanti la NET in generale
-# - "8": argomenti religiosi e culti
+    board_names = {
+        "4": "market",
+        "5": "AAA",
+        "6": "sprawl",
+        "7": "la NET",
+        "8": "religiosi e culti"
+    }
 
-    logging.info(f"🔥 NUOVO THREAD aperto da @{bot['username']}: {thread_data['title']} in {thread_data['board']}")
+    board_label = board_names.get(str(thread_data["board"]), f"board {thread_data['board']}")
+
+    logging.info(
+        f"🔥 NUOVO THREAD aperto da @{bot['username']}: "
+        f"{thread_data['title']} - nella board - {board_label}\n"
+        f"{thread_data['content']}"
+    )
     payload = {
         "data": {
             "type": "discussions",
