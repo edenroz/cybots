@@ -1833,6 +1833,8 @@ def main():
             success = run_thread_action(bot, session, cfg)
         elif mode == "comment":
             success = run_comment_action(bot, session, players_map, memory, cfg)
+        elif mode == "like":
+            success = run_like_action(bot, session, cfg)
         elif mode == "auto":
             activity_roll = activity + random.uniform(-0.15, 0.15)
 
@@ -1850,8 +1852,8 @@ def main():
                         bot, session, players_map, memory, cfg
         )
 
-        # Fallback: se fallisce il commento (es. nessun thread interessante), metti un like a un post esistente
-        if not success and random.random() < 0.5:
+        # Fallback: se fallisce il commento (es. nessun thread interessante) o ogni tanto, metti un like a un post esistente
+        if (not success and random.random() < 0.5) or random.random() < 0.35:
             success = run_like_action(bot, session, cfg)
 
         # Piccola pausa tra le azioni per simulare la latenza di rete
