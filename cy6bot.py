@@ -1294,14 +1294,6 @@ def run_comment_action(bot, session, players_map, memory, cfg):
 
             # Una discussione recente composta quasi interamente
             # da bot è leggermente meno interessante.
-            if recent_bot_count >= 3:
-                chain_penalty += cfg["bot_chain_penalty"]
-
-            if recent_bot_count == 4:
-                chain_penalty += cfg["bot_chain_penalty"]
-
-            # La vera penalità riguarda la catena consecutiva.
-
             if consecutive_bot_count >= 2:
                 chain_penalty += cfg["bot_chain_penalty"]
 
