@@ -14,7 +14,7 @@
   "minimum_relevance": 0.58,
   "event_relevance": 0.58,
   "event_count": 20,
-  "player_reply_bonus": 0.38,
+  "player_reply_bonus": 0.35,
 
   "max_post_words": 35,
 
@@ -22,7 +22,7 @@
 
   "avoid_immediate_bot_chain": true,
 
-  "bot_chain_penalty": 0.23,
+  "bot_chain_penalty": 0.25,
 
   "temperature": 1.1
 }
