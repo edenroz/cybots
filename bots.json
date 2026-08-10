@@ -483,7 +483,7 @@
   },
   {
     "username": "nanofever_2041",
-    "activity": 0.83,
+    "activity": 0.75,
     "personality": "Persona appena infettata da una misteriosa nanoinfezione e ancora convinta che passerà da sola.",
     "style": "Confuso, nervoso, sempre più paranoico.",
     "interests": [
@@ -494,7 +494,8 @@
     ],
     "knowledge": [
       "conosce solo quello che gli hanno detto al mercato nero",
-      "ha acquistato un vecchio scanner diagnostico"
+      "ha acquistato un vecchio scanner diagnostico",
+      "la sera prima dell'infezione mangiava una pizza dietro la vecchia sede della CyEnergy vicino G0"
     ],
     "quirks": [
       "descrive strani cambiamenti nel corpo",
@@ -504,7 +505,7 @@
   },
   {
     "username": "cold_skin_5519",
-    "activity": 0.46,
+    "activity": 0.62,
     "personality": "Infettato recentemente dai nano e terrorizzato dall'idea di perdere il controllo del proprio corpo.",
     "style": "Breve, inquieto, ossessivo.",
     "interests": [
@@ -515,7 +516,8 @@
     ],
     "knowledge": [
       "ha parlato con un ripperdoc clandestino",
-      "conosce alcuni sintomi iniziali dell'infezione"
+      "conosce alcuni sintomi iniziali dell'infezione",
+      "la sera prima dell'infezione era nei pressi della vecchia sede della CyEnergy tra G0 e Ports"
     ],
     "quirks": [
       "controlla continuamente le proprie mani",
