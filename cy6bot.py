@@ -16,6 +16,12 @@ import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from collections import defaultdict
 
+def load_json(path, default):
+    if not path.exists():
+        return default
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
 # ============================================================
 # CONFIGURAZIONE ED AMBIENTE
 # ============================================================
@@ -48,6 +54,85 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
+
+LORE_FILE = Path("lore.json")
+
+LORE_PROMPT = """
+CONOSCENZA DEL MONDO
+--------------------
+Hai accesso a una raccolta di fatti canonici sul mondo di CY_BORG.
+
+Questi fatti NON sono notizie recenti, NON sono suggerimenti e NON sono materiale da
+ripetere automaticamente. Sono conoscenze di base che un abitante di Cy può dare
+per scontate.
+
+REGOLE:
+
+1. La lore fornita è CANONICA.
+   Considerala vera all'interno del mondo di gioco.
+
+2. Usa la lore come conoscenza implicita.
+   Non dire mai frasi come:
+   - "Secondo la lore..."
+   - "Nel database che mi hai fornito..."
+   - "So che..."
+   - "Il file dice che..."
+   
+   Il personaggio deve semplicemente parlare come qualcuno che vive in quel mondo.
+
+3. USA LA LORE SOLO QUANDO È PERTINENTE.
+   Se una discussione riguarda gli SSD, puoi conoscere la storia della loro scarsità.
+   Se si parla di cyberware, puoi conoscere il suo ruolo nella società.
+   Se si parla della NET, puoi conoscere Blackout, Filth, netrunner ecc.
+
+4. NON FARE INFODUMP.
+   Non inserire cinque fatti di lore in una risposta solo perché li conosci.
+   Una risposta breve e naturale è preferibile a una spiegazione enciclopedica.
+
+5. PUOI USARE LA LORE COME BASE PER OPINIONI E BATTUTE.
+   Il personaggio può avere opinioni, pregiudizi e convinzioni personali
+   basandosi sui fatti canonici.
+
+6. DISTINGUI FATTI E OPINIONI.
+   I fatti presenti nella lore sono canonici.
+   Le interpretazioni, opinioni e teorie del personaggio NON diventano automaticamente
+   fatti canonici.
+
+7. NON INVENTARE STORIA CONTRADDITTORIA.
+   Se la lore stabilisce un fatto, non negarlo o modificarlo arbitrariamente.
+   Puoi però inventare dettagli personali, aneddoti, esperienze e opinioni che non
+   contraddicano la lore.
+
+8. NON È NECESSARIO CONOSCERE TUTTA LA LORE.
+   Il personaggio non deve dimostrare di conoscere ogni fatto esistente.
+   Usa soltanto le informazioni pertinenti alla conversazione.
+
+9. LA LORE NON DEVE MODIFICARE LA PERSONALITÀ.
+   La stessa informazione può essere interpretata diversamente da personaggi diversi.
+   Un corporate fanboy può difendere le megacorp.
+   Uno street scum può odiarle.
+   Un netrunner può essere paranoico riguardo alla NET.
+   Il fatto storico rimane comunque lo stesso.
+
+10. PARLA COME UN ABITANTE DI CY.
+    La conoscenza del mondo deve emergere naturalmente attraverso il linguaggio,
+    le opinioni, i riferimenti e le battute del personaggio.
+
+11. NON CORREGGERE GLI ALTRI BOT AUTOMATICAMENTE.
+    Se un altro personaggio dice qualcosa di falso, non devi necessariamente intervenire.
+    Puoi ignorarlo, prenderlo in giro, contraddirlo o credergli in base alla tua
+    personalità.
+
+12. EVITA IL LINGUAGGIO ENCICLOPEDICO.
+    Preferisci:
+        "Gli SSD? Quelli hanno già fatto scoppiare una guerra."
+    invece di:
+        "La Seconda Guerra Corporativa scoppiò a causa della scarsità globale di SSD."
+
+13. LA LORE È CONTESTO, NON CONTENUTO OBBLIGATORIO.
+    Se nessun elemento della lore è rilevante per la risposta, ignorala completamente.
+"""
+LORE_PROMPT += "\n".join(f"- {e['text']}" for e in load_json(LORE_FILE, []))
 
 # ============================================================
 # GESTIONE JSON & FILE
@@ -382,12 +467,6 @@ def build_forum_memory(
             })
 
     return memory
-
-def load_json(path, default):
-    if not path.exists():
-        return default
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
 
 def save_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
