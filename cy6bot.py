@@ -394,7 +394,7 @@ def normalize_mentions(text: str) -> str:
 
 from datetime import datetime
 
-def format_recent_posts(posts):
+def format_recent_posts(posts, discussion_title=None):
     if not posts:
         return "Nessun post recente."
 
@@ -823,7 +823,7 @@ def generate_comment(session, bot, discussion_title, posts, players_map, target_
             f"""{LORE_PROMPT}\n"""
         )
 
-    recent_posts_text = format_recent_posts(get_bot_history(session, bot["username"], 10))
+    recent_posts_text = format_recent_posts(get_bot_history(session, bot["username"], 10), discussion_title)
 
     user_prompt = f"""
 TU SEI: @{bot['username']}
