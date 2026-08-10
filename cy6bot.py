@@ -419,6 +419,8 @@ def format_recent_posts(posts, discussion_title=None):
 
         thread = post.get("thread") or {}
         title = thread.get("title", "Discussione sconosciuta")
+        if (title == discussion_title):
+            continue  # Salta i post della discussione corrente
 
         formatted.append(
             f'[{date_str}] Discussione: "{title}"\n'
