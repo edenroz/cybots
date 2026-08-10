@@ -1202,14 +1202,13 @@ def run_like_action(bot, session, cfg):
         if "2" in tag_ids and not bot_mentioned:
             continue
 
-        like.extend(evaluate_post_likes(bot, title, posts, get_events(), cfg))
+        like.append(evaluate_post_likes(bot, title, posts, get_events(), cfg))
 
     print(like)
 
 class PostLike(BaseModel):
     post_id: int
     score: float
-    reason: str
 
 
 class PostLikeEvaluation(BaseModel):
@@ -1227,8 +1226,7 @@ def evaluate_post_likes(bot, discussion_title, posts, recent_events, cfg):
         "likes": [
             {
                 "post_id": 123,
-                "score": 0.87,
-                "reason": "Condivide completamente il punto di vista."
+                "score": 0.87
             }
         ]
     }
@@ -1256,7 +1254,7 @@ def evaluate_post_likes(bot, discussion_title, posts, recent_events, cfg):
 
     system_prompt = """
 Sei un sistema automatico che simula il comportamento sociale
-di un personaggio in un forum RPG.
+di un personaggio in un forum RPG Cyberpunk.
 
 Il tuo compito è decidere quali post riceverebbero un LIKE
 da parte del personaggio.
@@ -1393,12 +1391,12 @@ Non significa:
 
         text = response.text.strip()
 
-        json_match = re.search(r'\{.*\}', text, re.DOTALL)
+        data = json.loads(text)
 
-        if json_match:
-            text = json_match.group(0)
+        if isinstance(data, dict) and "likes" in data:
+            return data
 
-        return json.loads(text)
+        return {"likes": []} 
 
     except Exception as e:
         logging.warning(
