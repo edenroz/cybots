@@ -1,8 +1,8 @@
 {
   "tag_id": 1,
-
+  "manual_check": true,
   "mode": "auto",
-  "dry_run": true,
+  "dry_run": false,
   "posts_per_run": 1,
 
   "new_thread_probability": 0.08,
