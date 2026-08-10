@@ -823,6 +823,8 @@ def generate_comment(session, bot, discussion_title, posts, players_map, target_
             f"""{LORE_PROMPT}\n"""
         )
 
+    recent_posts_text = format_recent_posts(get_bot_history(session, bot["username"], 10))
+
     user_prompt = f"""
 TU SEI: @{bot['username']}
 PERSONALITA': {bot['personality']}
@@ -835,6 +837,13 @@ THREAD: {discussion_title}
 CONVERSAZIONE DALLA NET:
 {conversation}
 
+MEMORIA PERSONALE RECENTE:\n
+{recent_posts_text}\n
+Questi sono alcuni dei tuoi ultimi post sul forum.
+Usali per mantenere continuità nel modo di parlare, nelle opinioni,
+nelle esperienze e negli argomenti già affrontati.
+Non copiarli e non citarli come memoria.
+Possono contenere opinioni, battute o informazioni sbagliate del personaggio.\n
 """
 
     if random.random() < cfg["event_relevance"]:
@@ -888,7 +897,7 @@ class DiscussionTitle(BaseModel):
     )
 
 
-def generate_thread(bot, cfg):
+def generate_thread(session, bot, cfg):
     recent_events = get_events()
     events_text = "\n".join(f"- {e['text']}" for e in recent_events)
     model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
@@ -929,6 +938,8 @@ def generate_thread(bot, cfg):
         "- 8: argomenti religiosi e culti\n"
     )
 
+    recent_posts_text = format_recent_posts(get_bot_history(session, bot["username"], 10))
+
     user_prompt_body = f"""
 USERNAME: {bot['username']}
 PERSONALITA': {bot['personality']}
@@ -936,23 +947,29 @@ STILE: {bot['style']}
 INTERESSI: {", ".join(bot['interests'])}
 
 EVENTI RECENTI IN CITTA':
-
 Queste sono cose successe recentemente a Cy e che stanno circolando
 tra la gente, sulla NET, per strada, nei locali o nei canali pubblici.
 NON devi necessariamente parlarne. Considerale semplicemente come
 parte del mondo attuale del personaggio.
-
 {events_text}
 
 Puoi:
-- collegarlo alla tua esperienza, fazione o interessi;
-- usarlo come battuta, paranoia, teoria o provocazione;
+- collegarle alla tua esperienza, fazione o interessi;
+- usarle come battuta, paranoia, teoria o provocazione;
 - comportarti come se ne avessi sentito parlare;
-- ignorarlo completamente se il tuo personaggio non avrebbe motivo di interessarsene.
+- ignorarle completamente se il tuo personaggio non avrebbe motivo di interessarsene.
 
 NON elencare gli eventi.
 NON dire "secondo gli eventi recenti".
 NON spiegare che stai usando questo contesto.\n
+
+MEMORIA PERSONALE RECENTE:\n
+{recent_posts_text}\n
+Questi sono alcuni dei tuoi ultimi post sul forum.
+Usali per mantenere continuità nel modo di parlare, nelle opinioni,
+nelle esperienze e negli argomenti già affrontati.
+Non copiarli e non citarli come memoria.
+Possono contenere opinioni, battute o informazioni sbagliate del personaggio.\n
 
 Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
 """
@@ -1237,7 +1254,7 @@ def run_comment_action(bot, session, players_map, memory, cfg):
     return True
 
 def run_thread_action(bot, session, cfg):
-    thread_data = generate_thread(bot, cfg)
+    thread_data = generate_thread(session, bot, cfg)
     if not thread_data or not all(k in thread_data for k in ("title", "content", "board")):
         return False
 
