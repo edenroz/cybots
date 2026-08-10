@@ -1295,7 +1295,7 @@ def run_comment_action(bot, session, players_map, memory, cfg):
             if recent_bot_count >= 3:
                 chain_penalty += cfg["bot_chain_penalty"] * 0.5
 
-            if recent_bot_count == 4:
+            if recent_bot_count >= 4:
                 chain_penalty += cfg["bot_chain_penalty"] * 0.5
 
             # ========================================================
