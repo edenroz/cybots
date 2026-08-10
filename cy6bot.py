@@ -1237,15 +1237,6 @@ def run_comment_action(bot, session, players_map, memory, cfg):
                 if p["author_username"] not in players_map
             )
 
-            # ========================================================
-            # PRESENZA RECENTE DEI BOT
-            # ========================================================
-
-            if recent_bot_count >= 3:
-                chain_penalty += cfg["bot_chain_penalty"] * 0.5
-
-            if recent_bot_count == 4:
-                chain_penalty += cfg["bot_chain_penalty"] * 0.5
 
             # ========================================================
             # CATENA CONSECUTIVA DI BOT
@@ -1296,11 +1287,20 @@ def run_comment_action(bot, session, players_map, memory, cfg):
                 elif last_player_distance <= 4:
                     score += player_bonus * 0.25
 
+            chain_penalty = 0.0
+            # ========================================================
+            # PRESENZA RECENTE DEI BOT
+            # ========================================================
+
+            if recent_bot_count >= 3:
+                chain_penalty += cfg["bot_chain_penalty"] * 0.5
+
+            if recent_bot_count == 4:
+                chain_penalty += cfg["bot_chain_penalty"] * 0.5
+
             # ========================================================
             # PENALITÀ CATENA BOT
             # ========================================================
-
-            chain_penalty = 0.0
 
             # Una discussione recente composta quasi interamente
             # da bot è leggermente meno interessante.
