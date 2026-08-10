@@ -3,7 +3,7 @@
   "manual_check": true,
   "mode": "auto",
   "dry_run": false,
-  "posts_per_run": 1,
+  "posts_per_run": 3,
 
   "new_thread_probability": 0.08,
   "comment_probability": 0.75,
@@ -14,7 +14,7 @@
   "minimum_relevance": 0.58,
   "event_relevance": 0.58,
   "event_count": 20,
-  "player_reply_bonus": 0.35,
+  "player_reply_bonus": 0.38,
 
   "max_post_words": 35,
 
@@ -22,7 +22,7 @@
 
   "avoid_immediate_bot_chain": true,
 
-  "bot_chain_penalty": 0.20,
+  "bot_chain_penalty": 0.23,
 
   "temperature": 1.1
 }
