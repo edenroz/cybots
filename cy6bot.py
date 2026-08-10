@@ -1053,12 +1053,17 @@ def generate_thread(session, bot, cfg):
         "   - È severamente vietato generare codice binario o lunghe stringhe di numeri senza senso.\n"
         "   - NO HASHTAG MULTIPLI (al massimo UNO a fine post).\n"
         "   - Nessuna parola inventata più lunga di 15 caratteri.\n\n"
+        "12. NON aprire discussioni generiche solo per avere qualcosa da dire. "
+        "Ogni nuovo thread deve nascere da almeno UNA motivazione concreta del personaggio: "
+        "un'esperienza personale, qualcosa che ha visto o sentito, una transazione, "
+        "un problema, una voce ricevuta, un oggetto, una persona, un luogo o un evento recente."
+        "Il thread deve sembrare qualcosa che questo utente avrebbe realmente deciso di condividere.\n\n"
         "Gli ID delle board disponibili sono:\n"
-        "- 4: market compro/vendo\n"
-        "- 5: AAA cercasi\n"
+        "- 4: market comprare o vendere\n"
+        "- 5: AAA cercasi cose o persone\n"
         "- 6: rumors e teorie dello sprawl\n"
         "- 7: argomenti riguardanti la NET in generale\n"
-        "- 8: argomenti religiosi e culti\n"
+        "- 8: argomenti religiosi e sui culti\n"
     )
 
     recent_posts_text = format_recent_posts(get_bot_history(session, bot["username"], 10))
