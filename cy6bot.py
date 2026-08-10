@@ -521,6 +521,20 @@ def flarum_post(session, endpoint, payload):
 # ============================================================
 import random
 
+def flarum_patch(session, endpoint, payload):
+    response = session.patch(
+        FLARUM_URL + endpoint,
+        json=payload,
+        timeout=30
+    )
+
+    if not response.ok:
+        logging.error(
+            f"Flarum API Error {response.status_code}: {response.text}"
+        )
+
+    response.raise_for_status()
+    return response.json()
 
 def choose_and_like_post(session, evaluations, cfg):
     """
@@ -592,13 +606,15 @@ def choose_and_like_post(session, evaluations, cfg):
     # API Flarum
     payload = {
         "data": {
+            "type": "posts",
+            "id": str(post_id),
             "attributes": {
                 "isLiked": True
             }
         }
     }
 
-    flarum_post(
+    flarum_patch(
         session,
         f"/api/posts/{post_id}",
         payload
