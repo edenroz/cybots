@@ -1185,7 +1185,9 @@ def run_comment_action(bot, session, players_map, memory, cfg):
         }
     }
 
-    flarum_post(session, "/api/posts", payload)
+    if not cfg.get("dry_run", False):
+        flarum_post(session, "/api/posts", payload)
+
     return True
 
 def run_thread_action(bot, session, cfg):
@@ -1215,8 +1217,9 @@ def run_thread_action(bot, session, cfg):
         }
     }
 
-    res = flarum_post(session, "/api/discussions", payload)
-    new_id = res.get("data", {}).get("id", "??")
+    if not cfg.get("dry_run", False):
+        res = flarum_post(session, "/api/discussions", payload)
+        new_id = res.get("data", {}).get("id", "??")
     return True
 
 # ============================================================
@@ -1264,8 +1267,8 @@ def main():
                 success = run_comment_action(bot, session, players_map, memory, cfg)
                 
             # Fallback: se fallisce il commento (es. nessun thread interessante), prova ad aprire un thread
-            if not success:
-                success = run_thread_action(bot, session, cfg)
+            #if not success:
+            #    success = run_thread_action(bot, session, cfg)
 
         # Piccola pausa tra le azioni per simulare la latenza di rete
         time.sleep(random.uniform(2, 5))

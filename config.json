@@ -2,7 +2,7 @@
   "tag_id": 1,
 
   "mode": "auto",
-
+  "dry_run": true,
   "posts_per_run": 1,
 
   "new_thread_probability": 0.08,
