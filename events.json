@@ -1,122 +1,27 @@
 [
   {
     "id": "001",
-    "text": "Non si trovano piu munizioni in città.",
-    "tags": ["blackout", "sector14"]
-  },
-  {
-    "id": "001",
-    "text": "Annullati tutti gli incontri di killmatch di Jack Martellone Steelhammer a causa della sua dipartita.",
-    "tags": ["blackout", "sector14"]
+    "text": "Le scorte di munizioni in città stanno rapidamente esaurendosi. Armerie, fixer e mercati neri riportano scaffali vuoti e prezzi fuori controllo. Nessuno sembra sapere chi stia comprando tutto.",
+    "tags": ["munizioni", "mercato_nero", "sector14"]
   },
   {
     "id": "002",
-    "text": "Due dozzine di Cydroidi sono caduti dal cielo a North Side.",
-    "tags": ["morti", "cychurch"]
+    "text": "Tutti gli incontri di Killmatch di Jack Martellone Steelhammer sono stati annullati dopo la sua improvvisa dipartita. Gli organizzatori parlano di un normale cambio di programma. I bookmaker non ci credono.",
+    "tags": ["killmatch", "morti", "sector14"]
   },
   {
     "id": "003",
-    "text": "Infestazioni di nano in aumento tra i quartieri BARNYARD FIELDS, G0 e PORTS.",
-    "tags": ["nano", "despair"]
+    "text": "Circa due dozzine di Cydroidi sono precipitate dal cielo su North Side. Alcuni erano ancora operativi all'impatto. Le autorità non hanno ancora spiegato da dove provenissero o perché fossero lassù.",
+    "tags": ["cydroidi", "north_side", "morti"]
   },
   {
     "id": "004",
-    "text": "La pizza Napoli in offerta da PIZZABOT3000 ha fatto venire la diarrea a molti.",
-    "tags": ["food", "cyber"]
+    "text": "Segnalazioni di infestazioni da Nano in aumento tra BARNYARD FIELDS, G0 e PORTS. Sono comparsi nuovi casi di alterazioni fisiche e comportamenti anomali. Le autorità invitano a non avvicinarsi alle zone contaminate.",
+    "tags": ["nano", "g0", "barnyard_fields", "ports", "despair"]
   },
   {
-    "id": "001",
-    "text": "Lo sapevi? ACGS non paga tasse.",
-    "tags": ["acgs", "corruzione", "corporazioni"]
-  },
-  {
-    "id": "002",
-    "text": "Lo sapevi? ACGS monta antincendio buggati che bloccano comodamente qualsiasi arma puntata contro bersagli classificati C.",
-    "tags": ["acgs", "armi", "sabotaggio"]
-  },
-  {
-    "id": "003",
-    "text": "Lo sapevi? La 'cura' BF-C di ACGS ha ucciso più pazienti dell'attacco vero e proprio.",
-    "tags": ["acgs", "bf-c", "morti"]
-  },
-  {
-    "id": "006",
-    "text": "Perché permettiamo a Royal West di controllare il 34% delle strade e delle ferrovie di Cy?",
-    "tags": ["royalwest", "infrastrutture", "potere"]
-  },
-  {
-    "id": "008",
-    "text": "Dobbiamo ritenerli responsabili. Ma ogni volta che proviamo a farlo, qualcuno ci mette a tacere.",
-    "tags": ["corruzione", "censura", "corporazioni"]
-  },
-  {
-    "id": "009",
-    "text": "La strage di Low Meadow è stata un'operazione di pulizia. I 'terroristi' erano sul libro paga di TG.",
-    "tags": ["lowmeadow", "tg", "terrorismo"]
-  },
-  {
-    "id": "010",
-    "text": "Quanto devi aver combinato male le cose per arrivare a uccidere 142 tuoi dipendenti pur di impedire che la verità venga fuori?",
-    "tags": ["tg", "morti", "insabbiamento"]
-  },
-  {
-    "id": "012",
-    "text": "STRAGE SENZA FINE SUI MARI. Il pesce che mangiamo contiene più plastica che carne.",
-    "tags": ["mare", "inquinamento", "plastica"]
-  },
-  {
-    "id": "014",
-    "text": "Perché i Barnyard Fields sono stati invasi dai Kroks?",
-    "tags": ["barnyardfields", "kroks", "invasione"]
-  },
-  {
-    "id": "015",
-    "text": "LA GUERRA TRA UNITED CITADEL SECURITY E ALLIANSEN INC. NON È FINITA.",
-    "tags": ["ucs", "alliansen", "guerra"]
-  },
-  {
-    "id": "016",
-    "text": "Gli scandali di quest'anno soltanto: il leak di IDVault, le sussidiarie Eclipse, la purga dei mech di CyBanks.",
-    "tags": ["ucs", "scandali", "cybanks"]
-  },
-  {
-    "id": "018",
-    "text": "Tre motivi per odiare UCS, se pestaggi e omicidi continui non bastano.",
-    "tags": ["ucs", "violenza", "corruzione"]
-  },
-  {
-    "id": "019",
-    "text": "Ancora nessuna giustizia per il massacro di North Remembrance Plaza.",
-    "tags": ["ucs", "northremembrance", "massacro"]
-  },
-  {
-    "id": "022",
-    "text": "Perché dobbiamo pagare per l'aria che respiriamo?",
-    "tags": ["ucs", "aria", "corporazioni"]
-  },
-  {
-    "id": "024",
-    "text": "Che cazzo stanno RILASCIANDO nell'acqua?",
-    "tags": ["ucs", "acqua", "inquinamento"]
-  },
-  {
-    "id": "026",
-    "text": "Vi ricordate lo scandalo dei tubi contaminati dal nanomuffa?",
-    "tags": ["ucs", "nanomuffa", "acqua"]
-  },
-  {
-    "id": "028",
-    "text": "Dove sono finiti i soldi?",
-    "tags": ["ucs", "corruzione", "soldi"]
-  },
-  {
-    "id": "029",
-    "text": "Oltre 2.000 morti sul lavoro negli ultimi due anni. Sette giornalisti morti mentre indagavano proprio su quegli incidenti.",
-    "tags": ["ucs", "morti", "giornalisti"]
-  },
-  {
-    "id": "002",
-    "text": "Annullati tutti gli incontri di killmatch di Jack @martellone Steelhammer a causa della sua dipartita.",
-    "tags": ["killmatch", "morti", "corpo"]
+    "id": "005",
+    "text": "La nuova offerta sulla Napoli di ZioGino3000 sta causando un'ondata di intossicazioni intestinali. Decine di clienti riportano diarrea violenta poche ore dopo il pasto. ZioGino3000 nega qualsiasi responsabilità e consiglia di aggiungere più peperoncino.",
+    "tags": ["food", "zio_gino_3000", "intossicazione", "cyber"]
   }
 ]
