@@ -1,5 +1,15 @@
 /* ==========================================================
    CY_FORUM theme for Flarum (CY_BORG - Matrix Canvas & Glitch)
+   ==========================================================
+   FIX APPLICATI (nessuna modifica grafica, solo stacking/z-index):
+   1. .Post:has(.Dropdown.open) -> i menu "..." dei singoli post non
+      vengono più coperti dai post successivi (stesso z-index 2 =
+      vinceva sempre chi viene dopo nel DOM).
+   2. .sideNav .Dropdown-menu / .IndexPage-nav .Dropdown-menu ->
+      z-index esplicito, così il menu "ALL DISCUSSIONS" non finisce
+      sotto la lista discussioni.
+   3. .Dropdown-menu, .Modal-content -> z-index di sicurezza generico
+      per qualsiasi altro dropdown/modal non coperto dai casi sopra.
    ========================================================== */
 
 /* --- PALETTE COLORI --- */
@@ -263,6 +273,11 @@ input[type="email"] {
   border: 2px solid @cy-yellow !important;
   box-shadow: 6px 6px 0 @cy-magenta !important;
   padding: 10px !important;
+  /* FIX: prima non aveva z-index -> la lista discussioni (che nel
+     DOM viene dopo la sidebar) le passava sopra e il menu appariva
+     "nascosto". Ora sta sempre sopra alla lista. */
+  position: absolute;
+  z-index: 6000 !important;
 }
 
 .DiscussionListItem {
@@ -295,6 +310,19 @@ input[type="email"] {
   z-index: 2;
 }
 
+/* FIX: ogni .Post ha z-index:2 come tutti gli altri Post della
+   discussione. A parità di z-index vince chi viene dopo nel DOM,
+   quindi il menu "..." (Dropdown) di un post veniva coperto dai
+   post successivi. Quando il dropdown è aperto, alziamo lo stacking
+   context dell'intero Post (stesso pattern già usato più sotto per
+   .DiscussionListItem) così il suo menu resta sempre visibile. */
+.Post:has(.Dropdown.open) {
+  z-index: 10000 !important;
+}
+.Post .Dropdown-menu {
+  z-index: 10001 !important;
+}
+
 .PostUser-name, 
 .PostUser-name a {
   color: @cy-yellow !important;
@@ -317,6 +345,11 @@ input[type="email"] {
   border: 3px solid @cy-yellow !important;
   box-shadow: 8px 8px 0 @cy-magenta, 0 0 20px rgba(0,0,0,0.9) !important;
   padding: 10px !important;
+  /* FIX: z-index di sicurezza generico, per qualsiasi dropdown/modal
+     del tema non coperto dalle regole più specifiche sopra/sotto
+     (es. menu utente nell'header, notifiche, ecc.), così non resta
+     mai sotto al contenuto normale della pagina. */
+  z-index: 500 !important;
 }
 
 /* --- CY_BORG TICKER --- */
@@ -515,6 +548,15 @@ input[type="email"] {
     }
 
     .DiscussionListItem .Dropdown-menu {
+        z-index: 10001 !important;
+    }
+
+    /* Il post con dropdown aperto (menu "...") resta sopra */
+    .Post:has(.Dropdown.open) {
+        z-index: 10000 !important;
+    }
+
+    .Post .Dropdown-menu {
         z-index: 10001 !important;
     }
 
