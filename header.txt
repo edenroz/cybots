@@ -290,83 +290,126 @@ document.addEventListener('DOMContentLoaded', () => {
        TEXT → INDIVIDUAL LETTERS
        ====================================================== */
 
-    function glitchifyTextNode(textNode) {
+function glitchifyTextNode(textNode) {
 
-        const text =
-            textNode.nodeValue;
-
-
-        if (
-            !text ||
-            !text.trim()
-        ) {
-            return;
-        }
+    const text =
+        textNode.nodeValue;
 
 
-        const fragment =
-            document.createDocumentFragment();
+    if (
+        !text ||
+        !text.trim()
+    ) {
+        return;
+    }
 
 
-        for (
-            const char of text
-        ) {
+    const fragment =
+        document.createDocumentFragment();
 
+
+    /*
+     * Divide il testo in:
+     *
+     * - parole
+     * - spazi
+     * - punteggiatura
+     *
+     * Le parole vengono racchiuse in un
+     * contenitore nowrap, così non possono
+     * essere spezzate durante il wrapping.
+     */
+
+    const parts =
+        text.split(/(\s+)/);
+
+
+    parts.forEach(
+        part => {
 
             /*
-             * Preserve whitespace.
+             * Spazi → mantienili come testo normale.
              */
 
             if (
-                /\s/.test(char)
+                /^\s+$/.test(part)
             ) {
 
                 fragment.appendChild(
-                    document.createTextNode(char)
+                    document.createTextNode(part)
                 );
 
-                continue;
+                return;
 
             }
 
 
-            const span =
+            /*
+             * Parola → contenitore nowrap.
+             */
+
+            const word =
                 document.createElement('span');
 
 
-            span.className =
-                'cy-glitch-letter';
-
-
-            span.textContent =
-                char;
+            word.className =
+                'cy-glitch-word';
 
 
             /*
-             * Random delay.
+             * Trasforma ogni carattere
+             * della parola in una lettera glitch.
              */
 
-            span.style.setProperty(
-                '--glitch-delay',
-                (
-                    Math.random() * 5
-                ).toFixed(2) + 's'
-            );
+            for (
+                const char of part
+            ) {
+
+                const span =
+                    document.createElement('span');
+
+
+                span.className =
+                    'cy-glitch-letter';
+
+
+                span.textContent =
+                    char;
+
+
+                /*
+                 * Random delay.
+                 */
+
+                span.style.setProperty(
+                    '--glitch-delay',
+                    (
+                        Math.random() * 5
+                    ).toFixed(2) + 's'
+                );
+
+
+                word.appendChild(
+                    span
+                );
+
+            }
 
 
             fragment.appendChild(
-                span
+                word
             );
 
         }
+    );
 
 
-        textNode.parentNode.replaceChild(
-            fragment,
-            textNode
-        );
+    textNode.parentNode.replaceChild(
+        fragment,
+        textNode
+    );
 
-    }
+}
 
 
     /* ======================================================

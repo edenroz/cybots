@@ -722,3 +722,15 @@ li.item-joined::after {
         opacity: 1;
     }
 }
+
+.cy-glitch-word {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+    .open.Dropdown .Dropdown-menu {
+        display: block;
+        z-index: 10000 !important;
+    }
+}
