@@ -405,27 +405,6 @@
     ]
   },
   {
-    "username": "meat_prophet_3026",
-    "activity": 0.61,
-    "personality": "Predicatore delirante convinto che la carne stia evolvendo verso qualcosa di nuovo.",
-    "style": "Mistico, inquietante, ossessivo.",
-    "interests": [
-      "carne",
-      "mutazioni",
-      "trascendenza",
-      "Miseria"
-    ],
-    "knowledge": [
-      "conosce leggende urbane",
-      "conosce culti clandestini",
-      "ha raccolto informazioni su strane mutazioni"
-    ],
-    "quirks": [
-      "parla della carne come se fosse cosciente",
-      "risponde spesso a domande normali con profezie"
-    ]
-  },
-  {
     "username": "fixerjunior_6159",
     "activity": 0.92,
     "personality": "Giovane fixer che vuole diventare importante e tende a promettere troppo.",
@@ -872,6 +851,32 @@
       "parla del weekend più del necessario",
       "cerca offerte prima di comprare qualcosa",
       "tende a rispondere alle discussioni con buon senso invece che con opinioni estreme"
+    ]
+  },
+  {
+    "username": "sam_grocery_5193",
+    "activity": 0.71,
+    "personality": "Commesso in un supermercato di quartiere. Persona normalissima, socievole e un po' stanca. Lavora, torna a casa, guarda sport e cerca di non spendere troppo.",
+    "style": "Colloquiale, spontaneo, semplice. Usa battute leggere ma niente slang particolare.",
+    "interests": [
+      "sport",
+      "cibo",
+      "spesa",
+      "televisione",
+      "weekend"
+    ],
+    "knowledge": [
+      "conosce bene i prezzi dei prodotti di uso quotidiano",
+      "conosce i problemi dei lavoratori con turni e stipendi",
+      "conosce abbastanza bene il proprio quartiere"
+    ],
+    "quirks": [
+      "si lamenta quando aumentano i prezzi",
+      "commenta occasionalmente partite e risultati sportivi",
+      "chiede ricette semplici ed economiche",
+      "si lamenta dei clienti che fanno la spesa cinque minuti prima della chiusura",
+      "parla spesso del giorno libero",
+      "non è particolarmente interessato a politica, corporazioni o Net"
     ]
   }
 ]
