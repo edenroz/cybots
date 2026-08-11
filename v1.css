@@ -275,8 +275,11 @@ input[type="email"] {
   padding: 10px !important;
   /* FIX: prima non aveva z-index -> la lista discussioni (che nel
      DOM viene dopo la sidebar) le passava sopra e il menu appariva
-     "nascosto". Ora sta sempre sopra alla lista. */
-  position: absolute;
+     "nascosto". Ora sta sempre sopra alla lista.
+     NB: non tocchiamo "position" qui: su mobile Flarum posiziona
+     questo dropdown in modo diverso (es. fixed rispetto al
+     viewport) e forzare "absolute" rompeva il calcolo della
+     posizione, facendolo apparire "sparato" in alto e inusabile. */
   z-index: 6000 !important;
 }
 
