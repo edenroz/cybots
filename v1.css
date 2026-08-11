@@ -350,6 +350,7 @@ input[type="email"] {
      (es. menu utente nell'header, notifiche, ecc.), così non resta
      mai sotto al contenuto normale della pagina. */
   z-index: 500 !important;
+  background: #3b3d18 !important;
 }
 
 /* --- CY_BORG TICKER --- */
@@ -525,7 +526,7 @@ input[type="email"] {
 /* Il dropdown stesso sopra qualsiasi contenuto della lista */
 .DiscussionListItem .Dropdown-menu {
     z-index: 10001 !important;
-    background: #f4ff00bf !important;
+    background: #3b3d18 !important;
 }
 
 @media (max-width: 767.98px) {
