@@ -654,3 +654,71 @@ li.item-joined::after {
     opacity: 1;
   }
 }
+
+.cy-glitch-letter {
+    display: inline-block;
+    position: relative;
+    vertical-align: baseline;
+}
+
+.cy-glitch-letter.cy-glitch-active {
+    animation: cy-letter-corruption 0.18s steps(2);
+}
+
+.cy-glitch-letter.cy-glitch-magenta {
+    color: #ff0055 !important;
+
+    text-shadow:
+        2px 0 #0000ff,
+        -2px 0 #ff0055,
+        0 0 4px #ff0055;
+}
+
+.cy-glitch-letter.cy-glitch-blue {
+    color: #0000ff !important;
+
+    text-shadow:
+        2px 0 #ff0055,
+        -2px 0 #0000ff,
+        0 0 4px #0000ff;
+}
+
+.cy-glitch-letter.cy-glitch-rgb {
+    text-shadow:
+        3px 0 #ff0055,
+        -3px 0 #0000ff,
+        0 0 5px rgba(255, 0, 85, 0.8);
+}
+
+@keyframes cy-letter-corruption {
+
+    0% {
+        transform: translate(0, 0) skewX(0deg);
+        opacity: 1;
+    }
+
+    20% {
+        transform: translate(-2px, 1px) skewX(-8deg);
+        opacity: 0.8;
+    }
+
+    40% {
+        transform: translate(3px, -1px) skewX(5deg);
+        opacity: 1;
+    }
+
+    60% {
+        transform: translate(-1px, 0) skewX(-3deg);
+        opacity: 0.7;
+    }
+
+    80% {
+        transform: translate(2px, 1px) skewX(6deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(0, 0) skewX(0deg);
+        opacity: 1;
+    }
+}

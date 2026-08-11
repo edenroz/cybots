@@ -571,12 +571,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function triggerRandomGlitch() {
 
-    const letters =
-        Array.from(
-            document.querySelectorAll(
-                '.cy-glitch-letter'
-            )
-        );
+    const letters = Array.from(
+        document.querySelectorAll(
+            '.cy-glitch-letter'
+        )
+    );
 
     if (!letters.length) {
         return;
@@ -584,44 +583,38 @@ function triggerRandomGlitch() {
 
 
     /*
-     * Quanti gruppi creare.
-     * Solitamente 1, occasionalmente 2.
+     * Numero di gruppi.
      */
-    const groups =
-        Math.random() < 0.25 ? 2 : 1;
+
+    const groupCount =
+        Math.random() < 0.20 ? 2 : 1;
 
 
-    for (
-        let g = 0;
-        g < groups;
-        g++
-    ) {
+    for (let g = 0; g < groupCount; g++) {
 
         /*
-         * Punto casuale di partenza.
+         * Punto di partenza casuale.
          */
+
         const start =
             Math.floor(
-                Math.random() *
-                letters.length
+                Math.random() * letters.length
             );
 
 
         /*
-         * Dimensione casuale del gruppo.
+         * Dimensione del gruppo.
          *
-         * 60% = 1-3 lettere
-         * 30% = 3-5 lettere
-         * 10% = 6-9 lettere
+         * 65% → 1-3
+         * 25% → 4-7
+         * 10% → 8-12
          */
+
+        const roll = Math.random();
 
         let size;
 
-        const roll =
-            Math.random();
-
-
-        if (roll < 0.60) {
+        if (roll < 0.65) {
 
             size =
                 1 +
@@ -632,26 +625,20 @@ function triggerRandomGlitch() {
         } else if (roll < 0.90) {
 
             size =
-                3 +
+                4 +
                 Math.floor(
-                    Math.random() * 3
+                    Math.random() * 4
                 );
 
         } else {
 
             size =
-                6 +
+                8 +
                 Math.floor(
-                    Math.random() * 4
+                    Math.random() * 5
                 );
-
         }
 
-
-        /*
-         * Applica il glitch alle lettere
-         * consecutive.
-         */
 
         const selected =
             letters.slice(
@@ -660,11 +647,22 @@ function triggerRandomGlitch() {
             );
 
 
+        /*
+         * Corrupt group.
+         */
+
         selected.forEach(
             (letter, index) => {
 
+                /*
+                 * Reset eventuale stato precedente.
+                 */
+
                 letter.classList.remove(
-                    'cy-glitch-active'
+                    'cy-glitch-active',
+                    'cy-glitch-magenta',
+                    'cy-glitch-blue',
+                    'cy-glitch-rgb'
                 );
 
 
@@ -676,13 +674,93 @@ function triggerRandomGlitch() {
 
 
                 /*
-                 * Piccolo offset temporale
-                 * tra le lettere del gruppo.
+                 * Tipo di corruzione.
+                 */
+
+                const mode =
+                    Math.random();
+
+
+                if (mode < 0.20) {
+
+                    /*
+                     * Magenta
+                     */
+
+                    letter.classList.add(
+                        'cy-glitch-magenta'
+                    );
+
+                } else if (mode < 0.40) {
+
+                    /*
+                     * Blu
+                     */
+
+                    letter.classList.add(
+                        'cy-glitch-blue'
+                    );
+
+                } else if (mode < 0.65) {
+
+                    /*
+                     * RGB split
+                     */
+
+                    letter.classList.add(
+                        'cy-glitch-rgb'
+                    );
+                }
+
+
+                /*
+                 * Carattere corrotto.
+                 */
+
+                if (
+                    Math.random() < 0.38
+                ) {
+
+                    letter.dataset.original =
+                        letter.textContent;
+
+                    const corruptedChars = [
+                        '█',
+                        '▓',
+                        '▒',
+                        '░',
+                        'Ø',
+                        'X',
+                        '#',
+                        '?',
+                        '0',
+                        '1',
+                        'Ξ',
+                        '╳',
+                        '╱',
+                        '╲',
+                        '¤',
+                        '§'
+                    ];
+
+                    letter.textContent =
+                        corruptedChars[
+                            Math.floor(
+                                Math.random() *
+                                corruptedChars.length
+                            )
+                        ];
+                }
+
+
+                /*
+                 * Piccolo ritardo progressivo
+                 * all'interno del gruppo.
                  */
 
                 letter.style.setProperty(
                     '--glitch-delay',
-                    (index * 0.015) + 's'
+                    (index * 0.012) + 's'
                 );
 
 
@@ -691,11 +769,29 @@ function triggerRandomGlitch() {
                 );
 
 
+                /*
+                 * Ripristino.
+                 */
+
                 setTimeout(
                     () => {
 
+                        if (
+                            letter.dataset.original
+                        ) {
+
+                            letter.textContent =
+                                letter.dataset.original;
+
+                            delete letter.dataset.original;
+                        }
+
+
                         letter.classList.remove(
-                            'cy-glitch-active'
+                            'cy-glitch-active',
+                            'cy-glitch-magenta',
+                            'cy-glitch-blue',
+                            'cy-glitch-rgb'
                         );
 
                     },
@@ -704,7 +800,6 @@ function triggerRandomGlitch() {
 
             }
         );
-
     }
 }
 
