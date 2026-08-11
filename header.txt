@@ -569,249 +569,391 @@ document.addEventListener('DOMContentLoaded', () => {
        RANDOM LETTER GLITCH
        ====================================================== */
 
-function triggerRandomGlitch() {
+    function triggerRandomGlitch() {
 
-    const letters = Array.from(
-        document.querySelectorAll(
-            '.cy-glitch-letter'
-        )
-    );
-
-    if (!letters.length) {
-        return;
-    }
+        const letters = Array.from(
+            document.querySelectorAll(
+                '.cy-glitch-letter'
+            )
+        );
 
 
-    /*
-     * Numero di gruppi.
-     */
-
-    const groupCount =
-        Math.random() < 0.20 ? 2 : 1;
-
-
-    for (let g = 0; g < groupCount; g++) {
-
-        /*
-         * Punto di partenza casuale.
-         */
-
-        const start =
-            Math.floor(
-                Math.random() * letters.length
-            );
-
-
-        /*
-         * Dimensione del gruppo.
-         *
-         * 65% → 1-3
-         * 25% → 4-7
-         * 10% → 8-12
-         */
-
-        const roll = Math.random();
-
-        let size;
-
-        if (roll < 0.65) {
-
-            size =
-                1 +
-                Math.floor(
-                    Math.random() * 3
-                );
-
-        } else if (roll < 0.90) {
-
-            size =
-                4 +
-                Math.floor(
-                    Math.random() * 4
-                );
-
-        } else {
-
-            size =
-                8 +
-                Math.floor(
-                    Math.random() * 5
-                );
+        if (!letters.length) {
+            return;
         }
 
 
-        const selected =
-            letters.slice(
-                start,
-                start + size
-            );
-
-
         /*
-         * Corrupt group.
+         * Numero di gruppi.
+         *
+         * 20% → 2 gruppi
+         * 80% → 1 gruppo
          */
 
-        selected.forEach(
-            (letter, index) => {
+        const groupCount =
+            Math.random() < 0.20 ? 2 : 1;
 
-                /*
-                 * Reset eventuale stato precedente.
-                 */
 
-                letter.classList.remove(
-                    'cy-glitch-active',
-                    'cy-glitch-magenta',
-                    'cy-glitch-blue',
-                    'cy-glitch-rgb'
+        for (
+            let g = 0;
+            g < groupCount;
+            g++
+        ) {
+
+            /*
+             * Punto di partenza casuale.
+             */
+
+            const start =
+                Math.floor(
+                    Math.random() *
+                    letters.length
                 );
 
 
-                /*
-                 * Force reflow.
-                 */
+            /*
+             * Dimensione del gruppo.
+             *
+             * 65% → 1-3
+             * 25% → 4-7
+             * 10% → 8-12
+             */
 
-                void letter.offsetWidth;
-
-
-                /*
-                 * Tipo di corruzione.
-                 */
-
-                const mode =
-                    Math.random();
+            const roll =
+                Math.random();
 
 
-                if (mode < 0.20) {
+            let size;
 
-                    /*
-                     * Magenta
-                     */
 
-                    letter.classList.add(
-                        'cy-glitch-magenta'
+            if (
+                roll < 0.65
+            ) {
+
+                size =
+                    1 +
+                    Math.floor(
+                        Math.random() * 3
                     );
 
-                } else if (mode < 0.40) {
+            } else if (
+                roll < 0.90
+            ) {
 
-                    /*
-                     * Blu
-                     */
-
-                    letter.classList.add(
-                        'cy-glitch-blue'
+                size =
+                    4 +
+                    Math.floor(
+                        Math.random() * 4
                     );
 
-                } else if (mode < 0.65) {
+            } else {
+
+                size =
+                    8 +
+                    Math.floor(
+                        Math.random() * 5
+                    );
+
+            }
+
+
+            const selected =
+                letters.slice(
+                    start,
+                    start + size
+                );
+
+
+            /*
+             * Corrupt group.
+             */
+
+            selected.forEach(
+                (letter, index) => {
 
                     /*
-                     * RGB split
+                     * Reset eventuale stato precedente.
                      */
 
-                    letter.classList.add(
+                    letter.classList.remove(
+                        'cy-glitch-active',
+                        'cy-glitch-magenta',
+                        'cy-glitch-blue',
                         'cy-glitch-rgb'
                     );
-                }
 
 
-                /*
-                 * Carattere corrotto.
-                 */
+                    /*
+                     * Force reflow.
+                     */
 
-                if (
-                    Math.random() < 0.38
-                ) {
-
-                    letter.dataset.original =
-                        letter.textContent;
-
-                    const corruptedChars = [
-                        '█',
-                        '▓',
-                        '▒',
-                        '░',
-                        'Ø',
-                        'X',
-                        '#',
-                        '?',
-                        '0',
-                        '1',
-                        'Ξ',
-                        '╳',
-                        '╱',
-                        '╲',
-                        '¤',
-                        '§'
-                    ];
-
-                    letter.textContent =
-                        corruptedChars[
-                            Math.floor(
-                                Math.random() *
-                                corruptedChars.length
-                            )
-                        ];
-                }
+                    void letter.offsetWidth;
 
 
-                /*
-                 * Piccolo ritardo progressivo
-                 * all'interno del gruppo.
-                 */
+                    /*
+                     * Tipo di corruzione.
+                     */
 
-                letter.style.setProperty(
-                    '--glitch-delay',
-                    (index * 0.012) + 's'
-                );
+                    const mode =
+                        Math.random();
 
 
-                letter.classList.add(
-                    'cy-glitch-active'
-                );
+                    if (
+                        mode < 0.20
+                    ) {
 
+                        /*
+                         * Magenta
+                         */
 
-                /*
-                 * Ripristino.
-                 */
+                        letter.classList.add(
+                            'cy-glitch-magenta'
+                        );
 
-                setTimeout(
-                    () => {
+                    } else if (
+                        mode < 0.40
+                    ) {
 
-                        if (
-                            letter.dataset.original
-                        ) {
+                        /*
+                         * Blu
+                         */
 
-                            letter.textContent =
-                                letter.dataset.original;
+                        letter.classList.add(
+                            'cy-glitch-blue'
+                        );
 
-                            delete letter.dataset.original;
-                        }
+                    } else if (
+                        mode < 0.65
+                    ) {
 
+                        /*
+                         * RGB split
+                         */
 
-                        letter.classList.remove(
-                            'cy-glitch-active',
-                            'cy-glitch-magenta',
-                            'cy-glitch-blue',
+                        letter.classList.add(
                             'cy-glitch-rgb'
                         );
 
-                    },
-                    180 + index * 15
+                    }
+
+
+                    /*
+                     * Carattere corrotto.
+                     */
+
+                    if (
+                        Math.random() < 0.38
+                    ) {
+
+                        letter.dataset.original =
+                            letter.textContent;
+
+
+                        const corruptedChars = [
+                            '█',
+                            '▓',
+                            '▒',
+                            '░',
+                            'Ø',
+                            'X',
+                            '#',
+                            '?',
+                            '0',
+                            '1',
+                            'Ξ',
+                            '╳',
+                            '╱',
+                            '╲',
+                            '¤',
+                            '§'
+                        ];
+
+
+                        letter.textContent =
+                            corruptedChars[
+                                Math.floor(
+                                    Math.random() *
+                                    corruptedChars.length
+                                )
+                            ];
+
+                    }
+
+
+                    /*
+                     * Piccolo ritardo progressivo
+                     * all'interno del gruppo.
+                     */
+
+                    letter.style.setProperty(
+                        '--glitch-delay',
+                        (
+                            index * 0.012
+                        ) + 's'
+                    );
+
+
+                    letter.classList.add(
+                        'cy-glitch-active'
+                    );
+
+
+                    /*
+                     * Ripristino.
+                     */
+
+                    setTimeout(
+                        () => {
+
+                            if (
+                                letter.dataset.original
+                            ) {
+
+                                letter.textContent =
+                                    letter.dataset.original;
+
+                                delete letter.dataset.original;
+
+                            }
+
+
+                            letter.classList.remove(
+                                'cy-glitch-active',
+                                'cy-glitch-magenta',
+                                'cy-glitch-blue',
+                                'cy-glitch-rgb'
+                            );
+
+                        },
+                        180 + index * 15
+                    );
+
+                }
+            );
+
+        }
+
+    }
+
+
+    /* ======================================================
+       RANDOM GLITCH SCHEDULER
+       
+       Glitch normali frequenti +
+       occasionali burst da 2-3 glitch.
+       ====================================================== */
+
+    function scheduleRandomGlitch() {
+
+        /*
+         * 25% di probabilità di creare un burst.
+         */
+
+        const isBurst =
+            Math.random() < 0.25;
+
+
+        if (
+            isBurst
+        ) {
+
+            /*
+             * 2 oppure 3 glitch ravvicinati.
+             */
+
+            const burstCount =
+                2 +
+                Math.floor(
+                    Math.random() * 2
                 );
 
+
+            let burstIndex = 0;
+
+
+            function runBurst() {
+
+                triggerRandomGlitch();
+
+                burstIndex++;
+
+
+                if (
+                    burstIndex < burstCount
+                ) {
+
+                    /*
+                     * 70–180 ms
+                     * tra i glitch del burst.
+                     */
+
+                    const burstDelay =
+                        70 +
+                        Math.random() * 110;
+
+
+                    setTimeout(
+                        runBurst,
+                        burstDelay
+                    );
+
+                } else {
+
+                    /*
+                     * Dopo il burst:
+                     * pausa più lunga.
+                     *
+                     * 800–2500 ms
+                     */
+
+                    const nextDelay =
+                        800 +
+                        Math.random() * 1700;
+
+
+                    setTimeout(
+                        scheduleRandomGlitch,
+                        nextDelay
+                    );
+
+                }
+
             }
-        );
+
+
+            runBurst();
+
+        } else {
+
+            /*
+             * Glitch normale.
+             *
+             * 400–1800 ms
+             */
+
+            triggerRandomGlitch();
+
+
+            const nextDelay =
+                400 +
+                Math.random() * 1400;
+
+
+            setTimeout(
+                scheduleRandomGlitch,
+                nextDelay
+            );
+
+        }
+
     }
-}
 
 
     /*
-     * Glitch every ~700ms.
+     * Start random glitch scheduler.
      */
 
-    setInterval(
-        triggerRandomGlitch,
-        700
-    );
+    scheduleRandomGlitch();
 
 
     /* ======================================================
