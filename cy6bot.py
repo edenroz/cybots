@@ -869,7 +869,7 @@ Valuta l'interesse del personaggio (score da 0.0 a 1.0) e compila i campi del JS
     )
 
     try:
-        time.sleep(random.uniform(20, 40))
+        time.sleep(random.uniform(6, 10))
         response = model.generate_content(user_prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
 
         text = response.text.strip()
@@ -1859,7 +1859,7 @@ def main():
         )
 
         # Fallback: se fallisce il commento (es. nessun thread interessante) o ogni tanto, metti un like a un post esistente
-        if (not success and random.random() < 0.5) or random.random() < 0.25:
+        if (not success and random.random() < 0.5) or random.random() < 0.15:
             success = run_like_action(bot, session, cfg)
 
         # Piccola pausa tra le azioni per simulare la latenza di rete
