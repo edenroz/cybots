@@ -569,98 +569,144 @@ document.addEventListener('DOMContentLoaded', () => {
        RANDOM LETTER GLITCH
        ====================================================== */
 
-    function triggerRandomGlitch() {
+function triggerRandomGlitch() {
 
-
-        const letters =
+    const letters =
+        Array.from(
             document.querySelectorAll(
                 '.cy-glitch-letter'
+            )
+        );
+
+    if (!letters.length) {
+        return;
+    }
+
+
+    /*
+     * Quanti gruppi creare.
+     * Solitamente 1, occasionalmente 2.
+     */
+    const groups =
+        Math.random() < 0.25 ? 2 : 1;
+
+
+    for (
+        let g = 0;
+        g < groups;
+        g++
+    ) {
+
+        /*
+         * Punto casuale di partenza.
+         */
+        const start =
+            Math.floor(
+                Math.random() *
+                letters.length
             );
 
 
-        if (
-            !letters.length
-        ) {
+        /*
+         * Dimensione casuale del gruppo.
+         *
+         * 60% = 1-3 lettere
+         * 30% = 3-5 lettere
+         * 10% = 6-9 lettere
+         */
 
-            return;
+        let size;
+
+        const roll =
+            Math.random();
+
+
+        if (roll < 0.60) {
+
+            size =
+                1 +
+                Math.floor(
+                    Math.random() * 3
+                );
+
+        } else if (roll < 0.90) {
+
+            size =
+                3 +
+                Math.floor(
+                    Math.random() * 3
+                );
+
+        } else {
+
+            size =
+                6 +
+                Math.floor(
+                    Math.random() * 4
+                );
 
         }
 
 
         /*
-         * 1–4 random letters.
+         * Applica il glitch alle lettere
+         * consecutive.
          */
 
-        const amount =
-            Math.min(
-                1 +
-                Math.floor(
-                    Math.random() * 4
-                ),
-                letters.length
+        const selected =
+            letters.slice(
+                start,
+                start + size
             );
 
 
-        for (
-            let i = 0;
-            i < amount;
-            i++
-        ) {
+        selected.forEach(
+            (letter, index) => {
+
+                letter.classList.remove(
+                    'cy-glitch-active'
+                );
 
 
-            const letter =
-                letters[
-                    Math.floor(
-                        Math.random() *
-                        letters.length
-                    )
-                ];
+                /*
+                 * Force reflow.
+                 */
+
+                void letter.offsetWidth;
 
 
-            /*
-             * Reset animation.
-             */
+                /*
+                 * Piccolo offset temporale
+                 * tra le lettere del gruppo.
+                 */
 
-            letter.classList.remove(
-                'cy-glitch-active'
-            );
-
-
-            /*
-             * Force reflow so the
-             * animation can restart.
-             */
-
-            void letter.offsetWidth;
+                letter.style.setProperty(
+                    '--glitch-delay',
+                    (index * 0.015) + 's'
+                );
 
 
-            /*
-             * Start glitch.
-             */
-
-            letter.classList.add(
-                'cy-glitch-active'
-            );
+                letter.classList.add(
+                    'cy-glitch-active'
+                );
 
 
-            /*
-             * Remove after animation.
-             */
+                setTimeout(
+                    () => {
 
-            setTimeout(
-                () => {
+                        letter.classList.remove(
+                            'cy-glitch-active'
+                        );
 
-                    letter.classList.remove(
-                        'cy-glitch-active'
-                    );
+                    },
+                    180 + index * 15
+                );
 
-                },
-                180
-            );
-
-        }
+            }
+        );
 
     }
+}
 
 
     /*
