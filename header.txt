@@ -1,104 +1,734 @@
-<!-- Font CY_BORG -->
+<!-- ==========================================================
+     CY_BORG // GLOBAL HEADER
+     Matrix Rain + Letter Glitch
+     ========================================================== -->
+
+
+<!-- ==========================================================
+     FONTS
+     ========================================================== -->
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,700;0,900;1,900&family=VT323&display=swap" rel="stylesheet">
+
+<link
+    href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,700;0,900;1,900&family=VT323&display=swap"
+    rel="stylesheet"
+>
+
 
 <style>
-  /* 1. EFFETTO GLITCH SICURO TRAMITE CSS (Nessun crash di Flarum) */
-  .cy-safe-glitch {
-    animation: cy-text-split 4s infinite alternate;
-  }
-  
-  .cy-safe-glitch-post {
-    animation: cy-text-split 6s infinite alternate-reverse;
-  }
 
-  /* Animazione cromatica stile CY_BORG (Magenta/Blu) */
-  @keyframes cy-text-split {
-    0%, 95% { text-shadow: none; transform: skewX(0deg); }
-    96% { text-shadow: 2px 0 0 #ff0055, -2px 0 0 #0000ff; transform: skewX(1deg); }
-    97% { text-shadow: -2px 1px 0 #ff0055, 2px -1px 0 #0000ff; transform: skewX(-1deg); }
-    98% { text-shadow: none; transform: skewX(0deg); }
-  }
+/* ==========================================================
+   GLOBAL OVERFLOW PROTECTION
+   ========================================================== */
+
+html,
+body {
+    overflow-x: hidden;
+}
+
+
+/* ==========================================================
+   MATRIX BACKGROUND
+   ========================================================== */
+
+#cy-matrix-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    z-index: 0;
+
+    pointer-events: none;
+
+    opacity: 0.42;
+}
+
+
+/* ==========================================================
+   CY_BORG LETTER GLITCH
+   ========================================================== */
+
+.cy-glitch-letter {
+    display: inline-block;
+    position: relative;
+
+    /*
+     * Impedisce alla singola lettera di influenzare
+     * il layout durante il transform.
+     */
+    vertical-align: baseline;
+}
+
+
+/* Singola lettera durante il glitch */
+
+.cy-glitch-letter.cy-glitch-active {
+    animation:
+        cy-letter-glitch 0.16s steps(2);
+}
+
+
+/* ==========================================================
+   LETTER GLITCH ANIMATION
+   ========================================================== */
+
+@keyframes cy-letter-glitch {
+
+    0% {
+        transform: translate(0, 0);
+        text-shadow: none;
+    }
+
+    20% {
+        transform: translate(-2px, 0);
+        text-shadow:
+            2px 0 #ff0055,
+            -2px 0 #0000ff;
+    }
+
+    40% {
+        transform: translate(2px, -1px);
+        text-shadow:
+            -2px 0 #ff0055,
+            2px 0 #0000ff;
+    }
+
+    60% {
+        transform: translate(-1px, 1px);
+        text-shadow:
+            2px 0 #0000ff,
+            -2px 0 #ff0055;
+    }
+
+    80% {
+        transform: translate(2px, 0);
+        text-shadow:
+            -2px 0 #ff0055,
+            2px 0 #0000ff;
+    }
+
+    100% {
+        transform: translate(0, 0);
+        text-shadow: none;
+    }
+}
+
+
+/* ==========================================================
+   MATRIX RAIN
+   ========================================================== */
+
 </style>
 
-<!-- Matrix Rain Canvas Engine + Glitch Sicuro -->
+
 <script>
+
 document.addEventListener('DOMContentLoaded', () => {
-  // --- MATRIX RAIN BACKGROUND ---
-  const canvas = document.createElement('canvas');
-  canvas.id = 'cy-matrix-bg';
-  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0.42;';
-  document.body.prepend(canvas);
 
-  const ctx = canvas.getContext('2d');
-  let width = canvas.width = window.innerWidth;
-  let height = canvas.height = window.innerHeight;
 
-  window.addEventListener('resize', () => {
-    width = canvas.width = window.innerWidth;
-    height = canvas.height = window.innerHeight;
-  });
+    /* ======================================================
+       MATRIX RAIN ENGINE
+       ====================================================== */
 
-  const chars = '01CY_BORG_ERR0R_SYSTEM_FAILURE_OVERRIDE_10101011_CYBERPUNK_SYS_KILL_';
-  const fontSize = 14;
-  let columns = Math.floor(width / fontSize);
-  let drops = Array(columns).fill(1);
+    const canvas = document.createElement('canvas');
 
-  // Ricalcola le colonne quando ruoti il telefono
-  window.addEventListener('resize', () => {
-    columns = Math.floor(canvas.width / fontSize);
-    drops = Array(columns).fill(1);
-  });
+    canvas.id = 'cy-matrix-bg';
 
-  function drawMatrix() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-    ctx.fillRect(0, 0, width, height);
-    ctx.font = fontSize + 'px "Space Mono", monospace';
+    canvas.style.cssText =
+        'position:fixed;' +
+        'top:0;' +
+        'left:0;' +
+        'width:100vw;' +
+        'height:100vh;' +
+        'z-index:0;' +
+        'pointer-events:none;' +
+        'opacity:0.42;';
 
-    for (let i = 0; i < drops.length; i++) {
-      const isMagenta = Math.random() < 0.08;
-      ctx.fillStyle = isMagenta ? '#ff0055' : '#0000ff';
+    document.body.prepend(canvas);
 
-      const text = chars.charAt(Math.floor(Math.random() * chars.length));
-      ctx.fillText(text, i * fontSize, drops[i] * fontSize);
 
-      if (drops[i] * fontSize > height && Math.random() > 0.975) {
-        drops[i] = 0;
-      }
-      drops[i]++;
+    const ctx = canvas.getContext('2d');
+
+
+    let width =
+        canvas.width =
+        window.innerWidth;
+
+    let height =
+        canvas.height =
+        window.innerHeight;
+
+
+    /* Resize */
+
+    window.addEventListener('resize', () => {
+
+        width =
+            canvas.width =
+            window.innerWidth;
+
+        height =
+            canvas.height =
+            window.innerHeight;
+
+    });
+
+
+    /* Matrix characters */
+
+    const chars =
+        '01CY_BORG_ERR0R_SYSTEM_FAILURE_OVERRIDE_10101011_CYBERPUNK_SYS_KILL_';
+
+
+    const fontSize = 14;
+
+
+    let columns =
+        Math.floor(width / fontSize);
+
+
+    let drops =
+        Array(columns).fill(1);
+
+
+    /* Recalculate columns on resize */
+
+    window.addEventListener('resize', () => {
+
+        columns =
+            Math.floor(
+                canvas.width / fontSize
+            );
+
+        drops =
+            Array(columns).fill(1);
+
+    });
+
+
+    /* Draw Matrix */
+
+    function drawMatrix() {
+
+        ctx.fillStyle =
+            'rgba(0, 0, 0, 0.08)';
+
+        ctx.fillRect(
+            0,
+            0,
+            width,
+            height
+        );
+
+
+        ctx.font =
+            fontSize +
+            'px "Space Mono", monospace';
+
+
+        for (
+            let i = 0;
+            i < drops.length;
+            i++
+        ) {
+
+            const isMagenta =
+                Math.random() < 0.08;
+
+
+            ctx.fillStyle =
+                isMagenta
+                    ? '#ff0055'
+                    : '#0000ff';
+
+
+            const text =
+                chars.charAt(
+                    Math.floor(
+                        Math.random() *
+                        chars.length
+                    )
+                );
+
+
+            ctx.fillText(
+                text,
+                i * fontSize,
+                drops[i] * fontSize
+            );
+
+
+            if (
+                drops[i] * fontSize > height &&
+                Math.random() > 0.975
+            ) {
+
+                drops[i] = 0;
+
+            }
+
+
+            drops[i]++;
+
+        }
+
     }
-  }
-  setInterval(drawMatrix, 73);
 
-  // --- GLITCH APPLICATION ENGINE (Safe Mode) ---
-  const applySafeGlitch = () => {
-    // Applica ai titoli
-    const titles = document.querySelectorAll('.Hero h2, .DiscussionListItem-title, .PostUser-name a, .Header-title a');
-    titles.forEach(el => {
-      if (el.closest('.UserCard-profile')) return;
-      if (!el.classList.contains('cy-safe-glitch')) {
-        el.classList.add('cy-safe-glitch');
-      }
-    });
 
-    // Applica ai post (senza rompere i link o le immagini all'interno!)
-    const posts = document.querySelectorAll('.Post-body p');
-    posts.forEach(p => {
-      if (p.closest('.UserCard-profile')) return;
-      if (!p.classList.contains('cy-safe-glitch-post')) {
-        p.classList.add('cy-safe-glitch-post');
-      }
-    });
-  };
+    setInterval(
+        drawMatrix,
+        73
+    );
 
-  // Esegui all'avvio
-  applySafeGlitch();
 
-  // Osserva dinamicamente senza far impazzire Flarum
-  const observer = new MutationObserver(() => {
+    /* ======================================================
+       TEXT → INDIVIDUAL LETTERS
+       ====================================================== */
+
+    function glitchifyTextNode(textNode) {
+
+        const text =
+            textNode.nodeValue;
+
+
+        if (
+            !text ||
+            !text.trim()
+        ) {
+            return;
+        }
+
+
+        const fragment =
+            document.createDocumentFragment();
+
+
+        for (
+            const char of text
+        ) {
+
+
+            /*
+             * Preserve whitespace.
+             */
+
+            if (
+                /\s/.test(char)
+            ) {
+
+                fragment.appendChild(
+                    document.createTextNode(char)
+                );
+
+                continue;
+
+            }
+
+
+            const span =
+                document.createElement('span');
+
+
+            span.className =
+                'cy-glitch-letter';
+
+
+            span.textContent =
+                char;
+
+
+            /*
+             * Random delay.
+             */
+
+            span.style.setProperty(
+                '--glitch-delay',
+                (
+                    Math.random() * 5
+                ).toFixed(2) + 's'
+            );
+
+
+            fragment.appendChild(
+                span
+            );
+
+        }
+
+
+        textNode.parentNode.replaceChild(
+            fragment,
+            textNode
+        );
+
+    }
+
+
+    /* ======================================================
+       PROCESS ELEMENT
+       ====================================================== */
+
+    function processElement(element) {
+
+
+        /*
+         * Already processed?
+         */
+
+        if (
+            element.classList.contains(
+                'cy-glitch-processed'
+            )
+        ) {
+
+            return;
+
+        }
+
+
+        /*
+         * Never touch user cards.
+         */
+
+        if (
+            element.closest(
+                '.UserCard-profile'
+            )
+        ) {
+
+            return;
+
+        }
+
+
+        /*
+         * Find text nodes only.
+         *
+         * This means links, images,
+         * strong, em, etc. remain intact.
+         */
+
+        const walker =
+            document.createTreeWalker(
+                element,
+                NodeFilter.SHOW_TEXT,
+                {
+
+                    acceptNode(node) {
+
+                        if (
+                            !node.nodeValue.trim()
+                        ) {
+
+                            return NodeFilter.FILTER_REJECT;
+
+                        }
+
+
+                        const parent =
+                            node.parentElement;
+
+
+                        if (!parent) {
+
+                            return NodeFilter.FILTER_REJECT;
+
+                        }
+
+
+                        /*
+                         * Never process:
+                         *
+                         * - existing glitch letters
+                         * - script
+                         * - style
+                         * - code
+                         * - pre
+                         */
+
+                        if (
+                            parent.closest(
+                                '.cy-glitch-letter,' +
+                                'script,' +
+                                'style,' +
+                                'code,' +
+                                'pre'
+                            )
+                        ) {
+
+                            return NodeFilter.FILTER_REJECT;
+
+                        }
+
+
+                        return NodeFilter.FILTER_ACCEPT;
+
+                    }
+
+                }
+            );
+
+
+        const nodes = [];
+
+
+        let node;
+
+
+        while (
+            node = walker.nextNode()
+        ) {
+
+            nodes.push(node);
+
+        }
+
+
+        /*
+         * Convert every text node
+         * into individual letters.
+         */
+
+        nodes.forEach(
+            glitchifyTextNode
+        );
+
+
+        element.classList.add(
+            'cy-glitch-processed'
+        );
+
+    }
+
+
+    /* ======================================================
+       APPLY GLITCH
+       ====================================================== */
+
+    function applySafeGlitch() {
+
+
+        /*
+         * TITLES
+         */
+
+        const titles =
+            document.querySelectorAll(
+                '.Hero h2,' +
+                '.DiscussionListItem-title,' +
+                '.PostUser-name a,' +
+                '.Header-title a'
+            );
+
+
+        titles.forEach(
+            element => {
+
+                if (
+                    element.closest(
+                        '.UserCard-profile'
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
+                processElement(
+                    element
+                );
+
+            }
+        );
+
+
+        /*
+         * POSTS
+         */
+
+        const posts =
+            document.querySelectorAll(
+                '.Post-body p'
+            );
+
+
+        posts.forEach(
+            processElement
+        );
+
+    }
+
+
+    /* ======================================================
+       RANDOM LETTER GLITCH
+       ====================================================== */
+
+    function triggerRandomGlitch() {
+
+
+        const letters =
+            document.querySelectorAll(
+                '.cy-glitch-letter'
+            );
+
+
+        if (
+            !letters.length
+        ) {
+
+            return;
+
+        }
+
+
+        /*
+         * 1–4 random letters.
+         */
+
+        const amount =
+            Math.min(
+                1 +
+                Math.floor(
+                    Math.random() * 4
+                ),
+                letters.length
+            );
+
+
+        for (
+            let i = 0;
+            i < amount;
+            i++
+        ) {
+
+
+            const letter =
+                letters[
+                    Math.floor(
+                        Math.random() *
+                        letters.length
+                    )
+                ];
+
+
+            /*
+             * Reset animation.
+             */
+
+            letter.classList.remove(
+                'cy-glitch-active'
+            );
+
+
+            /*
+             * Force reflow so the
+             * animation can restart.
+             */
+
+            void letter.offsetWidth;
+
+
+            /*
+             * Start glitch.
+             */
+
+            letter.classList.add(
+                'cy-glitch-active'
+            );
+
+
+            /*
+             * Remove after animation.
+             */
+
+            setTimeout(
+                () => {
+
+                    letter.classList.remove(
+                        'cy-glitch-active'
+                    );
+
+                },
+                180
+            );
+
+        }
+
+    }
+
+
+    /*
+     * Glitch every ~700ms.
+     */
+
+    setInterval(
+        triggerRandomGlitch,
+        700
+    );
+
+
+    /* ======================================================
+       INITIAL APPLICATION
+       ====================================================== */
+
     applySafeGlitch();
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+
+
+    /* ======================================================
+       FLARUM DYNAMIC CONTENT
+       ====================================================== */
+
+    let processing =
+        false;
+
+
+    const observer =
+        new MutationObserver(
+            () => {
+
+
+                if (
+                    processing
+                ) {
+
+                    return;
+
+                }
+
+
+                processing =
+                    true;
+
+
+                requestAnimationFrame(
+                    () => {
+
+                        applySafeGlitch();
+
+                        processing =
+                            false;
+
+                    }
+                );
+
+            }
+        );
+
+
+    observer.observe(
+        document.body,
+        {
+            childList: true,
+            subtree: true
+        }
+    );
+
 });
+
 </script>
