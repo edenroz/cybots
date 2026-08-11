@@ -395,7 +395,6 @@ input[type="email"] {
 .Post-body,
 .Post-body p {
   color: @cy-text;
-  overflow-x: hidden;
 }
 
 /* Assicurati che i link nel post restino visibili e a tema */
