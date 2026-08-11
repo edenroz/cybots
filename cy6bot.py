@@ -1817,10 +1817,23 @@ def main():
     posts_to_make = cfg.get("posts_per_run", 1)
 
 
+    # Se vuoi forzare un bot specifico, inserisci lo username.
+    # Se lasci None, viene scelto casualmente.
+    forced_username = None
+    # forced_username = "sam_grocery_5193"
+
     for _ in range(posts_to_make):
-        # Selezione del bot casuale
-        #bot = bots[34]  # Example index, replace with actual random selection
-        bot = random.choice(bots)
+
+        if forced_username:
+            bot = next(
+                (b for b in bots if b["username"] == forced_username),
+                None
+            )
+
+            if bot is None:
+                raise ValueError(f"Bot non trovato: {forced_username}")
+        else:
+            bot = random.choice(bots)
         
         username = bot["username"]
         activity = bot["activity"]
