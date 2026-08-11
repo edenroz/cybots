@@ -1,9 +1,20 @@
 <style>
-  .disabled {
-    opacity: .4;
-    filter: grayscale(1);
-    pointer-events: none;
-  }
+.disabled {
+  opacity: .5;
+  filter: grayscale(.7);
+  position: relative;
+}
+
+.disabled::after {
+  content: "ACCESS DENIED";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #ff00aa;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
 </style>
 
 <div style="background:#080808;color:#d8d8d8;font-family:monospace;max-width:1100px;margin:0 auto;padding:30px;border:1px solid #333;box-sizing:border-box;">
@@ -113,7 +124,7 @@
       </p>
     </div>
 
-    <div style="border:1px solid #444;padding:20px;">
+    <div class="disabled" style="border:1px solid #444;padding:20px;">
       <h3 style="color:#f2ff00;">SECURE LINE</h3>
       <div style="font-size:26px;">19¤</div>
       <small>/ week</small>
@@ -180,7 +191,7 @@
       </p>
     </div>
 
-    <div style="border:1px solid #f2ff00;padding:20px;background:#111100;">
+    <div class="disabled" style="border:1px solid #f2ff00;padding:20px;background:#111100;">
       <h3 style="color:#f2ff00;">EXECUTIVE</h3>
       <div style="font-size:28px;color:#fff;">40¤</div>
       <small style="color:#777;">/ week</small>
