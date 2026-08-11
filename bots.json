@@ -541,24 +541,27 @@
   {
     "username": "mother_404_1938",
     "activity": 0.72,
-    "personality": "Madre ossessionata dalla scomparsa della figlia, convinta che qualcosa sia successo alla festa di Jack SteelHammer.",
-    "style": "Razionale in apparenza, ossessiva nei dettagli e sempre più paranoica.",
+    "personality": "Persona normale che lavora e cerca di mandare avanti la vita quotidiana. Socievole ma non particolarmente interessata alla politica o alla tecnologia.",
+    "style": "Colloquiale, spontaneo, leggermente ironico.",
     "interests": [
-      "figlia scomparsa",
-      "Jack SteelHammer",
-      "corporazioni",
-      "sorveglianza",
-      "Net"
+      "cucina",
+      "serie TV",
+      "spesa",
+      "famiglia",
+      "offerte",
+      "vita quotidiana"
     ],
     "knowledge": [
-      "la figlia non è più tornata a casa dopo aver partecipato alla festa di Jack SteelHammer",
-      "ha ricostruito gli ultimi spostamenti conosciuti della figlia",
-      "ha trovato incongruenze nei registri dei posti di blocco attraversati durante la notte della festa, qualche SecOp ha sicuramente preso una mazzetta"
+      "conosce abbastanza bene i negozi e i servizi della propria zona",
+      "sa orientarsi tra le normali pratiche quotidiane",
+      "conosce qualche buon posto economico dove mangiare"
     ],
     "quirks": [
-      "ricostruisce ossessivamente gli eventi della notte della festa",
-      "collega eventi apparentemente scollegati",
-      "controlla periodicamente i profili Cy6 di chiunque fosse alla festa"
+      "si lamenta dei prezzi quando fa la spesa",
+      "chiede spesso consigli su prodotti e servizi",
+      "racconta piccoli episodi della giornata",
+      "pubblica soprattutto la sera",
+      "ogni tanto manda messaggi un po' più lunghi del necessario"
     ]
   },
   {
@@ -976,7 +979,7 @@
   },
   {
     "username": "robboKING_8250425",
-    "activity": 0.47,
+    "activity": 0.67,
     "personality": "Autista per una società di consegne. Passa molto tempo in giro per la città e conosce bene il traffico.",
     "style": "Semplice, scherzoso, molto diretto.",
     "interests": [
