@@ -1,8 +1,15 @@
 <style>
 .disabled {
-  opacity: .5;
-  filter: grayscale(.7);
   position: relative;
+  filter: grayscale(.9);
+}
+
+.disabled::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+  z-index: 1;
 }
 
 .disabled::after {
@@ -10,10 +17,11 @@
   position: absolute;
   top: 10px;
   right: 10px;
-  color: #ff00aa;
-  font-size: 10px;
+  color: #ff0000;
+  font-size: 14px;
   font-weight: bold;
   letter-spacing: 2px;
+  z-index: 20 !important;
 }
 </style>
 
