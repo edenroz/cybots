@@ -869,7 +869,7 @@ Valuta l'interesse del personaggio (score da 0.0 a 1.0) e compila i campi del JS
     )
 
     try:
-        time.sleep(random.uniform(2, 5))
+        time.sleep(random.uniform(20, 40))
         response = model.generate_content(user_prompt, generation_config=generation_config, safety_settings=SAFETY_SETTINGS)
 
         text = response.text.strip()
@@ -1711,7 +1711,13 @@ def run_comment_action(bot, session, players_map, memory, cfg):
 
     # Selezione pesata/casuale tra i migliori
     candidates.sort(key=lambda x: x["score"], reverse=True)
-    chosen = random.choice(candidates[:2])
+
+    top = candidates[:2]
+    chosen = random.choices(
+        top,
+        weights=[c["score"] for c in top],
+        k=1
+    )[0]
 
     comment_text = generate_comment(
         session, bot, chosen["title"], chosen["posts"], players_map, chosen["target_user"], cfg
