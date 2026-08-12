@@ -256,14 +256,6 @@ class MechanicalSound:
     def _setup_backend(self):
         # Prefer simpleaudio because it can play il flusso PCM completo
         # dalla memoria con una singola richiesta di playback.
-        try:
-            import simpleaudio as sa
-
-            self._sa = sa
-            return "simpleaudio"
-        except Exception:
-            pass
-
         if platform.system() == "Windows":
             try:
                 import winsound
@@ -411,13 +403,6 @@ class MechanicalSound:
             return
 
         try:
-            if self._backend == "simpleaudio":
-                pcm = self._encode_pcm16(self._raw_samples.get(name, []))
-                if not pcm:
-                    return
-                self._sa.WaveObject(pcm, 1, 2, self.SAMPLE_RATE).play()
-                return
-
             path = self._event_wav_paths.get(name)
             if not path:
                 return
@@ -496,7 +481,7 @@ class ASR33:
         margin_bell=True,
         audio_file="asr33_output.wav",
         interactive=False,
-        save_png_on_finish=False,
+        save_png_on_finish=True,
         png_path=None,
     ):
         self.text = to_asr33_charset(text, preserve_case=preserve_case)
@@ -515,7 +500,7 @@ class ASR33:
 
         self.interactive = interactive
         self._preserve_case_flag = preserve_case
-        self._save_png_on_finish = save_png_on_finish
+        self._save_png_on_finish = True
         self._png_path = png_path
         self._live_queue = queue.Queue()
         self._live_after_id = None
@@ -551,7 +536,7 @@ class ASR33:
 
         self.root = tk.Tk()
 
-        self.root.title("CYENERGY™ CORPORATION // MODEL 33 ASR")
+        #self.root.title("CYENERGY™ CORPORATION // MODEL 33 ASR")
 
         # ----------------------------------------------------
         # MONITOR
@@ -821,22 +806,14 @@ class ASR33:
     # ========================================================
     # EXPORT PNG
     # ========================================================
-
     def save_png(self, path=None):
         """
-        Salva un'istantanea PNG di cio' che e' attualmente visibile
-        sulla finestra (non solo il contenuto logico del canvas, ma
-        i pixel reali a schermo: importante perche' i caratteri hanno
-        una leggera rotazione/jitter che un export vettoriale del
-        canvas non renderizzerebbe in modo fedele).
-
-        Richiede Pillow (pip install pillow). Su Linux la cattura
-        schermo di Pillow ha bisogno di un server X11 (nessun
-        Wayland nativo) — se non funziona, valuta uno strumento
-        esterno come 'scrot' o 'gnome-screenshot'.
+        Salva il contenuto reale della finestra Tkinter in PNG.
+        Su Windows usa PrintWindow, che è molto più affidabile di
+        ImageGrab per finestre Tkinter borderless/overrideredirect.
         """
         try:
-            from PIL import ImageGrab
+            from PIL import Image
         except ImportError:
             print(
                 "[ASR33] Per esportare in PNG serve Pillow: "
@@ -844,25 +821,141 @@ class ASR33:
             )
             return None
 
-        self.root.update_idletasks()
-
-        x = self.root.winfo_rootx()
-        y = self.root.winfo_rooty()
-        w = self.root.winfo_width()
-        h = self.root.winfo_height()
-
         if path is None:
             path = f"asr33_snapshot_{time.strftime('%Y%m%d_%H%M%S')}.png"
 
         try:
-            image = ImageGrab.grab(bbox=(x, y, x + w, y + h))
-            image.save(path)
-            print(f"[ASR33] Screenshot salvato: {path}")
-            return path
-        except Exception as e:
-            print(f"[ASR33] Errore salvataggio PNG: {e}")
-            return None
+            self.root.update()
+            self.root.update_idletasks()
 
+            x = self.root.winfo_rootx()
+            y = self.root.winfo_rooty()
+            w = self.root.winfo_width()
+            h = self.root.winfo_height()
+
+            if w <= 0 or h <= 0:
+                print("[ASR33] Dimensioni finestra non valide")
+                return None
+
+            if platform.system() == "Windows":
+                import ctypes
+                from ctypes import wintypes
+
+                hwnd = self.root.winfo_id()
+
+                # DC della finestra
+                hwndDC = ctypes.windll.user32.GetWindowDC(hwnd)
+
+                # DC compatibile in memoria
+                mfcDC = ctypes.windll.gdi32.CreateCompatibleDC(hwndDC)
+
+                # Bitmap compatibile
+                saveBitMap = ctypes.windll.gdi32.CreateCompatibleBitmap(
+                    hwndDC,
+                    w,
+                    h
+                )
+
+                ctypes.windll.gdi32.SelectObject(
+                    mfcDC,
+                    saveBitMap
+                )
+
+                # PW_RENDERFULLCONTENT = 0x00000002
+                result = ctypes.windll.user32.PrintWindow(
+                    hwnd,
+                    mfcDC,
+                    0x00000002
+                )
+
+                if result == 0:
+                    print("[ASR33] PrintWindow ha fallito")
+                    return None
+
+                # BITMAPINFO
+                class BITMAPINFOHEADER(ctypes.Structure):
+                    _fields_ = [
+                        ("biSize", wintypes.DWORD),
+                        ("biWidth", wintypes.LONG),
+                        ("biHeight", wintypes.LONG),
+                        ("biPlanes", wintypes.WORD),
+                        ("biBitCount", wintypes.WORD),
+                        ("biCompression", wintypes.DWORD),
+                        ("biSizeImage", wintypes.DWORD),
+                        ("biXPelsPerMeter", wintypes.LONG),
+                        ("biYPelsPerMeter", wintypes.LONG),
+                        ("biClrUsed", wintypes.DWORD),
+                        ("biClrImportant", wintypes.DWORD),
+                    ]
+
+                class BITMAPINFO(ctypes.Structure):
+                    _fields_ = [
+                        ("bmiHeader", BITMAPINFOHEADER),
+                        ("bmiColors", wintypes.DWORD * 3),
+                    ]
+
+                bmi = BITMAPINFO()
+                bmi.bmiHeader.biSize = ctypes.sizeof(
+                    BITMAPINFOHEADER
+                )
+                bmi.bmiHeader.biWidth = w
+                bmi.bmiHeader.biHeight = -h
+                bmi.bmiHeader.biPlanes = 1
+                bmi.bmiHeader.biBitCount = 32
+                bmi.bmiHeader.biCompression = 0
+
+                buffer_size = w * h * 4
+                buffer = ctypes.create_string_buffer(buffer_size)
+
+                ctypes.windll.gdi32.GetDIBits(
+                    mfcDC,
+                    saveBitMap,
+                    0,
+                    h,
+                    buffer,
+                    ctypes.byref(bmi),
+                    0
+                )
+
+                image = Image.frombuffer(
+                    "RGBA",
+                    (w, h),
+                    buffer,
+                    "raw",
+                    "BGRA",
+                    0,
+                    1
+                )
+
+                image.save(path)
+
+                # Cleanup GDI
+                ctypes.windll.gdi32.DeleteObject(saveBitMap)
+                ctypes.windll.gdi32.DeleteDC(mfcDC)
+                ctypes.windll.user32.ReleaseDC(hwnd, hwndDC)
+
+                print(f"[ASR33] PNG salvato: {path}")
+                return path
+
+            else:
+                # Fallback per Linux/macOS
+                from PIL import ImageGrab
+
+                image = ImageGrab.grab(
+                    bbox=(x, y, x + w, y + h)
+                )
+
+                image.save(path)
+
+                print(f"[ASR33] PNG salvato: {path}")
+                return path
+
+        except Exception as e:
+            print(
+                f"[ASR33] Errore salvataggio PNG: "
+                f"{type(e).__name__}: {e}"
+            )
+            return None
     # ========================================================
     # CARTA CONTINUA
     # ========================================================
@@ -1218,6 +1311,7 @@ class ASR33:
                 "[ASR33] Stampa terminata. "
                 "La finestra resta aperta: premi ESC per uscire."
             )
+
             self._claim_focus()
 
             if self._save_png_on_finish:
@@ -1539,7 +1633,7 @@ def main():
     # ASR-33 HEADER
     # --------------------------------------------------------
 
-    header = "// CYENERGY™ CORPORATION // Teletype Model 33 ASR\n// CONNECTING.......\n\n"
+    header = "// CY_Sanitation™ // Teletype Model 33 ASR\n// CONNECTING.......\n\n"
 
     # --------------------------------------------------------
     # INPUT
