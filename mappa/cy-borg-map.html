@@ -761,6 +761,7 @@ function addPoiLayer() {
     id: 'cy-poi-marker',
     type: 'circle',
     source: 'cy-pois',
+    minzoom: 14, // only show once zoomed in close, to avoid cluttering the wide view
     paint: {
       'circle-radius': 8,
       'circle-color': '#f2ede4',
