@@ -250,16 +250,16 @@ const typeColor = {
    ========================================================================= */
 const pois = [
   {
-    name: "Il Nido di Corvo",
+    name: "CY_SANITAZION HQ",
     category: "Rifugio",
-    lng: 18.0450, lat: 59.3380,
-    blurb: "Il covo segreto del party in Bigmosse. Nessuno sa che esiste, tranne chi ci ha portato un coltello alla gola."
+    lng: 18.04848, lat: 59.35139,
+    blurb: "Ex sede della CY_SANITAZION, abbandonata e sottoposta a quarantena"
   },
   {
-    name: "Bar del Sale",
+    name: "The Floating Hive",
     category: "Incontro chiave",
     lng: 18.0620, lat: 59.3260,
-    blurb: "Dove hanno incontrato per la prima volta il fixer Dr Neo. Il caffè è pessimo, le informazioni no."
+    blurb: "L'arcologia dove ha sede la Cynergy Water & Power Co."
   }
 ];
 
@@ -342,8 +342,8 @@ function addLandmarkLayer() {
   const landmarkFeatures = [
     {
       type: "Feature",
-      properties: { name: "DR NEO", height: 15, base: 0, color: "#e8c93a",
-        blurb: "Il covo/laboratorio del fixer Dr Neo. Un edificio basso ma pesantemente sorvegliato — meglio farsi annunciare." },
+      properties: { name: "@dr_neo101", height: 15, base: 0, color: "#e8c93a",
+        blurb: "Il covo/laboratorio del ripperdoc Dr Neo. Un edificio basso ma pesantemente sorvegliato, meglio citofonare." },
       geometry: {
         type: "Polygon",
         coordinates: [[
@@ -355,7 +355,7 @@ function addLandmarkLayer() {
     },
     {
       type: "Feature",
-      properties: { name: "Officina chopshop", height: 5, base: 0, color: "#9f05b3",
+      properties: { name: "Officina di @chopshop__1147", height: 5, base: 0, color: "#9f05b3",
         blurb: "Un'officina clandestina dove veicoli e cyberware rubati cambiano identità nel giro di una notte." },
       geometry: {
         type: "Polygon",
