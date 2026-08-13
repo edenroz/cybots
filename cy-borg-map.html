@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE MAP OF THE CITY — cy</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/3.6.2/maplibre-gl.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/3.6.2/maplibre-gl.css" rel="stylesheet">
+<style>
+  :root{
+    --cy-black:#0a0908;
+    --cy-red:#c8102e;
+    --cy-red-dark:#7a0a1c;
+    --cy-yellow:#e8c93a;
+    --cy-purple:#8c3a7a;
+    --cy-grey:#b9b6b0;
+    --cy-white:#f2ede4;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--cy-black);overflow:hidden;
+    font-family:'Courier New',monospace;}
+  @font-face{
+    font-family:'CyStencil';
+    src:local('Impact');
+  }
+  #map{position:absolute;top:0;left:0;right:0;bottom:0;filter:contrast(1.05) saturate(1.05);}
+
+  /* red flood layer beneath the map, matching the reference art's spilled-water aesthetic */
+  #bloodwater{
+    position:absolute;inset:0;pointer-events:none;z-index:2;
+    background:
+      radial-gradient(ellipse 60% 45% at 15% 20%, rgba(200,16,46,0.55), transparent 60%),
+      radial-gradient(ellipse 55% 50% at 85% 15%, rgba(200,16,46,0.5), transparent 65%),
+      radial-gradient(ellipse 50% 60% at 90% 80%, rgba(122,10,28,0.55), transparent 60%),
+      radial-gradient(ellipse 55% 45% at 10% 85%, rgba(122,10,28,0.5), transparent 60%);
+    mix-blend-mode:multiply;
+  }
+  #vignette{
+    position:absolute;inset:0;pointer-events:none;z-index:3;
+    background:radial-gradient(ellipse 70% 70% at 50% 50%, transparent 55%, rgba(0,0,0,0.75) 100%);
+  }
+  #grain{
+    position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  #titleblock{
+    position:absolute;top:18px;left:18px;z-index:10;color:var(--cy-white);
+    pointer-events:none;
+  }
+  #titleblock .kicker{font-size:11px;letter-spacing:3px;opacity:0.6;}
+  #titleblock h1{
+    font-family:Impact,'Arial Narrow',sans-serif;
+    font-size:38px;margin:0;letter-spacing:1px;color:var(--cy-white);
+    text-shadow:2px 2px 0 var(--cy-red-dark);
+  }
+  #titleblock h1 .cy{color:var(--cy-red);}
+
+  #legend{
+    position:absolute;bottom:18px;left:18px;z-index:10;
+    background:rgba(10,9,8,0.85);border:1px solid rgba(242,237,228,0.25);
+    padding:10px 14px;color:var(--cy-white);font-size:11px;letter-spacing:1px;
+    backdrop-filter:blur(2px);
+  }
+  #legend .row{display:flex;align-items:center;gap:8px;margin:3px 0;}
+  #legend .sw{width:12px;height:12px;flex:none;}
+
+  #popup-panel{
+    position:absolute;top:0;right:0;bottom:0;width:320px;max-width:80vw;
+    background:rgba(10,9,8,0.94);border-left:1px solid rgba(200,16,46,0.5);
+    color:var(--cy-white);z-index:20;transform:translateX(100%);
+    transition:transform 0.25s ease;padding:24px 20px;overflow-y:auto;
+  }
+  #popup-panel.open{transform:translateX(0);}
+  #popup-panel .close{
+    position:absolute;top:12px;right:14px;cursor:pointer;font-size:20px;
+    color:var(--cy-grey);background:none;border:none;
+  }
+  #popup-panel .district-tag{
+    display:inline-block;font-size:10px;letter-spacing:2px;padding:3px 8px;
+    border:1px solid currentColor;margin-bottom:10px;
+  }
+  #popup-panel h2{
+    font-family:Impact,'Arial Narrow',sans-serif;font-size:28px;margin:0 0 6px 0;
+  }
+  #popup-panel p{font-size:13px;line-height:1.6;color:var(--cy-grey);}
+
+  .maplibregl-ctrl-attrib{background:rgba(10,9,8,0.7)!important;color:var(--cy-grey)!important;}
+  .maplibregl-ctrl-attrib a{color:var(--cy-grey)!important;}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="bloodwater"></div>
+<div id="vignette"></div>
+<div id="grain"></div>
+
+<div id="titleblock">
+  <div class="kicker">THE MAP OF THE CITY™</div>
+  <h1><span class="cy">CY</span>_BORG</h1>
+</div>
+
+<div id="legend">
+  <div class="row"><div class="sw" style="background:var(--cy-purple)"></div>SLUMS</div>
+  <div class="row"><div class="sw" style="background:var(--cy-yellow);opacity:0.85"></div>INDUSTRIES</div>
+  <div class="row"><div class="sw" style="background:var(--cy-grey)"></div>HILLS</div>
+</div>
+
+<div id="popup-panel">
+  <button class="close" onclick="closePanel()">✕</button>
+  <div id="panel-body"></div>
+</div>
+
+<script>
+/* =========================================================================
+   DISTRICT DATA
+   Coordinates below are placeholders centered on real Stockholm-county
+   neighborhoods, remapped as the districts of Cy from the CY_BORG map.
+   Replace lng/lat with your own hand-picked points once you've matched
+   each district to a real-world area you like on the map.
+   ========================================================================= */
+const districts = [
+  { name:"OLD CY / GO", type:"core",   lng:18.0686, lat:59.3251, blurb:"Il cuore pulsante e corrotto della città. Qui tutto è cominciato, e qui tutto marcisce più in fretta." },
+  { name:"LILYPOND",    type:"slums",  lng:17.9970, lat:59.3550, blurb:"Acque stagnanti e baracche costruite l'una sull'altra. L'odore non va mai via." },
+  { name:"BIGMOSSE",    type:"slums",  lng:17.9600, lat:59.3400, blurb:"Il Founder's Hill domina lo skyline degli slum, un monumento a chi ha smesso di guardare in basso." },
+  { name:"MOSSCROFT",   type:"industries", lng:18.1800, lat:59.3700, blurb:"Ciminiere e produttività forzata. Il Perch Productivity Park non chiude mai." },
+  { name:"BARNYARD FIELDS", type:"industries", lng:18.1100, lat:59.3300, blurb:"Quay 47 scarica merci di provenienza incerta ogni notte." },
+  { name:"NORTH CENTRAL", type:"core", lng:18.0500, lat:59.3400, blurb:"Il Nexus amministrativo. Wraith Towers si staglia contro il cielo rosso sangue." },
+  { name:"SOUTH CENTRAL", type:"core", lng:18.0300, lat:59.3050, blurb:"Crown Island e l'Epoch Plaza: qui il potere si mostra, altrove si nasconde." },
+  { name:"THE ARCS",    type:"core",   lng:18.0100, lat:59.3200, blurb:"Tre grandi archi di cemento, resti di un progetto mai finito." },
+  { name:"LAKE GRAVEL", type:"core",   lng:18.0000, lat:59.3350, blurb:"Un lago che non è mai stato blu, nemmeno prima." },
+  { name:"LAKETON",     type:"slums",  lng:18.1000, lat:59.2800, blurb:"Old Sheen e Paradise Spire: nomi che ridono della miseria che nominano." },
+  { name:"OATH LAKE",   type:"slums",  lng:18.1500, lat:59.2700, blurb:"Slayer's Pot al centro. Meglio non chiedere perché si chiama così." },
+  { name:"GALGBACKEN",  type:"hills",  lng:18.0700, lat:59.2600, blurb:"Barrow Hill e Seared Heights. Le colline forche della città." },
+  { name:"EDGES",       type:"hills",  lng:18.0800, lat:59.4000, blurb:"Cy Golf Village: un'illusione di normalità ai margini di tutto." },
+  { name:"OAK ISLES",   type:"hills",  lng:17.9200, lat:59.3050, blurb:"Elm Island e Gravelstead Peak. Isolate, silenziose, sorvegliate." },
+  { name:"MOSSLAKE",    type:"core",   lng:17.9400, lat:59.3700, blurb:"Il confine nord-ovest, dove la città inizia a perdere forma." },
+  { name:"EVERGREEN BAY", type:"core", lng:18.2200, lat:59.3900, blurb:"La baia orientale, verde solo di nome." },
+  { name:"OPTIMA DEPTHS", type:"core", lng:17.9700, lat:59.2750, blurb:"Zona sud-ovest, poco battuta, poco raccomandata." },
+  { name:"LOW MEADOW",  type:"industries", lng:18.1700, lat:59.2900, blurb:"Cot Square e Sword Lake. L'ironia del nome non sfugge a nessuno." },
+  { name:"BURNCHURCH HEX", type:"core", lng:18.0400, lat:59.2900, blurb:"Drylake e High Lake: sette peccati in cerca di un ottavo." },
+  { name:"SVÄRTA",      type:"core",   lng:17.9800, lat:59.3500, blurb:"Il Wreath, corona nera all'ingresso occidentale." },
+  { name:"AQUACULTURE CAGE MAZE", type:"industries", lng:18.2000, lat:59.3300, blurb:"Gabbie su gabbie sull'acqua rossa. Nessuno chiede cosa allevano." },
+];
+
+const typeColor = {
+  core:      "#c8102e",
+  slums:     "#8c3a7a",
+  industries:"#e8c93a",
+  hills:     "#b9b6b0"
+};
+
+/* =========================================================================
+   MAP INITIALIZATION
+   OpenFreeMap "Liberty" style, no API key required. We strip label layers
+   at runtime so no real place name is ever shown to players.
+   ========================================================================= */
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://tiles.openfreemap.org/styles/liberty',
+  center: [18.05, 59.33],
+  zoom: 10.3,
+  pitch: 0,
+  attributionControl: false,
+  minZoom: 9,
+  maxZoom: 17,
+  maxBounds: [[17.4, 59.05], [18.7, 59.65]] // keep players inside the Cy metro area
+});
+
+map.addControl(new maplibregl.NavigationControl({showCompass:false}), 'top-right');
+map.addControl(new maplibregl.AttributionControl({compact:true}));
+
+map.on('load', () => {
+  const style = map.getStyle();
+
+  // 1. Strip every symbol/label layer so no real Stockholm place name leaks through.
+  style.layers.forEach(layer => {
+    if (layer.type === 'symbol') {
+      map.setLayoutProperty(layer.id, 'visibility', 'none');
+    }
+  });
+
+  // 2. Recolor the base map toward the Toner-style palette: near-black ground,
+  //    white/grey linework, red water instead of blue.
+  style.layers.forEach(layer => {
+    const id = layer.id.toLowerCase();
+    try {
+      if (layer.type === 'fill') {
+        if (id.includes('water')) {
+          map.setPaintProperty(layer.id, 'fill-color', '#3a0510');
+        } else if (id.includes('park') || id.includes('wood') || id.includes('landuse') || id.includes('grass')) {
+          map.setPaintProperty(layer.id, 'fill-color', '#141210');
+        } else if (id.includes('building')) {
+          map.setPaintProperty(layer.id, 'fill-color', '#1c1a17');
+        } else {
+          map.setPaintProperty(layer.id, 'fill-color', '#0f0e0c');
+        }
+      }
+      if (layer.type === 'line') {
+        if (id.includes('water') || id.includes('river') || id.includes('stream')) {
+          map.setPaintProperty(layer.id, 'line-color', '#c8102e');
+        } else if (id.includes('motorway') || id.includes('trunk') || id.includes('primary')) {
+          map.setPaintProperty(layer.id, 'line-color', '#f2ede4');
+          map.setPaintProperty(layer.id, 'line-opacity', 0.85);
+        } else if (id.includes('boundary') || id.includes('admin')) {
+          map.setLayoutProperty(layer.id, 'visibility', 'none'); // hide real admin borders
+        } else {
+          map.setPaintProperty(layer.id, 'line-color', '#8a8680');
+          map.setPaintProperty(layer.id, 'line-opacity', 0.4);
+        }
+      }
+      if (layer.type === 'background') {
+        map.setPaintProperty(layer.id, 'background-color', '#0a0908');
+      }
+    } catch(e) { /* some layers don't support every property; safe to skip */ }
+  });
+
+  addDistrictLayer();
+});
+
+function addDistrictLayer() {
+  // District markers + labels for Cy, drawn as our own layer on top of the stripped base map.
+  const features = districts.map(d => ({
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [d.lng, d.lat] },
+    properties: { name: d.name, type: d.type, blurb: d.blurb, color: typeColor[d.type] }
+  }));
+
+  map.addSource('cy-districts', {
+    type: 'geojson',
+    data: { type: "FeatureCollection", features }
+  });
+
+  map.addLayer({
+    id: 'cy-district-halo',
+    type: 'circle',
+    source: 'cy-districts',
+    paint: {
+      'circle-radius': 22,
+      'circle-color': ['get', 'color'],
+      'circle-opacity': 0.18,
+      'circle-blur': 0.6
+    }
+  });
+
+  map.addLayer({
+    id: 'cy-district-dot',
+    type: 'circle',
+    source: 'cy-districts',
+    paint: {
+      'circle-radius': 5,
+      'circle-color': ['get', 'color'],
+      'circle-stroke-width': 1.5,
+      'circle-stroke-color': '#f2ede4'
+    }
+  });
+
+  map.addLayer({
+    id: 'cy-district-label',
+    type: 'symbol',
+    source: 'cy-districts',
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-font': ['Noto Sans Bold'],
+      'text-size': 13,
+      'text-offset': [0, 1.4],
+      'text-anchor': 'top',
+      'text-letter-spacing': 0.08,
+      'text-allow-overlap': false
+    },
+    paint: {
+      'text-color': '#f2ede4',
+      'text-halo-color': '#0a0908',
+      'text-halo-width': 1.5
+    }
+  });
+
+  map.on('mouseenter', 'cy-district-dot', () => map.getCanvas().style.cursor = 'pointer');
+  map.on('mouseleave', 'cy-district-dot', () => map.getCanvas().style.cursor = '');
+
+  map.on('click', 'cy-district-dot', (e) => {
+    const p = e.features[0].properties;
+    openPanel(p);
+  });
+}
+
+function openPanel(p) {
+  const panel = document.getElementById('popup-panel');
+  const body = document.getElementById('panel-body');
+  body.innerHTML = `
+    <div class="district-tag" style="color:${p.color}">${p.type.toUpperCase()}</div>
+    <h2>${p.name}</h2>
+    <p>${p.blurb}</p>
+  `;
+  panel.classList.add('open');
+}
+function closePanel() {
+  document.getElementById('popup-panel').classList.remove('open');
+}
+</script>
+</body>
+</html>
