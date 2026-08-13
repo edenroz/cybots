@@ -166,7 +166,7 @@ const districts = [
   { name:"GALGBACKEN",  type:"hills",  lng:18.1200, lat:59.2800, blurb:"Barrow Hill e Seared Heights. Le colline forche della città." },
   { name:"EDGES",       type:"hills",  lng:18.0800, lat:59.4000, blurb:"Cy Golf Village: un'illusione di normalità ai margini di tutto." },
   { name:"OAK ISLES",   type:"hills",  lng:17.6900, lat:59.3450, blurb:"Elm Island e Gravelstead Peak. Isolate, silenziose, sorvegliate." },
-  { name:"MOSSLAKE",    type:"core",   lng:17.745800, lat:59.4200, blurb:"Il confine nord-ovest, dove la città inizia a perdere forma." },
+  { name:"MOSSLAKE",    type:"core",   lng:17.805800, lat:59.4300, blurb:"Il confine nord-ovest, dove la città inizia a perdere forma." },
   { name:"EVERGREEN BAY", type:"core", lng:18.2200, lat:59.3900, blurb:"La baia orientale, verde solo di nome." },
   { name:"OPTIMA DEPTHS", type:"core", lng:17.840, lat:59.2050, blurb:"Zona sud-ovest, poco battuta, poco raccomandata." },
   { name:"LOW MEADOW",  type:"industries", lng:18.1700, lat:59.2900, blurb:"Cot Square e Sword Lake. L'ironia del nome non sfugge a nessuno." },
@@ -196,7 +196,7 @@ const map = new maplibregl.Map({
   attributionControl: false,
   minZoom: 9,
   maxZoom: 17,
-  maxBounds: [[17.4, 59.05], [18.7, 59.65]] // keep players inside the Cy metro area
+  maxBounds: [[17.4, 58.71], [18.7, 59.65]] // keep players inside the Cy metro area
 });
 
 map.addControl(new maplibregl.NavigationControl({showCompass:false}), 'top-right');
@@ -967,6 +967,117 @@ function addMaskLayer() {
             [
               18.5261851,
               59.1665669
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              17.857992,
+              58.7251696
+            ],
+            [
+              17.7360505,
+              58.7920441
+            ],
+            [
+              17.7194045,
+              58.8237562
+            ],
+            [
+              17.7620026,
+              58.8548918
+            ],
+            [
+              17.7526188,
+              58.8966757
+            ],
+            [
+              17.7268469,
+              58.919325
+            ],
+            [
+              17.7208508,
+              58.9420843
+            ],
+            [
+              17.7134432,
+              58.965431
+            ],
+            [
+              17.7062747,
+              58.9798158
+            ],
+            [
+              17.7172579,
+              58.9903591
+            ],
+            [
+              17.7239579,
+              59.0160936
+            ],
+            [
+              17.7096321,
+              59.0175769
+            ],
+            [
+              17.705665,
+              59.0322878
+            ],
+            [
+              17.695928,
+              59.0498799
+            ],
+            [
+              17.6884765,
+              59.0515099
+            ],
+            [
+              17.6845261,
+              59.0601562
+            ],
+            [
+              17.6689924,
+              59.0830927
+            ],
+            [
+              17.6425366,
+              59.1278658
+            ],
+            [
+              15.8936064,
+              59.4749528
+            ],
+            [
+              14.3050637,
+              58.2783295
+            ],
+            [
+              18.4563951,
+              56.7812518
+            ],
+            [
+              21.0624479,
+              57.8217834
+            ],
+            [
+              19.8381894,
+              58.7753628
+            ],
+            [
+              18.1660499,
+              58.7544661
+            ],
+            [
+              17.857992,
+              58.7251696
             ]
           ]
         ]
