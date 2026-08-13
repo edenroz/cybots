@@ -87,6 +87,19 @@
 
   .maplibregl-ctrl-attrib{background:rgba(10,9,8,0.7)!important;color:var(--cy-grey)!important;}
   .maplibregl-ctrl-attrib a{color:var(--cy-grey)!important;}
+
+  #north-reset{
+    position:absolute;bottom:90px;right:10px;z-index:10;
+    width:38px;height:38px;
+    background:rgba(10,9,8,0.85);
+    border:1px solid var(--cy-white);
+    color:var(--cy-white);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-family:Impact,'Arial Narrow',sans-serif;
+    transition:border-color 0.15s, color 0.15s;
+  }
+  #north-reset:hover{border-color:var(--cy-red);color:var(--cy-red);}
+  #north-reset svg{width:20px;height:20px;transition:transform 0.4s ease;}
 </style>
 </head>
 <body>
@@ -110,6 +123,13 @@
 <div id="popup-panel">
   <button class="close" onclick="closePanel()">✕</button>
   <div id="panel-body"></div>
+</div>
+
+<div id="north-reset" title="Reset direzione a nord" onclick="resetNorth()">
+  <svg id="north-needle" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2 L16 13 L12 10.5 L8 13 Z" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"/>
+    <path d="M12 10.5 L16 13 L12 22 L8 13 Z" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round" opacity="0.4"/>
+  </svg>
 </div>
 
 <script>
@@ -217,7 +237,54 @@ map.on('load', () => {
   });
 
   addDistrictLayer();
+  addMaskLayer();
 });
+
+/* =========================================================================
+   MASK LAYER
+   Polygons painted in the same color as the water layer, used to visually
+   erase real islands/land that don't exist in Cy (e.g. Evergreen Bay).
+   To add a new masked area: go to geojson.io, draw a polygon over the
+   zone you want hidden, copy its coordinates array into a new feature below.
+   ========================================================================= */
+function addMaskLayer() {
+  const maskFeatures = [
+    {
+      type: "Feature",
+      properties: { note: "Evergreen Bay — isole reali nascoste sotto l'acqua rossa" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [18.20, 59.42],
+          [18.32, 59.42],
+          [18.35, 59.38],
+          [18.30, 59.34],
+          [18.20, 59.35],
+          [18.17, 59.39],
+          [18.20, 59.42]
+        ]]
+      }
+    }
+  ];
+
+  map.addSource('cy-mask', {
+    type: 'geojson',
+    data: { type: "FeatureCollection", features: maskFeatures }
+  });
+
+  map.addLayer({
+    id: 'cy-mask-fill',
+    type: 'fill',
+    source: 'cy-mask',
+    paint: {
+      'fill-color': '#3a0510', // must match the water fill-color set above
+      'fill-opacity': 1
+    }
+  });
+
+  // Keep the mask below district markers/labels but above the base map.
+  map.moveLayer('cy-mask-fill', 'cy-district-halo');
+}
 
 function addDistrictLayer() {
   // District markers + labels for Cy, drawn as our own layer on top of the stripped base map.
@@ -298,6 +365,17 @@ function openPanel(p) {
 function closePanel() {
   document.getElementById('popup-panel').classList.remove('open');
 }
+
+function resetNorth() {
+  map.easeTo({ bearing: 0, pitch: 0, duration: 400 });
+}
+
+// The needle icon rotates opposite to the map bearing so it always points
+// toward true north, giving a visual cue of current orientation at a glance.
+map.on('rotate', () => {
+  const needle = document.getElementById('north-needle');
+  needle.style.transform = `rotate(${-map.getBearing()}deg)`;
+});
 </script>
 </body>
 </html>
