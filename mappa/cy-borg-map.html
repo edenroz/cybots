@@ -100,6 +100,14 @@
   }
   #north-reset:hover{border-color:var(--cy-red);color:var(--cy-red);}
   #north-reset svg{width:20px;height:20px;transition:transform 0.4s ease;}
+
+  #coord-readout{
+    position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:10;
+    background:rgba(10,9,8,0.85);border:1px solid rgba(242,237,228,0.25);
+    color:var(--cy-white);font-size:11px;letter-spacing:1px;
+    padding:6px 12px;pointer-events:none;white-space:nowrap;
+  }
+  #coord-readout .lbl{color:var(--cy-grey);margin-right:4px;}
 </style>
 </head>
 <body>
@@ -130,6 +138,11 @@
     <path d="M12 2 L16 13 L12 10.5 L8 13 Z" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"/>
     <path d="M12 10.5 L16 13 L12 22 L8 13 Z" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round" opacity="0.4"/>
   </svg>
+</div>
+
+<div id="coord-readout">
+  <span class="lbl">lng</span><span id="coord-lng">—</span>
+  &nbsp;&nbsp;<span class="lbl">lat</span><span id="coord-lat">—</span>
 </div>
 
 <script>
@@ -375,6 +388,13 @@ function resetNorth() {
 map.on('rotate', () => {
   const needle = document.getElementById('north-needle');
   needle.style.transform = `rotate(${-map.getBearing()}deg)`;
+});
+
+// Live coordinate readout under the cursor — useful when drawing mask
+// polygons or placing districts: hover the spot you want, copy the numbers.
+map.on('mousemove', (e) => {
+  document.getElementById('coord-lng').textContent = e.lngLat.lng.toFixed(5);
+  document.getElementById('coord-lat').textContent = e.lngLat.lat.toFixed(5);
 });
 </script>
 </body>
