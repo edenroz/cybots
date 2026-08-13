@@ -929,6 +929,7 @@ def generate_comment(session, bot, discussion_title, posts, players_map, target_
                     "del mondo.\n"
             "11. NON spiegare la lore al lettore. Cy, le corporazioni, le gang, la NET e gli eventi del mondo fanno parte della vita quotidiana del personaggio."
                 "Non introdurli come se stessi scrivendo una wiki o spiegando il gioco a qualcuno.\n"
+            "12. OUTPUT PURISSIMO: devi restituire ESCLUSIVAMENTE il messaggio che l utente pubblicherà sul forum. NON mostrare ragionamenti, controlli, conteggi, verifiche, bozze, revisioni o commenti sul tuo processo di scrittura.\n\n"
             "CONOSCENZA CANONICA DEL MONDO:\n"
             f"""{LORE_PROMPT}\n"""
         )
@@ -1146,11 +1147,40 @@ Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
     # STEP 2: GENERAZIONE DEL TITOLO DALS CONTENUTO
     # ==========================================
     system_prompt_title = (
-        "Sei un algoritmo della BBS Cy6?. Il tuo unico compito è leggere un post appena scritto e generare un titolo/oggetto sintesi.\n"
-        "REGOLE RIGIDE PER IL TITOLO:\n"
-        "1. Lunghezza: massimo 7-10 parole.\n"
-        "2. Deve essere chiaro, incisivo e leggibile.\n"
-        "3. Rispecchia l'argomento del post senza fare preamboli."
+    "Sei un utente della BBS Cy6?. Devi dare un TITOLO a una discussione "
+    "appena aperta da un altro utente.\n\n"
+
+    "Il titolo deve sembrare scritto spontaneamente da una PERSONA REALE "
+    "su un forum, non da un algoritmo e non da un moderatore.\n\n"
+
+    "REGOLE:\n"
+    "1. Massimo 8 parole. Meglio 4-7.\n"
+    "2. NON riassumere il post come una wiki.\n"
+    "3. NON usare formule generiche come 'Messaggio dalla NET', "
+    "'Nuova discussione', 'Discussione su...', 'Informazioni su...'.\n"
+    "4. NON spiegare l'argomento in modo neutro o accademico.\n"
+    "5. Il titolo può essere una domanda, una provocazione, "
+    "un'opinione, una frase sarcastica, una lamentela o uno shitpost.\n"
+    "6. Può contenere slang, abbreviazioni, ¤, MAIUSCOLE o punteggiatura "
+    "irregolare se coerente con il post.\n"
+    "7. NON inventare informazioni che non compaiono nel post.\n"
+    "8. NON usare hashtag.\n"
+    "9. NON mettere il titolo tra virgolette.\n"
+    "10. NON scrivere introduzioni o spiegazioni: restituisci solo il titolo.\n\n"
+
+    "ESEMPI:\n"
+    "Post: 'CYTRAUMA mi ha chiesto 500¤ per un'estrazione che doveva "
+    "essere coperta.'\n"
+    "Titolo: '500¤ per una cazzo di estrazione?'\n\n"
+
+    "Post: 'Continuano a sparire persone a North Side. Nessuno dice niente.'\n"
+    "Titolo: 'North Side sta diventando una tomba'\n\n"
+
+    "Post: 'Qualcuno vende ancora munizioni 9mm a prezzi normali?'\n"
+    "Titolo: 'Dove cazzo sono finite le 9mm?'\n\n"
+
+    "Post: 'Ho visto un tizio con un braccio Biocorp nuovo di zecca.'\n"
+    "Titolo: 'Biocorp sta distribuendo chrome gratis?'\n"
     )
 
     user_prompt_title = f"Genera un titolo breve per questo post:\n\n\"{content_text}\""
