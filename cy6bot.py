@@ -1119,7 +1119,7 @@ Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
 
     config_body = genai.GenerationConfig(
         temperature=cfg["temperature"],
-        max_output_tokens=1500,
+        max_output_tokens=2000,
         response_mime_type="application/json",
         response_schema=DiscussionBody
     )
@@ -1144,69 +1144,48 @@ Crea il messaggio principale per un nuovo thread e scegli la board più adatta.
         return {"interested": False, "score": 0.0, "reason": "eval_error", "target_user": None}
 
     # ==========================================
-    # STEP 2: GENERAZIONE DEL TITOLO DALS CONTENUTO
+    # STEP 2: GENERAZIONE DEL TITOLO (PLAIN TEXT)
     # ==========================================
     system_prompt_title = (
-    "Sei un utente della BBS Cy6?. Devi dare un TITOLO a una discussione "
-    "appena aperta da un altro utente.\n\n"
-
-    "Il titolo deve sembrare scritto spontaneamente da una PERSONA REALE "
-    "su un forum, non da un algoritmo e non da un moderatore.\n\n"
-
-    "REGOLE:\n"
-    "1. Massimo 8 parole. Meglio 4-7.\n"
-    "2. NON riassumere il post come una wiki.\n"
-    "3. NON usare formule generiche come 'Messaggio dalla NET', "
-    "'Nuova discussione', 'Discussione su...', 'Informazioni su...'.\n"
-    "4. NON spiegare l'argomento in modo neutro o accademico.\n"
-    "5. Il titolo può essere una domanda, una provocazione, "
-    "un'opinione, una frase sarcastica, una lamentela o uno shitpost.\n"
-    "6. Può contenere slang, abbreviazioni, ¤, MAIUSCOLE o punteggiatura "
-    "irregolare se coerente con il post.\n"
-    "7. NON inventare informazioni che non compaiono nel post.\n"
-    "8. NON usare hashtag.\n"
-    "9. NON mettere il titolo tra virgolette.\n"
-    "10. NON scrivere introduzioni o spiegazioni: restituisci solo il titolo.\n\n"
-
-    "ESEMPI:\n"
-    "Post: 'CYTRAUMA mi ha chiesto 500¤ per un'estrazione che doveva "
-    "essere coperta.'\n"
-    "Titolo: '500¤ per una cazzo di estrazione?'\n\n"
-
-    "Post: 'Continuano a sparire persone a North Side. Nessuno dice niente.'\n"
-    "Titolo: 'North Side sta diventando una tomba'\n\n"
-
-    "Post: 'Qualcuno vende ancora munizioni 9mm a prezzi normali?'\n"
-    "Titolo: 'Dove cazzo sono finite le 9mm?'\n\n"
-
-    "Post: 'Ho visto un tizio con un braccio Biocorp nuovo di zecca.'\n"
-    "Titolo: 'Biocorp sta distribuendo chrome gratis?'\n"
+        "Sei un utente umano della BBS Cy6? di CY_BORG.\n"
+        "Leggi il post e genera SOLO ed ESCLUSIVAMENTE il titolo del thread.\n\n"
+        "REGOLE:\n"
+        "- Massimo 7-10 parole.\n"
+        "- Nessun commento, nessuna spiegazione, non rispondere al post.\n"
+        "- NON usare virgolette all'inizio o alla fine.\n"
+        "- Scrivi solo la frase del titolo.\n"
+        "- Deve essere accattivante, in stile cyberpunk/street, basato sul post.\n"
     )
 
-    user_prompt_title = f"Genera un titolo breve per questo post:\n\n\"{content_text}\""
+    # Forniamo il contesto in modo più chiaro
+    user_prompt_title = f"POST:\n{content_text}\n\nTITOLO:"
 
     model_title = genai.GenerativeModel(
         model_name=model_name,
         system_instruction=system_prompt_title
     )
 
+    # ATTENZIONE QUI: Rimosso response_schema e mime_type! 
+    # Ora genera una semplice stringa pura.
     config_title = genai.GenerationConfig(
-        temperature=0.6, # Temperatura più bassa per titoli più precisi e coerenti
-        max_output_tokens=150,
-        response_mime_type="application/json",
-        response_schema=DiscussionTitle
+        temperature=0.7, 
+        max_output_tokens=450, # Abbassato ulteriormente
     )
 
     try:
-        time.sleep(random.uniform(2, 5))
+        time.sleep(random.uniform(2, 4))
         res_title = model_title.generate_content(
             user_prompt_title, 
             generation_config=config_title, 
             safety_settings=SAFETY_SETTINGS
         )
         
-        title_json = json.loads(res_title.text)
-        title_text = title_json.get("title", "Nuova discussione").strip()
+        # Puliamo la stringa da spazi e da eventuali virgolette " o ' messe dall'IA
+        title_text = res_title.text.strip().strip('"').strip("'")
+
+        # Fallback anti-spazzatura per essere sicuri al 100%
+        if len(title_text) < 3 or title_text.lower() in ["here", "test", "hello", "titolo", "title", "null"]:
+             title_text = "Nessun Oggetto"
 
     except Exception as e:
         logging.warning(f"Errore Step 2 (Title) per @{bot['username']}: {e}")
