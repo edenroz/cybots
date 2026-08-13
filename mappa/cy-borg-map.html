@@ -26,21 +26,16 @@
   }
   #map{position:absolute;top:0;left:0;right:0;bottom:0;filter:contrast(1.05) saturate(1.05);}
 
-  /* Toxic-water miasma: turbulent marbled bands instead of flat radial
-     blobs, matching the reference art's swirled-paint look. An SVG
-     feTurbulence/feDisplacementMap filter distorts soft color gradients
-     into curved veins — cheap to render, no images needed. Lower
-     opacity below if it still reads too strong. */
+  /* Flat red water-tint overlay, matching the reference art's palette.
+     (Miasma/turbulence experiment dropped — flat gradient reads better.) */
   #bloodwater{
     position:absolute;inset:0;pointer-events:none;z-index:2;
     background:
-      radial-gradient(ellipse 65% 50% at 12% 15%, rgba(180,10,35,0.5), transparent 65%),
-      radial-gradient(ellipse 60% 55% at 88% 10%, rgba(150,8,30,0.45), transparent 68%),
-      radial-gradient(ellipse 55% 65% at 92% 85%, rgba(120,8,25,0.5), transparent 65%),
-      radial-gradient(ellipse 60% 50% at 8% 90%, rgba(120,8,25,0.45), transparent 65%);
+      radial-gradient(ellipse 60% 45% at 15% 20%, rgba(200,16,46,0.55), transparent 60%),
+      radial-gradient(ellipse 55% 50% at 85% 15%, rgba(200,16,46,0.5), transparent 65%),
+      radial-gradient(ellipse 50% 60% at 90% 80%, rgba(122,10,28,0.55), transparent 60%),
+      radial-gradient(ellipse 55% 45% at 10% 85%, rgba(122,10,28,0.5), transparent 60%);
     mix-blend-mode:multiply;
-    opacity:0.55;
-    filter:url(#miasma-turbulence);
   }
   #vignette{
     position:absolute;inset:0;pointer-events:none;z-index:3;
@@ -159,16 +154,6 @@
 </head>
 <body>
 
-<!-- Hidden SVG filter powering the toxic-water miasma effect on #bloodwater.
-     feTurbulence generates a fractal noise field; feDisplacementMap uses it
-     to warp the gradients above into curved, marbled bands. -->
-<svg width="0" height="0" style="position:absolute">
-  <filter id="miasma-turbulence" x="-20%" y="-20%" width="140%" height="140%">
-    <feTurbulence type="fractalNoise" baseFrequency="0.008 0.014" numOctaves="4" seed="7" result="noise"/>
-    <feDisplacementMap in="SourceGraphic" in2="noise" scale="140" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-</svg>
-
 <div id="map"></div>
 <div id="bloodwater"></div>
 <div id="vignette"></div>
@@ -244,10 +229,6 @@ const typeColor = {
 
 /* =========================================================================
    POI DATA
-   Points of interest your players have discovered during the campaign.
-   Each one gets a marker on the map (if it has coordinates) and an entry
-   in the slide-out POI panel. Clicking a list entry flies the map to it
-   and opens the same description panel used for districts/landmarks.
    ========================================================================= */
 const pois = [
   {
@@ -361,271 +342,35 @@ function addLandmarkLayer() {
       }
     },
     {
-      "type": "Feature",
+      type: "Feature",
       properties: { name: "@dr_neo101", height: 180, base: 0, color: "#038207",
         blurb: "The Floating Hive: l'arcologia dove ha sede la  Cynergy Water & Power Co." },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              17.9007607,
-              59.3082817
-            ],
-            [
-              17.900639,
-              59.3083276
-            ],
-            [
-              17.9004474,
-              59.3083438
-            ],
-            [
-              17.9000716,
-              59.3083082
-            ],
-            [
-              17.8999147,
-              59.3083236
-            ],
-            [
-              17.8995965,
-              59.3082452
-            ],
-            [
-              17.8993074,
-              59.3082915
-            ],
-            [
-              17.8991212,
-              59.3083247
-            ],
-            [
-              17.8989728,
-              59.3084048
-            ],
-            [
-              17.8990813,
-              59.3084885
-            ],
-            [
-              17.8994874,
-              59.308592
-            ],
-            [
-              17.8996933,
-              59.3086819
-            ],
-            [
-              17.8997813,
-              59.3087698
-            ],
-            [
-              17.8997176,
-              59.3088727
-            ],
-            [
-              17.8997424,
-              59.3090058
-            ],
-            [
-              17.8998267,
-              59.3091295
-            ],
-            [
-              17.9000876,
-              59.3092886
-            ],
-            [
-              17.9003362,
-              59.3094945
-            ],
-            [
-              17.9010773,
-              59.3098077
-            ],
-            [
-              17.9015563,
-              59.3098942
-            ],
-            [
-              17.9021935,
-              59.3100074
-            ],
-            [
-              17.9032282,
-              59.3101262
-            ],
-            [
-              17.9043367,
-              59.3101971
-            ],
-            [
-              17.9055421,
-              59.3101349
-            ],
-            [
-              17.9060018,
-              59.3100073
-            ],
-            [
-              17.9061913,
-              59.3099853
-            ],
-            [
-              17.906216,
-              59.309909
-            ],
-            [
-              17.9064362,
-              59.3098035
-            ],
-            [
-              17.9063479,
-              59.3096289
-            ],
-            [
-              17.9063093,
-              59.3095629
-            ],
-            [
-              17.9060534,
-              59.309429
-            ],
-            [
-              17.9059782,
-              59.3094001
-            ],
-            [
-              17.9058678,
-              59.3091528
-            ],
-            [
-              17.905631,
-              59.3089694
-            ],
-            [
-              17.905383,
-              59.3088109
-            ],
-            [
-              17.9053231,
-              59.308695
-            ],
-            [
-              17.9053957,
-              59.3085638
-            ],
-            [
-              17.9053617,
-              59.3084008
-            ],
-            [
-              17.9052425,
-              59.3082786
-            ],
-            [
-              17.9051501,
-              59.3080786
-            ],
-            [
-              17.9051033,
-              59.3079083
-            ],
-            [
-              17.9051019,
-              59.3078195
-            ],
-            [
-              17.9048434,
-              59.3076228
-            ],
-            [
-              17.9046758,
-              59.3075141
-            ],
-            [
-              17.9046318,
-              59.3074625
-            ],
-            [
-              17.9046535,
-              59.3073233
-            ],
-            [
-              17.9046355,
-              59.3071631
-            ],
-            [
-              17.9044178,
-              59.3071039
-            ],
-            [
-              17.9041545,
-              59.3070933
-            ],
-            [
-              17.9036642,
-              59.3072608
-            ],
-            [
-              17.9034991,
-              59.3073524
-            ],
-            [
-              17.9033329,
-              59.3074021
-            ],
-            [
-              17.9031155,
-              59.3074124
-            ],
-            [
-              17.9026897,
-              59.3074544
-            ],
-            [
-              17.9027232,
-              59.3074985
-            ],
-            [
-              17.9026178,
-              59.3075254
-            ],
-            [
-              17.9017803,
-              59.3078171
-            ],
-            [
-              17.9015793,
-              59.3078677
-            ],
-            [
-              17.9019716,
-              59.3083346
-            ],
-            [
-              17.9019983,
-              59.3086183
-            ],
-            [
-              17.9016194,
-              59.3087166
-            ],
-            [
-              17.9011116,
-              59.3087302
-            ],
-            [
-              17.9006521,
-              59.3086287
-            ],
-            [
-              17.9007607,
-              59.3082817
-            ]
-          ]
-        ]
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [17.9007607,59.3082817],[17.900639,59.3083276],[17.9004474,59.3083438],
+          [17.9000716,59.3083082],[17.8999147,59.3083236],[17.8995965,59.3082452],
+          [17.8993074,59.3082915],[17.8991212,59.3083247],[17.8989728,59.3084048],
+          [17.8990813,59.3084885],[17.8994874,59.308592],[17.8996933,59.3086819],
+          [17.8997813,59.3087698],[17.8997176,59.3088727],[17.8997424,59.3090058],
+          [17.8998267,59.3091295],[17.9000876,59.3092886],[17.9003362,59.3094945],
+          [17.9010773,59.3098077],[17.9015563,59.3098942],[17.9021935,59.3100074],
+          [17.9032282,59.3101262],[17.9043367,59.3101971],[17.9055421,59.3101349],
+          [17.9060018,59.3100073],[17.9061913,59.3099853],[17.906216,59.309909],
+          [17.9064362,59.3098035],[17.9063479,59.3096289],[17.9063093,59.3095629],
+          [17.9060534,59.309429],[17.9059782,59.3094001],[17.9058678,59.3091528],
+          [17.905631,59.3089694],[17.905383,59.3088109],[17.9053231,59.308695],
+          [17.9053957,59.3085638],[17.9053617,59.3084008],[17.9052425,59.3082786],
+          [17.9051501,59.3080786],[17.9051033,59.3079083],[17.9051019,59.3078195],
+          [17.9048434,59.3076228],[17.9046758,59.3075141],[17.9046318,59.3074625],
+          [17.9046535,59.3073233],[17.9046355,59.3071631],[17.9044178,59.3071039],
+          [17.9041545,59.3070933],[17.9036642,59.3072608],[17.9034991,59.3073524],
+          [17.9033329,59.3074021],[17.9031155,59.3074124],[17.9026897,59.3074544],
+          [17.9027232,59.3074985],[17.9026178,59.3075254],[17.9017803,59.3078171],
+          [17.9015793,59.3078677],[17.9019716,59.3083346],[17.9019983,59.3086183],
+          [17.9016194,59.3087166],[17.9011116,59.3087302],[17.9006521,59.3086287],
+          [17.9007607,59.3082817]
+        ]]
       }
     },
     {
@@ -661,7 +406,6 @@ function addLandmarkLayer() {
     }
   });
 
-  // Click (desktop) — fill-extrusion layers support click like any other.
   map.on('click', 'cy-landmark-extrusion', (e) => {
     const p = e.features[0].properties;
     openPanel({ name: p.name, type: 'landmark', blurb: p.blurb, color: p.color });
@@ -963,7 +707,7 @@ function addDistrictLayer() {
     type: 'circle',
     source: 'cy-districts',
     paint: {
-      'circle-radius': 9,             // enlarged hit target, easier to tap on mobile
+      'circle-radius': 9,
       'circle-stroke-width': 1.5,
       'circle-stroke-color': '#f2ede4',
       'circle-color': ['get', 'color'],
@@ -994,11 +738,6 @@ function addDistrictLayer() {
   map.on('mouseenter', 'cy-district-dot', () => map.getCanvas().style.cursor = 'pointer');
   map.on('mouseleave', 'cy-district-dot', () => map.getCanvas().style.cursor = '');
 
-  // Shared handler for click (desktop) and touch tap (mobile). MapLibre
-  // normally maps touch taps to 'click' too, but on some mobile browsers
-  // a tap that lands a few px off the tiny circle radius never fires the
-  // layer-scoped click at all — queryRenderedFeatures with a small padded
-  // box around the tap point is a more reliable hit test on touch.
   function handleDistrictTap(e) {
     const bbox = [
       [e.point.x - 12, e.point.y - 12],
@@ -1010,7 +749,6 @@ function addDistrictLayer() {
     }
   }
   map.on('click', 'cy-district-dot', (e) => openPanel(e.features[0].properties));
-  // Fallback: tap anywhere near a district dot, not just exactly on the pixel.
   map.on('touchend', handleDistrictTap);
 }
 
@@ -1036,7 +774,7 @@ function addPoiLayer() {
     id: 'cy-poi-marker',
     type: 'circle',
     source: 'cy-pois',
-    minzoom: 14, // only show once zoomed in close, to avoid cluttering the wide view
+    minzoom: 14,
     paint: {
       'circle-radius': 8,
       'circle-color': '#f2ede4',
@@ -1055,7 +793,15 @@ function addPoiLayer() {
 
 /* =========================================================================
    POI SIDE PANEL (list)
+   On mobile, tapping a POI in the list flies the map to it but does NOT
+   auto-open the description panel — that panel is full-width on small
+   screens and would otherwise cover the map right as it flies in,
+   hiding the animation the tap was meant to trigger. Desktop keeps the
+   original behavior since its panel is a narrow sidebar that doesn't
+   block the view.
    ========================================================================= */
+const isMobile = window.matchMedia('(max-width: 640px)').matches;
+
 function buildPoiList() {
   const list = document.getElementById('poi-list');
   list.innerHTML = '';
@@ -1066,8 +812,12 @@ function buildPoiList() {
       if (p.lng !== undefined && p.lat !== undefined) {
         map.flyTo({ center: [p.lng, p.lat], zoom: 14, pitch: 45, duration: 1000 });
       }
-      openPanel({ name: p.name, type: p.category, blurb: p.blurb, color: '#c8102e' });
       togglePoiPanel(false);
+      if (!isMobile) {
+        openPanel({ name: p.name, type: p.category, blurb: p.blurb, color: '#c8102e' });
+      }
+      // On mobile the player can still tap the marker itself once the fly
+      // animation lands, which opens the same description panel.
     });
     list.appendChild(li);
   });
