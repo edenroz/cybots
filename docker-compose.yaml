@@ -39,6 +39,16 @@ services:
     networks:
       - cy6
 
+  map:
+    image: nginx:alpine
+    container_name: cy6-map
+    restart: unless-stopped
+
+    volumes:
+      - ./map:/usr/share/nginx/html:ro
+
+    networks:
+      - cy6
 
   db:
     image: mariadb:10.11
