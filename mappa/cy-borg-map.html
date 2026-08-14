@@ -16,6 +16,8 @@
     --cy-purple:#8c3a7a;
     --cy-grey:#b9b6b0;
     --cy-white:#f2ede4;
+    --cy-neon-cyan:#00fff2;
+    --cy-neon-magenta:#ff2ee6;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;height:100%;background:var(--cy-black);overflow:hidden;
@@ -312,6 +314,17 @@ map.on('load', () => {
       if (layer.type === 'background') {
         map.setPaintProperty(layer.id, 'background-color', '#0a0908');
       }
+
+      if (id.includes('motorway') || id.includes('trunk') || id.includes('primary')) {
+        map.setPaintProperty(layer.id, 'line-color', '#acfcf8');
+        map.setPaintProperty(layer.id, 'line-opacity', 0.6);
+      } else if (id.includes('secondary') || id.includes('tertiary')) {
+        map.setPaintProperty(layer.id, 'line-color', '#ff8cf1');
+        map.setPaintProperty(layer.id, 'line-opacity', 0.4);
+      } else {
+        map.setPaintProperty(layer.id, 'line-color', '#8a8680');
+        map.setPaintProperty(layer.id, 'line-opacity', 0.2);
+      }
       
     } catch(e) { /* some layers don't support every property; safe to skip */ }
   });
@@ -321,7 +334,7 @@ map.on('load', () => {
       map.setLayoutProperty(layer.id, 'visibility', 'none');
     }
   });
-  
+
   addDistrictLayer();
   addMaskLayer();
   addLandmarkLayer();
