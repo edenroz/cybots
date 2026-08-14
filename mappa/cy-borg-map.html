@@ -317,13 +317,13 @@ map.on('load', () => {
 
       if (id.includes('motorway') || id.includes('trunk') || id.includes('primary')) {
         map.setPaintProperty(layer.id, 'line-color', '#acfcf8');
-        map.setPaintProperty(layer.id, 'line-opacity', 0.6);
+        map.setPaintProperty(layer.id, 'line-opacity', 0.3);
       } else if (id.includes('secondary') || id.includes('tertiary')) {
         map.setPaintProperty(layer.id, 'line-color', '#ff8cf1');
-        map.setPaintProperty(layer.id, 'line-opacity', 0.4);
+        map.setPaintProperty(layer.id, 'line-opacity', 0.2);
       } else {
         map.setPaintProperty(layer.id, 'line-color', '#8a8680');
-        map.setPaintProperty(layer.id, 'line-opacity', 0.2);
+        map.setPaintProperty(layer.id, 'line-opacity', 0.1);
       }
       
     } catch(e) { /* some layers don't support every property; safe to skip */ }
