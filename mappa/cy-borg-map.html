@@ -312,9 +312,15 @@ map.on('load', () => {
       if (layer.type === 'background') {
         map.setPaintProperty(layer.id, 'background-color', '#0a0908');
       }
+      
     } catch(e) { /* some layers don't support every property; safe to skip */ }
   });
 
+  style.layers.forEach(layer => {
+    if (layer.type === 'fill' && layer.paint && layer.paint['fill-pattern']) {
+      map.setLayoutProperty(layer.id, 'visibility', 'none');
+    }
+  });
   addDistrictLayer();
   addMaskLayer();
   addLandmarkLayer();
