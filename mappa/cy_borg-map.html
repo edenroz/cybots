@@ -271,6 +271,10 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.NavigationControl({showCompass:false}), 'top-right');
 map.addControl(new maplibregl.AttributionControl({compact:true}));
 
+// Quanto scalare gli edifici 3D provenienti dai dati OpenFreeMap.
+// Alza questo valore per grattacieli ancora più imponenti.
+const BUILDING_HEIGHT_MULTIPLIER = 4;
+
 map.on('load', () => {
   const style = map.getStyle();
 
@@ -297,6 +301,20 @@ map.on('load', () => {
       if (layer.type === 'fill-extrusion') {
         map.setPaintProperty(layer.id, 'fill-extrusion-color', '#232019');
         map.setPaintProperty(layer.id, 'fill-extrusion-opacity', 0.9);
+
+        // Amplifica l'altezza (e la base, per evitare edifici "sospesi")
+        // mantenendo l'espressione originale dello stile invece di
+        // sovrascriverla con un numero fisso.
+        const origHeight = layer.paint && layer.paint['fill-extrusion-height'];
+        if (origHeight !== undefined) {
+          map.setPaintProperty(layer.id, 'fill-extrusion-height',
+            ['*', origHeight, BUILDING_HEIGHT_MULTIPLIER]);
+        }
+        const origBase = layer.paint && layer.paint['fill-extrusion-base'];
+        if (origBase !== undefined) {
+          map.setPaintProperty(layer.id, 'fill-extrusion-base',
+            ['*', origBase, BUILDING_HEIGHT_MULTIPLIER]);
+        }
       }
       if (layer.type === 'line') {
         if (id.includes('water') || id.includes('river') || id.includes('stream')) {
