@@ -61,6 +61,10 @@ html {
   padding-bottom:8px;
   margin:35px 0 10px;
   font-size:20px;
+}
+
+/* le sezioni sono i veri bersagli dei link #sec-... */
+.choumy > div[id^="sec-"] {
   scroll-margin-top:70px; /* per non finire sotto la nav sticky */
 }
 
@@ -125,17 +129,31 @@ html {
   color:#d5d5d5;
 }
 
-.choumy-nav a.active {
+/* Evidenziazione della voce attiva SENZA JavaScript: molti CMS
+   (es. FoF Pages su Flarum) rimuovono i tag <script>, quindi qui
+   usiamo solo :target (la sezione a cui punta l'URL corrente) e
+   :has() per "risalire" dalla sezione al link corrispondente.
+   Si accende cliccando la voce di nav (o aprendo un link diretto
+   con #sec-...) e resta accesa finché non se ne clicca un'altra. */
+
+:root:has(#sec-armi:target)       .choumy-nav a[href="#sec-armi"],
+:root:has(#sec-equip:target)      .choumy-nav a[href="#sec-equip"],
+:root:has(#sec-trasporti:target)  .choumy-nav a[href="#sec-trasporti"],
+:root:has(#sec-alloggi:target)    .choumy-nav a[href="#sec-alloggi"],
+:root:has(#sec-servizi:target)    .choumy-nav a[href="#sec-servizi"] {
   color:#fff;
-  border-bottom-color:var(--nav-accent, #00e5ff);
 }
 
-.choumy-nav a[data-accent="armi"].active     { --nav-accent:#d40000; }
-.choumy-nav a[data-accent="equip"].active    { --nav-accent:#0400d4; }
-.choumy-nav a[data-accent="trasporti"].active{ --nav-accent:#a6d400; }
-.choumy-nav a[data-accent="alloggi"].active  { --nav-accent:#00d451; }
-.choumy-nav a[data-accent="servizi"].active  { --nav-accent:#7f00d4; }
+:root:has(#sec-armi:target)       .choumy-nav a[href="#sec-armi"]       { border-bottom-color:#d40000; }
+:root:has(#sec-equip:target)      .choumy-nav a[href="#sec-equip"]      { border-bottom-color:#0400d4; }
+:root:has(#sec-trasporti:target)  .choumy-nav a[href="#sec-trasporti"]  { border-bottom-color:#a6d400; }
+:root:has(#sec-alloggi:target)    .choumy-nav a[href="#sec-alloggi"]    { border-bottom-color:#00d451; }
+:root:has(#sec-servizi:target)    .choumy-nav a[href="#sec-servizi"]    { border-bottom-color:#7f00d4; }
 
+/* Pulsante "torna su": un semplice link ancorato in cima alla
+   pagina. Niente JS, quindi resta sempre visibile invece di
+   comparire solo dopo N pixel di scroll — ma funziona ovunque,
+   incluse le pagine dove gli script vengono rimossi. */
 .choumy-top-btn {
   position:fixed;
   right:18px;
@@ -148,17 +166,9 @@ html {
   font-size:11px;
   letter-spacing:1px;
   padding:10px 12px;
-  cursor:pointer;
-  opacity:0;
-  pointer-events:none;
-  transform:translateY(8px);
-  transition:opacity .2s ease, transform .2s ease, border-color .2s ease;
-}
-
-.choumy-top-btn.visible {
-  opacity:1;
-  pointer-events:auto;
-  transform:translateY(0);
+  text-decoration:none;
+  display:inline-block;
+  transition:border-color .2s ease;
 }
 
 .choumy-top-btn:hover {
@@ -465,6 +475,8 @@ html {
   }
 }
 </style>
+
+<a id="top"></a>
 
 <!-- NAV STICKY -->
 <nav class="choumy-nav" id="choumy-nav">
@@ -1352,40 +1364,4 @@ html {
 
 </div>
 
-<button class="choumy-top-btn" id="choumy-top-btn" aria-label="Torna in cima">▲ TOP</button>
-
-<script>
-(function () {
-  var sections = document.querySelectorAll('.choumy [id^="sec-"]');
-  var links = document.querySelectorAll('.choumy-nav a');
-  var topBtn = document.getElementById('choumy-top-btn');
-
-  function setActive(id) {
-    links.forEach(function (a) {
-      a.classList.toggle('active', a.getAttribute('href') === '#' + id);
-    });
-  }
-
-  if ('IntersectionObserver' in window) {
-    var observer = new IntersectionObserver(
-      function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            setActive(entry.target.id);
-          }
-        });
-      },
-      { rootMargin: '-80px 0px -70% 0px', threshold: 0 }
-    );
-    sections.forEach(function (s) { observer.observe(s); });
-  }
-
-  window.addEventListener('scroll', function () {
-    topBtn.classList.toggle('visible', window.scrollY > 400);
-  }, { passive: true });
-
-  topBtn.addEventListener('click', function () {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-})();
-</script>
+<a class="choumy-top-btn" href="#top" aria-label="Torna in cima">▲ TOP</a>
