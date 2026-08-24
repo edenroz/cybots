@@ -1,0 +1,670 @@
+<style>
+.choumy {
+  background:#080808;
+  color:#d5d5d5;
+  font-family:monospace;
+  max-width:1100px;
+  margin:0 auto;
+  padding:clamp(16px,4vw,30px);
+  border:1px solid #333;
+  box-sizing:border-box;
+}
+
+.choumy * {
+  box-sizing:border-box;
+}
+
+.choumy .header {
+  border-bottom:2px solid #00e5ff;
+  padding-bottom:18px;
+  margin-bottom:25px;
+}
+
+.choumy .tag {
+  font-size:11px;
+  color:#666;
+  letter-spacing:2px;
+}
+
+.choumy .logo {
+  color:#00e5ff;
+  font-size:clamp(30px,7vw,42px);
+  font-weight:bold;
+  letter-spacing:-3px;
+  margin:6px 0;
+}
+
+.choumy .subtitle {
+  color:#888;
+  line-height:1.5;
+}
+
+.choumy .warning {
+  color:#ff00aa;
+  font-size:10px;
+  margin-top:10px;
+}
+
+.choumy h2 {
+  color:#ff00aa;
+  border-bottom:1px solid #333;
+  padding-bottom:8px;
+  margin:35px 0 10px;
+  font-size:20px;
+}
+
+.choumy .notice {
+  color:#666;
+  font-size:12px;
+  margin:0 0 15px;
+}
+
+/* DESKTOP LIST */
+
+.choumy .catalog {
+  width:100%;
+  border:1px solid #292929;
+}
+
+.choumy .catalog-head,
+.choumy .product {
+  display:grid;
+  grid-template-columns:190px 1fr 110px;
+  gap:15px;
+  align-items:center;
+}
+
+.choumy .catalog-head {
+  padding:10px 12px;
+  color:#00e5ff;
+  font-size:11px;
+  letter-spacing:1px;
+  border-bottom:1px solid #444;
+}
+
+.choumy .product {
+  min-height:65px;
+  padding:12px;
+  border-bottom:1px solid #222;
+}
+
+.choumy .product:last-child {
+  border-bottom:0;
+}
+
+.choumy .product:hover {
+  background:#0d1112;
+}
+
+.choumy .name {
+  color:#fff;
+  font-weight:bold;
+}
+
+.choumy .description {
+  color:#777;
+  font-size:12px;
+  line-height:1.4;
+}
+
+.choumy .price {
+  color:#f2ff00;
+  text-align:right;
+  white-space:nowrap;
+  font-weight:bold;
+}
+
+.choumy .badge {
+  display:inline-block;
+  color:#000;
+  background:#00e5ff;
+  padding:2px 5px;
+  font-size:9px;
+  margin-left:5px;
+  vertical-align:2px;
+}
+
+.choumy .premium .price {
+  color:#ff00aa;
+}
+
+.choumy .premium {
+  border-left:2px solid #ff00aa;
+}
+
+
+/* FOOTER */
+
+.choumy .footer {
+  border-top:1px solid #333;
+  margin-top:35px;
+  padding-top:18px;
+  color:#555;
+  font-size:10px;
+  line-height:1.6;
+}
+
+
+/* MOBILE */
+
+@media (max-width:650px) {
+
+  .choumy {
+    padding:16px 12px;
+    border-left:0;
+    border-right:0;
+  }
+
+  .choumy .header {
+    margin-bottom:20px;
+  }
+
+  .choumy .logo {
+    font-size:34px;
+  }
+
+  .choumy h2 {
+    font-size:18px;
+    margin-top:28px;
+  }
+
+  .choumy .notice {
+    font-size:11px;
+  }
+
+  .choumy .catalog {
+    border:0;
+  }
+
+  .choumy .catalog-head {
+    display:none;
+  }
+
+  .choumy .product {
+    display:block;
+    position:relative;
+    min-height:0;
+    padding:14px 12px;
+    margin-bottom:8px;
+    border:1px solid #292929;
+    background:#0b0b0b;
+  }
+
+  .choumy .product:hover {
+    background:#0b0b0b;
+  }
+
+  .choumy .name {
+    padding-right:85px;
+    font-size:13px;
+    line-height:1.3;
+  }
+
+  .choumy .description {
+    margin-top:7px;
+    padding-right:5px;
+    font-size:11px;
+    line-height:1.5;
+  }
+
+  .choumy .price {
+    position:absolute;
+    top:13px;
+    right:12px;
+    font-size:14px;
+  }
+
+  .choumy .badge {
+    display:block;
+    width:max-content;
+    margin:7px 0 0;
+    font-size:8px;
+  }
+
+  .choumy .premium {
+    border-left:2px solid #ff00aa;
+  }
+
+  .choumy .footer {
+    margin-top:25px;
+  }
+}
+
+
+/* VERY SMALL PHONES */
+
+@media (max-width:380px) {
+
+  .choumy {
+    padding:14px 9px;
+  }
+
+  .choumy .logo {
+    font-size:30px;
+  }
+
+  .choumy h2 {
+    font-size:17px;
+  }
+
+  .choumy .product {
+    padding:12px 10px;
+  }
+
+  .choumy .name {
+    font-size:12px;
+    padding-right:75px;
+  }
+
+  .choumy .description {
+    font-size:10px;
+  }
+
+  .choumy .price {
+    right:10px;
+    font-size:12px;
+  }
+}
+</style>
+
+
+<div class="choumy">
+
+  <!-- HEADER -->
+
+  <div class="header">
+
+    <div class="tag">
+      CH0UMY™ // BL4CK MARKETPLACE // NODE 98.63.6
+    </div>
+
+    <div class="logo">
+      Ch0umY™
+    </div>
+
+    <div class="subtitle">
+      Tutto ciò che ti serve per sopravvivere.
+      Tutto ciò che non puoi permetterti.
+    </div>
+
+    <div class="warning">
+      PRICES SUBJECT TO MARKET CONDITIONS //
+      CORPORATE SURCHARGE MAY APPLY
+    </div>
+
+  </div>
+
+
+  <!-- ARMI -->
+  <div style="border-left: 4px solid #d40000; padding-left: 10px;">
+
+   <h2 style="color: #d40000;">// ARMI</h2>
+    
+  <p class="notice">
+    Risolvi i tuoi problemi. Alcuni problemi smettono di esistere.
+  </p>
+
+  <div class="catalog">
+
+    <div class="catalog-head">
+      <div>PRODOTTO</div>
+      <div>DESCRIZIONE</div>
+      <div style="text-align:right;">PREZZO</div>
+    </div>
+
+    <div class="product">
+      <div class="name">BROKEN BOTTLE d3</div>
+      <div class="description">
+        Arma improvvisata. Non molto efficace. Spacco famiglia, ammazzo bottiglia.
+      </div>
+      <div class="price">0¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">TASER d2</div>
+        <div class="description">
+          Test Toughness o cade prono.
+        </div>
+        <div class="price">20¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">SHOCKSTICK d4</div>
+        <div class="description">
+          Test Toughness o cade prono.
+        </div>
+        <div class="price">350¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">MACHETE d6</div>
+        <div class="description"></div>
+        <div class="price">20¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">FILAMENT KNIFE d6</div>
+        <div class="description"></div>
+        <div class="price">300¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">MONOSWORD d8</div>
+        <div class="description"></div>
+        <div class="price">200¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">THROWING KNIFE d4</div>
+        <div class="description">
+          Due attacchi per turno.
+        </div>
+        <div class="price">30¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">POWER TOOL d6
+          <span class="badge">A/V</span>
+        </div>
+        <div class="description">
+          Si rompe con 1 sul dado.
+        </div>
+        <div class="price">35¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">CHAINSAW d6+1</div>
+        <div class="description">
+          Se manchi, 1-in-4 per colpirti da solo.
+        </div>
+        <div class="price">40¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">PNEUMATIC GLOVE d6</div>
+        <div class="description">
+          Ignora armatura sui critici.
+        </div>
+        <div class="price">300¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">9mm PISTOL d6a</div>
+        <div class="description"></div>
+        <div class="price">60¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">ANCIENT REVOLVER d8</div>
+        <div class="description"></div>
+        <div class="price">50¤</div>
+    </div>
+
+    <div class="product">
+      <div class="name">SmartGun™ d6a</div>
+      <div class="description">
+        Se connessa con uno SmartJack™ d10a.
+      </div>
+      <div class="price">100¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">Pair of small SMGs d6a</div>
+        <div class="description">
+          Solo autofire. Secondo attacco DR18.
+        </div>
+        <div class="price">300¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">ASSAULT RIFLE d8a</div>
+        <div class="description"></div>
+        <div class="price">400¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">GRENADE LAUNCHER d6
+            <span class="badge">A/V</span>
+        </div>
+        <div class="description">
+          Da montare su Assault Rifle. Fino a d3 bersagli.
+        </div>
+        <div class="price">600¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">SHOTGUN d8</div>
+        <div class="description"></div>
+        <div class="price">350¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">SNIPER RIFLE 2d10</div>
+        <div class="description">
+          Su critico x3 danni. Se miri per 2 round: -4DR, +3 danni.
+        </div>
+        <div class="price">1000¤</div>
+    </div>
+
+    <div class="product premium">
+        <div class="name">PULSE RIFLE d10a<span class="badge">A/V</span></div>
+        <div class="description"></div>
+        <div class="price">-¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">NAIL GUN d6a</div>
+        <div class="description">
+          Solo autofire.
+        </div>
+        <div class="price">400¤</div>
+    </div>
+
+    <div class="product premium">
+        <div class="name">LASER TURRET d12a<span class="badge">A/V</span></div>
+        <div class="description"></div>
+        <div class="price">10000¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">ROCKET LAUNCHER d12<span class="badge">A/V</span></div>
+        <div class="description">Fino a d4 bersagli. Ignora 2 punti armatura. Una volta per combat.</div>
+        <div class="price">5000¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">FLASH BANG</div>
+        <div class="description">
+          Test Toughness o +4DR per d4 turni.
+        </div>
+        <div class="price">25¤</div>
+    </div>
+ 
+    <div class="product">
+        <div class="name">HAND GRENADE d6<span class="badge">A/V</span></div>
+        <div class="description">Fino a d3 bersagli.</div>
+        <div class="price">45¤</div>
+    </div>
+
+    <div class="product">
+        <div class="name">ePULSE GRENADE d8<span class="badge">A/V</span></div>
+        <div class="description">Fino a d3 bersagli tech o persone con +2 chromo.</div>
+        <div class="price">60¤</div>
+    </div>  
+  
+    </div>
+    <div style="margin-top: 10px;margin-bottom: 10px;">
+      <span class="badge">A/V</span> x2 danni contro veicoli, torrette e mech.
+    </div>
+    <div style="margin-top: 10px;margin-bottom: 10px;border-left: 3px solid #ff00aa;padding-left: 10px;">
+        Out of Stock.
+    </div>
+  </div>
+
+
+  <!-- EQUIPAGGIAMENTO -->
+
+  <h2>// EQUIPAGGIAMENTO</h2>
+
+  <p class="notice">
+    Preparati al peggio. Il peggio è incluso nel prezzo.
+  </p>
+
+  <div class="catalog">
+
+    <div class="catalog-head">
+      <div>PRODOTTO</div>
+      <div>DESCRIZIONE</div>
+      <div style="text-align:right;">PREZZO</div>
+    </div>
+
+    <div class="product">
+      <div class="name">BODY ARMOR</div>
+      <div class="description">
+        Protezione balistica standard.
+      </div>
+      <div class="price">700¤</div>
+    </div>
+
+    <div class="product">
+      <div class="name">TACTICAL HELMET</div>
+      <div class="description">
+        Casco rinforzato. Comunicatore analogico incluso.
+      </div>
+      <div class="price">350¤</div>
+    </div>
+
+    <div class="product">
+      <div class="name">RESPIRATOR</div>
+      <div class="description">
+        Filtro antiparticolato per ambienti urbani.
+      </div>
+      <div class="price">80¤</div>
+    </div>
+
+    <div class="product">
+      <div class="name">MEDKIT</div>
+      <div class="description">
+        Kit medico da campo.
+        Nessun medico incluso.
+      </div>
+      <div class="price">120¤</div>
+    </div>
+
+    <div class="product">
+      <div class="name">FLASHLIGHT</div>
+      <div class="description">
+        Torcia industriale. 9000 lumen.
+      </div>
+      <div class="price">45¤</div>
+    </div>
+
+    <div class="product">
+      <div class="name">COMBAT KNIFE</div>
+      <div class="description">
+        Utensile multifunzione.
+      </div>
+      <div class="price">90¤</div>
+    </div>
+
+    <div class="product premium">
+      <div class="name">
+        SURVIVAL PACK
+        <span class="badge">BEST SELLER</span>
+      </div>
+      <div class="description">
+        Acqua, razioni, filtro, coperta e accendino.
+      </div>
+      <div class="price">180¤</div>
+    </div>
+
+  </div>
+
+
+  <!-- ALLOGGI -->
+
+  <h2>// ALLOGGI</h2>
+
+  <p class="notice">
+    Perché dormire per strada quando puoi pagare per dormire al chiuso?
+  </p>
+
+  <div class="catalog">
+
+    <div class="catalog-head">
+      <div>ALLOGGIO</div>
+      <div>INCLUSO</div>
+      <div style="text-align:right;">PREZZO</div>
+    </div>
+
+    <div class="product">
+      <div class="name">STREET POD</div>
+      <div class="description">
+        4m². Porta. Letto. Presa elettrica.
+      </div>
+      <div class="price">35¤ / week</div>
+    </div>
+
+    <div class="product">
+      <div class="name">MICRO-APARTMENT</div>
+      <div class="description">
+        12m². Cucina. Bagno condiviso.
+      </div>
+      <div class="price">120¤ / week</div>
+    </div>
+
+    <div class="product">
+      <div class="name">STANDARD UNIT</div>
+      <div class="description">
+        25m². Bagno privato. Acqua corrente.
+      </div>
+      <div class="price">250¤ / week</div>
+    </div>
+
+    <div class="product">
+      <div class="name">SECURE APARTMENT</div>
+      <div class="description">
+        Porta blindata. Telecamere. Filtrazione aria.
+      </div>
+      <div class="price">600¤ / week</div>
+    </div>
+
+    <div class="product premium">
+      <div class="name">
+        EXECUTIVE HABITAT
+        <span class="badge">LUXURY</span>
+      </div>
+      <div class="description">
+        80m². Aria pulita. Acqua premium.
+        Accesso privato. Nessun vicino.
+      </div>
+      <div class="price">2.500¤ / week</div>
+    </div>
+
+  </div>
+
+
+  <!-- FOOTER -->
+
+  <div class="footer">
+
+    <span style="color:#ff00aa;">
+      CHOUMY™ DELIVERY GUARANTEE:
+    </span>
+
+    Se il prodotto non arriva,
+    consideralo un problema di consegna.
+
+    <br><br>
+
+    Prezzi soggetti a inflazione, guerra, blackout,
+    scarsità di munizioni, scioperi, invasioni,
+    mutazioni e variazioni della domanda.
+
+    <br><br>
+
+    CHOUMY™ — BUY MORE. LIVE LESS.
+
+  </div>
+
+</div>
