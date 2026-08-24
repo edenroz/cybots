@@ -275,6 +275,73 @@
     font-size:12px;
   }
 }
+
+
+/* ===================================================
+   ALLOGGI — variante a 3 colonne prezzo (scoped .rooms)
+   Non tocca .catalog / .product / .price di base,
+   usati anche da ARMI ed EQUIPAGGIAMENTO.
+=================================================== */
+
+.choumy .catalog.rooms .catalog-head,
+.choumy .catalog.rooms .product {
+  grid-template-columns: 1fr 110px 110px 110px;
+}
+
+.choumy .catalog.rooms .catalog-head > div:not(:first-child) {
+  text-align:center;
+}
+
+/* il wrapper "sparisce" agli occhi del grid: i 3 .price
+   restano colonne dirette del .product su desktop */
+.choumy .catalog.rooms .prices {
+  display:contents;
+}
+
+.choumy .catalog.rooms .price {
+  text-align:center;
+}
+
+.choumy .price-label {
+  display:none;
+}
+
+@media (max-width:650px) {
+
+  .choumy .catalog.rooms .name {
+    padding-right:0;
+  }
+
+  .choumy .catalog.rooms .prices {
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+  }
+
+  .choumy .catalog.rooms .price {
+    position:static;
+    flex:1;
+    background:#111;
+    border:1px solid #222;
+    padding:6px 4px;
+    font-size:12px;
+  }
+
+  .choumy .catalog.rooms.premium .price,
+  .choumy .catalog .product.premium .prices .price {
+    background:#150010;
+    border-color:#ff00aa44;
+  }
+
+  .choumy .price-label {
+    display:block;
+    color:#666;
+    font-size:9px;
+    letter-spacing:1px;
+    font-weight:normal;
+    margin-bottom:3px;
+  }
+}
 </style>
 
 
@@ -771,44 +838,49 @@
     Perché dormire per strada quando puoi pagare per dormire al chiuso?
   </p>
 
-  <div class="catalog">
+  <div class="catalog rooms">
 
     <div class="catalog-head">
       <div>ALLOGGIO</div>
-      <div>INCLUSO</div>
-      <div style="text-align:right;">PREZZO</div>
+      <div>1 NOTTE</div>
+      <div>1 SETTIMANA</div>
+      <div>POSSESSO</div>
     </div>
 
     <div class="product">
       <div class="name">STREET POD</div>
-      <div class="description">
-        4m². Porta. Letto. Presa elettrica.
+      <div class="prices">
+        <div class="price"><span class="price-label">1 notte</span>6¤</div>
+        <div class="price"><span class="price-label">1 settimana</span>35¤</div>
+        <div class="price"><span class="price-label">Possesso</span>900¤</div>
       </div>
-      <div class="price">35¤ / week</div>
     </div>
 
     <div class="product">
       <div class="name">MICRO-APARTMENT</div>
-      <div class="description">
-        12m². Cucina. Bagno condiviso.
+      <div class="prices">
+        <div class="price"><span class="price-label">1 notte</span>20¤</div>
+        <div class="price"><span class="price-label">1 settimana</span>120¤</div>
+        <div class="price"><span class="price-label">Possesso</span>3.000¤</div>
       </div>
-      <div class="price">120¤ / week</div>
     </div>
 
     <div class="product">
       <div class="name">STANDARD UNIT</div>
-      <div class="description">
-        25m². Bagno privato. Acqua corrente.
+      <div class="prices">
+        <div class="price"><span class="price-label">1 notte</span>40¤</div>
+        <div class="price"><span class="price-label">1 settimana</span>250¤</div>
+        <div class="price"><span class="price-label">Possesso</span>6.000¤</div>
       </div>
-      <div class="price">250¤ / week</div>
     </div>
 
     <div class="product">
       <div class="name">SECURE APARTMENT</div>
-      <div class="description">
-        Porta blindata. Telecamere. Filtrazione aria.
+      <div class="prices">
+        <div class="price"><span class="price-label">1 notte</span>95¤</div>
+        <div class="price"><span class="price-label">1 settimana</span>600¤</div>
+        <div class="price"><span class="price-label">Possesso</span>15.000¤</div>
       </div>
-      <div class="price">600¤ / week</div>
     </div>
 
     <div class="product premium">
@@ -816,11 +888,11 @@
         EXECUTIVE HABITAT
         <span class="badge">LUXURY</span>
       </div>
-      <div class="description">
-        80m². Aria pulita. Acqua premium.
-        Accesso privato. Nessun vicino.
+      <div class="prices">
+        <div class="price"><span class="price-label">1 notte</span>400¤</div>
+        <div class="price"><span class="price-label">1 settimana</span>2.500¤</div>
+        <div class="price"><span class="price-label">Possesso</span>65.000¤</div>
       </div>
-      <div class="price">2.500¤ / week</div>
     </div>
 
   </div>
