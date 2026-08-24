@@ -96,6 +96,17 @@ html {
   overflow-x:auto;
   scrollbar-width:none;
   -webkit-overflow-scrolling:touch;
+
+  background-color:#080808;
+  background-image:
+    linear-gradient(to right, #080808 30%, rgba(8,8,8,0)),
+    linear-gradient(to left, #080808 30%, rgba(8,8,8,0)),
+    linear-gradient(to right, rgba(0,229,255,0.35), rgba(0,229,255,0)),
+    linear-gradient(to left, rgba(0,229,255,0.35), rgba(0,229,255,0));
+  background-repeat:no-repeat;
+  background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+  background-position: left, right, left, right;
+  background-attachment: local, local, scroll, scroll;
 }
 
 .choumy-nav-inner::-webkit-scrollbar {
@@ -474,9 +485,13 @@ html {
     margin-bottom:3px;
   }
 }
+
+html {
+  scroll-padding-top: 0;
+}
 </style>
 
-<a id="top"></a>
+<a class="choumy-top-btn" href="#" aria-label="Torna in cima">▲ TOP</a>
 
 <!-- NAV STICKY -->
 <nav class="choumy-nav" id="choumy-nav">
@@ -716,10 +731,10 @@ html {
     </div>  
   
     </div>
-    <div style="margin-top: 10px;margin-bottom: 10px;">
+    <div style="margin-top: 10px;margin-bottom: 10px;font-size: medium;">
       <span class="badge">A/V</span> x2 danni contro veicoli, torrette e mech.
     </div>
-    <div style="margin-top: 10px;margin-bottom: 10px;border-left: 3px solid #ff00aa;padding-left: 10px;">
+    <div style="margin-top: 10px;margin-bottom: 10px;border-left: 3px solid #ff00aa;padding-left: 10px;font-size: medium;">
         Out of Stock.
     </div>
   </div>
@@ -781,7 +796,7 @@ html {
 
   
     </div>
-    <div style="margin-top: 10px;margin-bottom: 10px;border-left: 3px solid #ff00aa;padding-left: 10px;">
+    <div style="margin-top: 10px;margin-bottom: 10px;border-left: 3px solid #ff00aa;padding-left: 10px;font-size: medium;">
         Out of Stock.
     </div>
   </div>
@@ -1029,10 +1044,10 @@ html {
 
 
   </div>
-    <div style="margin-top: 10px;margin-bottom: 10px;">
+    <div style="margin-top: 10px;margin-bottom: 10px;font-size: medium;">
       <span class="badge_ilg">ILG</span> Richiede un permesso corporativo. In assenza, è illegale. SecOps autorizzati all'uso della forza letale.
     </div>
-    <div style="margin-top: 10px;margin-bottom: 10px;border-left: 3px solid #ff00aa;padding-left: 10px;">
+    <div style="margin-top: 10px;margin-bottom: 10px;border-left: 3px solid #ff00aa;padding-left: 10px;font-size: medium;">
         Out of Stock.
     </div>
   </div>
@@ -1393,10 +1408,10 @@ html {
     </div>
  
     </div>
-    <div style="margin-top: 10px;margin-bottom: 10px;">
+    <div style="margin-top: 10px;margin-bottom: 10px;font-size: medium;">
       <span class="badge_ilg">ILG</span> Richiede un permesso corporativo. In assenza, è illegale. SecOps autorizzati all'uso della forza letale.
     </div>
-    <div style="margin-top: 10px;margin-bottom: 10px;border-left: 3px solid #ff00aa;padding-left: 10px;">
+    <div style="margin-top: 10px;margin-bottom: 10px;border-left: 3px solid #ff00aa;padding-left: 10px;font-size: medium;">
         Non spedibile.
     </div>
   </div>
@@ -1410,7 +1425,7 @@ html {
     </span>
 
     Se il prodotto non arriva,
-    consideralo un problema tuo.
+    consideralo un tuo problema.
 
     <br><br>
 
