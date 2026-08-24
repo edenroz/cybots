@@ -1,4 +1,14 @@
 <style>
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 .choumy {
   background:#080808;
   color:#d5d5d5;
@@ -51,12 +61,124 @@
   padding-bottom:8px;
   margin:35px 0 10px;
   font-size:20px;
+  scroll-margin-top:70px; /* per non finire sotto la nav sticky */
 }
 
 .choumy .notice {
   color:#666;
   font-size:12px;
   margin:0 0 15px;
+}
+
+/* ===================================================
+   NAV STICKY
+=================================================== */
+
+.choumy-nav {
+  position:sticky;
+  top:0;
+  z-index:50;
+  background:#080808;
+  border-bottom:1px solid #333;
+  margin:0 auto 0;
+  max-width:1100px;
+}
+
+.choumy-nav-inner {
+  display:flex;
+  align-items:center;
+  gap:2px;
+  padding:0 clamp(16px,4vw,30px);
+  overflow-x:auto;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+
+.choumy-nav-inner::-webkit-scrollbar {
+  display:none;
+}
+
+.choumy-nav-brand {
+  color:#00e5ff;
+  font-weight:bold;
+  font-size:13px;
+  letter-spacing:-1px;
+  padding:12px 14px 12px 0;
+  white-space:nowrap;
+  border-right:1px solid #292929;
+  margin-right:6px;
+}
+
+.choumy-nav a {
+  flex:0 0 auto;
+  color:#888;
+  text-decoration:none;
+  font-size:11px;
+  letter-spacing:1px;
+  white-space:nowrap;
+  padding:14px 12px;
+  border-bottom:2px solid transparent;
+  transition:color .15s ease, border-color .15s ease;
+}
+
+.choumy-nav a:hover {
+  color:#d5d5d5;
+}
+
+.choumy-nav a.active {
+  color:#fff;
+  border-bottom-color:var(--nav-accent, #00e5ff);
+}
+
+.choumy-nav a[data-accent="armi"].active     { --nav-accent:#d40000; }
+.choumy-nav a[data-accent="equip"].active    { --nav-accent:#0400d4; }
+.choumy-nav a[data-accent="trasporti"].active{ --nav-accent:#a6d400; }
+.choumy-nav a[data-accent="alloggi"].active  { --nav-accent:#00d451; }
+.choumy-nav a[data-accent="servizi"].active  { --nav-accent:#7f00d4; }
+
+.choumy-top-btn {
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:60;
+  background:#0d0d0d;
+  color:#00e5ff;
+  border:1px solid #333;
+  font-family:monospace;
+  font-size:11px;
+  letter-spacing:1px;
+  padding:10px 12px;
+  cursor:pointer;
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(8px);
+  transition:opacity .2s ease, transform .2s ease, border-color .2s ease;
+}
+
+.choumy-top-btn.visible {
+  opacity:1;
+  pointer-events:auto;
+  transform:translateY(0);
+}
+
+.choumy-top-btn:hover {
+  border-color:#00e5ff;
+}
+
+@media (max-width:650px) {
+  .choumy-nav-brand {
+    display:none;
+  }
+  .choumy-nav a {
+    font-size:10px;
+    padding:12px 10px;
+  }
+  .choumy-top-btn {
+    right:12px;
+    bottom:12px;
+    font-size:10px;
+    padding:9px 10px;
+  }
 }
 
 /* DESKTOP LIST */
@@ -344,6 +466,17 @@
 }
 </style>
 
+<!-- NAV STICKY -->
+<nav class="choumy-nav" id="choumy-nav">
+  <div class="choumy-nav-inner">
+    <span class="choumy-nav-brand">Ch0umY™</span>
+    <a href="#sec-armi" data-accent="armi">ARMI</a>
+    <a href="#sec-equip" data-accent="equip">EQUIPAGGIAMENTO</a>
+    <a href="#sec-trasporti" data-accent="trasporti">TRASPORTI</a>
+    <a href="#sec-alloggi" data-accent="alloggi">ALLOGGI</a>
+    <a href="#sec-servizi" data-accent="servizi">SERVIZI</a>
+  </div>
+</nav>
 
 <div class="choumy">
 
@@ -373,7 +506,7 @@
 
 
   <!-- ARMI -->
-  <div style="border-left: 4px solid #d40000; padding-left: 10px;">
+  <div id="sec-armi" style="border-left: 4px solid #d40000; padding-left: 10px;">
 
    <h2 style="color: #d40000;">// ARMI</h2>
     
@@ -580,7 +713,7 @@
 
 
   <!-- EQUIPAGGIAMENTO -->
-  <div style="border-left: 4px solid #0400d4; padding-left: 10px;">
+  <div id="sec-equip" style="border-left: 4px solid #0400d4; padding-left: 10px;">
 
   <h2 style="color: #0400d4;">// EQUIPAGGIAMENTO</h2>
 
@@ -832,7 +965,7 @@
 
   <!-- TRASPORTI -->
 
-  <div style="border-left: 4px solid #a6d400; padding-left: 10px;">
+  <div id="sec-trasporti" style="border-left: 4px solid #a6d400; padding-left: 10px;">
   <h2 style="color: #a6d400;">// TRASPORTI</h2>
 
   <p class="notice">
@@ -990,7 +1123,7 @@
 
   <!-- ALLOGGI -->
 
-  <div style="border-left: 4px solid #00d451; padding-left: 10px;">
+  <div id="sec-alloggi" style="border-left: 4px solid #00d451; padding-left: 10px;">
   <h2 style="color: #00d451;">// ALLOGGI</h2>
 
   <p class="notice">
@@ -1074,7 +1207,7 @@
 
 
   <!-- SERVIZI -->
-  <div style="border-left: 4px solid #7f00d4; padding-left: 10px;">
+  <div id="sec-servizi" style="border-left: 4px solid #7f00d4; padding-left: 10px;">
 
    <h2 style="color: #7f00d4;">// SERVIZI</h2>
     
@@ -1218,3 +1351,41 @@
   </div>
 
 </div>
+
+<button class="choumy-top-btn" id="choumy-top-btn" aria-label="Torna in cima">▲ TOP</button>
+
+<script>
+(function () {
+  var sections = document.querySelectorAll('.choumy [id^="sec-"]');
+  var links = document.querySelectorAll('.choumy-nav a');
+  var topBtn = document.getElementById('choumy-top-btn');
+
+  function setActive(id) {
+    links.forEach(function (a) {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+    });
+  }
+
+  if ('IntersectionObserver' in window) {
+    var observer = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+          }
+        });
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 }
+    );
+    sections.forEach(function (s) { observer.observe(s); });
+  }
+
+  window.addEventListener('scroll', function () {
+    topBtn.classList.toggle('visible', window.scrollY > 400);
+  }, { passive: true });
+
+  topBtn.addEventListener('click', function () {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+})();
+</script>
