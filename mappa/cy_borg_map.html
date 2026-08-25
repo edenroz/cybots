@@ -1264,7 +1264,7 @@ function buildPoiList() {
     li.innerHTML = `<span class="poi-name">${p.name}</span><span class="poi-sub">${p.category || ''}</span>`;
     li.addEventListener('click', () => {
       if (p.lng !== undefined && p.lat !== undefined) {
-        map.flyTo({ center: [p.lng, p.lat], zoom: 14, pitch: 45, duration: 1000 });
+        map.flyTo({ center: [p.lng, p.lat], zoom: 14, pitch: 45, duration: 3200, curve: 1.4, speed: 0.6 });      
       }
       togglePoiPanel(false);
       if (!isMobile) {
