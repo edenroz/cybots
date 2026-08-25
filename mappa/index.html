@@ -281,6 +281,14 @@ map.addControl(new maplibregl.AttributionControl({compact:true}));
 // Alza questo valore per grattacieli ancora più imponenti.
 const BUILDING_HEIGHT_MULTIPLIER = 4;
 
+// A che zoom minimo devono iniziare ad apparire i building 3D.
+// ATTENZIONE: questo forza solo la visibilità del layer — se a quello
+// zoom le tile vettoriali non contengono ancora la geometria degli
+// edifici, non comparirà comunque nulla. Se abbassando questo valore
+// non vedi cambiamenti, prova a scendere di un livello alla volta
+// finché non trovi la soglia reale a cui i dati sono disponibili.
+const BUILDING_MIN_ZOOM = 12;
+
 map.on('load', () => {
   const style = map.getStyle();
 
@@ -321,6 +329,10 @@ map.on('load', () => {
           map.setPaintProperty(layer.id, 'fill-extrusion-base',
             ['*', origBase, BUILDING_HEIGHT_MULTIPLIER]);
         }
+
+        // Forza la comparsa dei building 3D a partire da BUILDING_MIN_ZOOM
+        // invece del minzoom originale (più alto) definito dallo stile.
+        map.setLayerZoomRange(layer.id, BUILDING_MIN_ZOOM, 24);
       }
       if (layer.type === 'line') {
         if (id.includes('water') || id.includes('river') || id.includes('stream')) {
