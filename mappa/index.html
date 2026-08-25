@@ -332,7 +332,7 @@ map.on('load', () => {
 
         // Forza la comparsa dei building 3D a partire da BUILDING_MIN_ZOOM
         // invece del minzoom originale (più alto) definito dallo stile.
-        map.setLayerZoomRange(layer.id, BUILDING_MIN_ZOOM, 24);
+        //map.setLayerZoomRange(layer.id, BUILDING_MIN_ZOOM, 24);
       }
       if (layer.type === 'line') {
         if (id.includes('water') || id.includes('river') || id.includes('stream')) {
