@@ -1194,8 +1194,8 @@ function addDistrictLayer() {
 
   function handleDistrictTap(e) {
     const bbox = [
-      [e.point.x - 12, e.point.y - 12],
-      [e.point.x + 12, e.point.y + 12]
+      [e.point.x - 8, e.point.y - 8],
+      [e.point.x + 8, e.point.y + 8]
     ];
     const feats = map.queryRenderedFeatures(bbox, { layers: ['cy-district-dot'] });
     if (feats.length) {
