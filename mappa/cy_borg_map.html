@@ -269,8 +269,9 @@ const map = new maplibregl.Map({
   zoom: 10.3,
   pitch: 0,
   attributionControl: false,
-  minZoom: 9,
-  maxZoom: 17,
+  minZoom: 7,
+  maxZoom: 20,
+  maxPitch: 80,
   maxBounds: [[17.4, 58.71], [18.7, 59.65]]
 });
 
@@ -496,7 +497,7 @@ function addLandmarkLayer() {
     {
       type: "Feature",
       properties: { name: "Officina di @chopshop__1147", height: 3, base: 0, color: "#9f05b3",
-        blurb: "Un'officina clandestina dove veicoli e cyberware rubati cambiano identità nel giro di una notte." },
+        blurb: "Un'discarica clandestina dove veicoli e cyberware rubati cambiano identità nel giro di una notte." },
       geometry: {
         type: "Polygon",
         coordinates: [[
@@ -1270,8 +1271,8 @@ function addDistrictLayer() {
 
   function handleDistrictTap(e) {
     const bbox = [
-      [e.point.x - 8, e.point.y - 8],
-      [e.point.x + 8, e.point.y + 8]
+      [e.point.x - 9, e.point.y - 9],
+      [e.point.x + 9, e.point.y + 9]
     ];
     const feats = map.queryRenderedFeatures(bbox, { layers: ['cy-district-dot'] });
     if (feats.length) {
