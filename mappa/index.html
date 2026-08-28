@@ -1223,8 +1223,8 @@ function camLoop(now) {
 
   // Rotazione (A/D) e pitch (W/S)
   let bearingDelta = 0, pitchDelta = 0;
-  if (keyState.KeyA) bearingDelta -= ROTATE_SPEED * dt;
-  if (keyState.KeyD) bearingDelta += ROTATE_SPEED * dt;
+  if (keyState.KeyD) bearingDelta -= ROTATE_SPEED * dt;
+  if (keyState.KeyA) bearingDelta += ROTATE_SPEED * dt;
   if (keyState.KeyW) pitchDelta += PITCH_SPEED * dt;
   if (keyState.KeyS) pitchDelta -= PITCH_SPEED * dt;
   if (bearingDelta !== 0 || pitchDelta !== 0) {
