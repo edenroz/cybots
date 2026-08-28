@@ -106,7 +106,7 @@
   #north-reset svg{width:20px;height:20px;transition:transform 0.4s ease;}
 
   #map-cover{
-    position:absolute;inset:0;z-index:60000 !important;background:var(--cy-black);
+    position:absolute;inset:0;z-index:6;background:var(--cy-black);
     pointer-events:none;transition:opacity 0.4s ease;
   }
 
@@ -395,17 +395,26 @@ map.on('load', () => {
   addMaskLayer();
   addLandmarkLayer();
   addWallLayer();
+  //addMeteorCraterLayer();
   addPoiLayer();
   buildPoiList();
 
-  // Solo ora la mappa ha i colori e i layer custom applicati: rimuoviamo
-  // il cover che nascondeva il flash iniziale con lo stile originale
-  // (Stoccolma "vera", non ricolorata).
+  // Solo ora la mappa ha i colori e i layer custom applicati. 'idle' scatta
+  // quando MapLibre ha finito di renderizzare tutte le modifiche pendenti
+  // (a differenza di un requestAnimationFrame, che può scattare un frame
+  // troppo presto rispetto al vero repaint interno e far intravedere per
+  // un istante i colori originali di Stoccolma). Aggiungiamo comunque un
+  // timeout di sicurezza nel caso 'idle' tardasse per problemi di rete.
   const cover = document.getElementById('map-cover');
-  requestAnimationFrame(() => {
+  let revealed = false;
+  function revealMap() {
+    if (revealed) return;
+    revealed = true;
     cover.style.opacity = '0';
     setTimeout(() => { cover.style.display = 'none'; }, 450);
-  });
+  }
+  map.once('idle', revealMap);
+  setTimeout(revealMap, 3000);
 });
 
 /* =========================================================================
@@ -673,6 +682,110 @@ function addLandmarkLayer() {
   });
   map.on('mouseenter', 'cy-landmark-extrusion', () => map.getCanvas().style.cursor = 'pointer');
   map.on('mouseleave', 'cy-landmark-extrusion', () => map.getCanvas().style.cursor = '');
+}
+
+/* =========================================================================
+   CRATERE / LAGO DA IMPATTO METEORITE (centro di GO)
+   FIX: la vecchia strategia (un fill 2D piatto sopra tutto, come in
+   addMaskLayer) non funziona per "cancellare" un'area piena di edifici:
+   i building sono fill-extrusion, cioè geometria 3D che si estende in
+   altezza — un fill piatto disegnato sopra copre solo la base, ma le
+   pareti degli edifici restano visibili e spuntano dall'acqua da
+   qualunque angolazione diversa dalla vista dall'alto.
+   La soluzione giusta è togliere del tutto, dal layer dei building dello
+   stile di base, le feature che ricadono nel perimetro del cratere,
+   usando l'espressione di filtro 'within' (supportata da MapLibre per
+   escludere geometrie contenute in un poligono). Il lago viene poi
+   disegnato sopra come un semplice fill colorato.
+   ========================================================================= */
+function addMeteorCraterLayer() {
+  const craterCenter = [18.04963, 59.34154]; // centro di GO
+  const craterRadiusDeg = 0.005;             // raggio del lago visibile (~450m qui)
+  const exclusionRadiusDeg = craterRadiusDeg * 1.6; // un po' più largo del lago,
+                                                     // così non restano edifici a
+                                                     // cavallo della riva
+
+  // Genera un anello poligonale (leggermente irregolare, non un cerchio
+  // perfetto, per sembrare più un cratere naturale) attorno al centro.
+  function makeCraterRing(center, radiusDeg) {
+    const [cx, cy] = center;
+    const latCorrection = Math.cos(cy * Math.PI / 180); // compensa lng vs lat
+    const points = 48;
+    const coords = [];
+    for (let i = 0; i <= points; i++) {
+      const angle = (i / points) * Math.PI * 2;
+      // Irregolarità deterministica (non casuale) via due armoniche, così
+      // la forma resta identica ad ogni caricamento della pagina.
+      const wobble = 1 + 0.08 * Math.sin(angle * 3) + 0.05 * Math.sin(angle * 7 + 1.2);
+      const r = radiusDeg * wobble;
+      coords.push([cx + Math.cos(angle) * r / latCorrection, cy + Math.sin(angle) * r]);
+    }
+    coords[coords.length - 1] = coords[0];
+    return coords;
+  }
+
+  const lakeRing = makeCraterRing(craterCenter, craterRadiusDeg);
+  const exclusionRing = makeCraterRing(craterCenter, exclusionRadiusDeg);
+
+  const lakePolygon = {
+    type: "Feature", properties: {},
+    geometry: { type: "Polygon", coordinates: [lakeRing] }
+  };
+  const exclusionPolygon = {
+    type: "Feature", properties: {},
+    geometry: { type: "Polygon", coordinates: [exclusionRing] }
+  };
+
+  // Filtra via gli edifici (fill e fill-extrusion) che ricadono nella
+  // zona di esclusione, su tutti i layer dello stile di base il cui id
+  // contiene "building".
+  const style = map.getStyle();
+  style.layers.forEach(layer => {
+    if (layer.type !== 'fill' && layer.type !== 'fill-extrusion') return;
+    if (!layer.id.toLowerCase().includes('building')) return;
+    const existingFilter = map.getFilter(layer.id) || null;
+    const notInCrater = ['!', ['within', exclusionPolygon]];
+    const newFilter = existingFilter ? ['all', existingFilter, notInCrater] : notInCrater;
+    map.setFilter(layer.id, newFilter);
+  });
+
+  map.addSource('cy-crater', {
+    type: 'geojson',
+    data: lakePolygon
+  });
+
+  map.addLayer({
+    id: 'cy-crater-fill',
+    type: 'fill',
+    source: 'cy-crater',
+    paint: {
+      'fill-color': '#5a0713',
+      'fill-opacity': 1
+    }
+  });
+
+  // Bordo del cratere, leggermente più acceso, per dargli profondità.
+  map.addLayer({
+    id: 'cy-crater-rim',
+    type: 'line',
+    source: 'cy-crater',
+    paint: {
+      'line-color': '#c8102e',
+      'line-width': 2,
+      'line-opacity': 0.6
+    }
+  });
+
+  map.on('click', 'cy-crater-fill', () => {
+    openPanel({
+      name: 'IL CRATERE',
+      type: 'landmark',
+      color: '#c8102e',
+      blurb: 'Il punto di impatto del meteorite che ha marchiato G0. Nulla cresce, nulla si costruisce sul bordo di questa cicatrice.'
+    });
+  });
+  map.on('mouseenter', 'cy-crater-fill', () => map.getCanvas().style.cursor = 'pointer');
+  map.on('mouseleave', 'cy-crater-fill', () => map.getCanvas().style.cursor = '');
 }
 
 /* =========================================================================
@@ -1223,8 +1336,8 @@ function camLoop(now) {
 
   // Rotazione (A/D) e pitch (W/S)
   let bearingDelta = 0, pitchDelta = 0;
-  if (keyState.KeyD) bearingDelta -= ROTATE_SPEED * dt;
-  if (keyState.KeyA) bearingDelta += ROTATE_SPEED * dt;
+  if (keyState.KeyA) bearingDelta -= ROTATE_SPEED * dt;
+  if (keyState.KeyD) bearingDelta += ROTATE_SPEED * dt;
   if (keyState.KeyW) pitchDelta += PITCH_SPEED * dt;
   if (keyState.KeyS) pitchDelta -= PITCH_SPEED * dt;
   if (bearingDelta !== 0 || pitchDelta !== 0) {
