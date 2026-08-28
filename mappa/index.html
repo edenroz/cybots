@@ -206,7 +206,7 @@
    DISTRICT DATA
    ========================================================================= */
 const districts = [
-  { name:"GO", type:"core",   lng:18.05463, lat:59.34154, blurb:"Il cuore pulsante e corrotto della città. Qui tutto è cominciato, e qui tutto marcisce più in fretta." },
+  { name:"G0", type:"core",   lng:18.05463, lat:59.34154, blurb:"Il cuore pulsante e corrotto della città. Qui tutto è cominciato, e qui tutto marcisce più in fretta." },
   { name:"PORTS",    type:"industries",  lng:17.9970, lat:59.3550, blurb:"Acque stagnanti e baracche costruite l'una sull'altra. L'odore non va mai via." },
   { name:"BIGMOSSE",    type:"slums",  lng:17.9000, lat:59.3700, blurb:"Il Founder's Hill domina lo skyline degli slum, un monumento a chi ha smesso di guardare in basso." },
   { name:"MOSSCROFT",   type:"industries", lng:18.1600, lat:59.3600, blurb:"Ciminiere e produttività forzata. Il Perch Productivity Park non chiude mai." },
@@ -699,8 +699,8 @@ function addLandmarkLayer() {
    disegnato sopra come un semplice fill colorato.
    ========================================================================= */
 function addMeteorCraterLayer() {
-  const craterCenter = [18.04963, 59.34154]; // centro di GO
-  const craterRadiusDeg = 0.005;             // raggio del lago visibile (~450m qui)
+  const craterCenter = [18.04103, 59.33949]; // centro di GO
+  const craterRadiusDeg = 0.004;             // raggio del lago visibile (~450m qui)
   const exclusionRadiusDeg = craterRadiusDeg * 1.3; // Blast radius
 
   // Funzione per generare gli anelli
