@@ -395,7 +395,7 @@ map.on('load', () => {
   addMaskLayer();
   addLandmarkLayer();
   addWallLayer();
-  //addMeteorCraterLayer();
+  addMeteorCraterLayer();
   addPoiLayer();
   buildPoiList();
 
@@ -701,21 +701,16 @@ function addLandmarkLayer() {
 function addMeteorCraterLayer() {
   const craterCenter = [18.04963, 59.34154]; // centro di GO
   const craterRadiusDeg = 0.005;             // raggio del lago visibile (~450m qui)
-  const exclusionRadiusDeg = craterRadiusDeg * 1.6; // un po' più largo del lago,
-                                                     // così non restano edifici a
-                                                     // cavallo della riva
+  const exclusionRadiusDeg = craterRadiusDeg * 1.3; // Blast radius
 
-  // Genera un anello poligonale (leggermente irregolare, non un cerchio
-  // perfetto, per sembrare più un cratere naturale) attorno al centro.
+  // Funzione per generare gli anelli
   function makeCraterRing(center, radiusDeg) {
     const [cx, cy] = center;
-    const latCorrection = Math.cos(cy * Math.PI / 180); // compensa lng vs lat
+    const latCorrection = Math.cos(cy * Math.PI / 180); 
     const points = 48;
     const coords = [];
     for (let i = 0; i <= points; i++) {
       const angle = (i / points) * Math.PI * 2;
-      // Irregolarità deterministica (non casuale) via due armoniche, così
-      // la forma resta identica ad ogni caricamento della pagina.
       const wobble = 1 + 0.08 * Math.sin(angle * 3) + 0.05 * Math.sin(angle * 7 + 1.2);
       const r = radiusDeg * wobble;
       coords.push([cx + Math.cos(angle) * r / latCorrection, cy + Math.sin(angle) * r]);
@@ -724,21 +719,22 @@ function addMeteorCraterLayer() {
     return coords;
   }
 
+  // Anelli per lago e gradoni
   const lakeRing = makeCraterRing(craterCenter, craterRadiusDeg);
+  const midRing = makeCraterRing(craterCenter, craterRadiusDeg + (exclusionRadiusDeg - craterRadiusDeg) * 0.5);
   const exclusionRing = makeCraterRing(craterCenter, exclusionRadiusDeg);
 
   const lakePolygon = {
     type: "Feature", properties: {},
     geometry: { type: "Polygon", coordinates: [lakeRing] }
   };
+  
   const exclusionPolygon = {
     type: "Feature", properties: {},
     geometry: { type: "Polygon", coordinates: [exclusionRing] }
   };
 
-  // Filtra via gli edifici (fill e fill-extrusion) che ricadono nella
-  // zona di esclusione, su tutti i layer dello stile di base il cui id
-  // contiene "building".
+  // 1. FILTRO EDIFICI: Nasconde i palazzi dentro la zona d'urto
   const style = map.getStyle();
   style.layers.forEach(layer => {
     if (layer.type !== 'fill' && layer.type !== 'fill-extrusion') return;
@@ -749,45 +745,68 @@ function addMeteorCraterLayer() {
     map.setFilter(layer.id, newFilter);
   });
 
-  map.addSource('cy-crater', {
+  // 2. SORGENTI GEOJSON
+  map.addSource('cy-crater-lake', {
     type: 'geojson',
     data: lakePolygon
   });
 
+  const rimInner = {
+    type: "Feature", 
+    properties: { height: 120}, 
+    geometry: { type: "Polygon", coordinates: [midRing, lakeRing] }
+  };
+  const rimOuter = {
+    type: "Feature", 
+    properties: { height: 35 }, 
+    geometry: { type: "Polygon", coordinates: [exclusionRing, midRing] }
+  };
+
+  map.addSource('cy-crater-blast', {
+    type: 'geojson',
+    data: { type: "FeatureCollection", features: [rimInner, rimOuter] }
+  });
+
+  // 3. LAYER: LAGO DI ACQUA ROSSA
+  // Aggiunto ORA: Riempe il buco centrale con il rosso sangue della mappa
   map.addLayer({
-    id: 'cy-crater-fill',
-    type: 'fill',
-    source: 'cy-crater',
+    id: 'cy-crater-lake-water',
+    type: 'fill-extrusion',
+    source: 'cy-crater-lake',
     paint: {
-      'fill-color': '#5a0713',
-      'fill-opacity': 1
+      'fill-extrusion-color': '#c8102e', // Il rosso acceso del tuo CSS
+      'fill-extrusion-height': 100,        // Leggermente sollevato per non compenetrare col suolo
+      'fill-extrusion-base': 0,
+      'fill-extrusion-opacity': 0.85
     }
   });
 
-  // Bordo del cratere, leggermente più acceso, per dargli profondità.
+  // 4. LAYER: TERRA BRUCIATA 3D (Crater Rim)
   map.addLayer({
-    id: 'cy-crater-rim',
+    id: 'cy-crater-blast-fill',
+    type: 'fill-extrusion',
+    source: 'cy-crater-blast',
+    paint: {
+      'fill-extrusion-color': '#050404', 
+      'fill-extrusion-height': ['get', 'height'], 
+      'fill-extrusion-base': 0,
+      'fill-extrusion-opacity': 0.98
+    }
+  });
+
+  // 5. LAYER: LINEA DI DEMARCAZIONE (Opzionale)
+  map.addLayer({
+    id: 'cy-crater-blast-line',
     type: 'line',
-    source: 'cy-crater',
+    source: 'cy-crater-blast',
     paint: {
-      'line-color': '#c8102e',
+      'line-color': '#7a0a1c', // Rosso scuro
       'line-width': 2,
-      'line-opacity': 0.6
+      'line-dasharray': [2, 4],
+      'line-opacity': 0.8
     }
   });
-
-  map.on('click', 'cy-crater-fill', () => {
-    openPanel({
-      name: 'IL CRATERE',
-      type: 'landmark',
-      color: '#c8102e',
-      blurb: 'Il punto di impatto del meteorite che ha marchiato G0. Nulla cresce, nulla si costruisce sul bordo di questa cicatrice.'
-    });
-  });
-  map.on('mouseenter', 'cy-crater-fill', () => map.getCanvas().style.cursor = 'pointer');
-  map.on('mouseleave', 'cy-crater-fill', () => map.getCanvas().style.cursor = '');
 }
-
 /* =========================================================================
    WALLS (3D)
    ========================================================================= */
