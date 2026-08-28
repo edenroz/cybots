@@ -33,10 +33,10 @@
   #bloodwater{
     position:absolute;inset:0;pointer-events:none;z-index:2;
     background:
-      radial-gradient(ellipse 60% 45% at 15% 20%, rgba(200,16,46,0.55), transparent 60%),
-      radial-gradient(ellipse 55% 50% at 85% 15%, rgba(200,16,46,0.5), transparent 65%),
-      radial-gradient(ellipse 50% 60% at 90% 80%, rgba(122,10,28,0.55), transparent 60%),
-      radial-gradient(ellipse 55% 45% at 10% 85%, rgba(122,10,28,0.5), transparent 60%);
+      radial-gradient(ellipse 60% 45% at 15% 20%, #c8102e8c, transparent 60%),
+      radial-gradient(ellipse 55% 50% at 85% 15%, #c8102e80, transparent 65%),
+      radial-gradient(ellipse 50% 60% at 90% 80%, #7a0a1c8c, transparent 60%),
+      radial-gradient(ellipse 55% 45% at 10% 85%, #7a0a1c80, transparent 60%);
     mix-blend-mode:multiply;
   }
   #vignette{
@@ -774,7 +774,7 @@ function addMeteorCraterLayer() {
     type: 'fill-extrusion',
     source: 'cy-crater-lake',
     paint: {
-      'fill-extrusion-color': '#36060d', // Il rosso acceso del tuo CSS
+      'fill-extrusion-color': '#7a0a1c80', // Il rosso acceso del tuo CSS
       'fill-extrusion-height': 100,        // Leggermente sollevato per non compenetrare col suolo
       'fill-extrusion-base': 0,
       'fill-extrusion-opacity': 1.00
