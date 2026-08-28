@@ -277,6 +277,20 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.NavigationControl({showCompass:false}), 'top-right');
 map.addControl(new maplibregl.AttributionControl({compact:true}));
 
+// Il pan da tastiera nativo di MapLibre rifà una nuova animazione ad ogni
+// keydown: se tieni premuta una freccia, le animazioni si accodano/si
+// interrompono a vicenda e il movimento risulta a scatti. Lo disabilitiamo
+// e lo sostituiamo con un loop a requestAnimationFrame (vedi più sotto),
+// che sposta la camera in modo continuo finché il tasto resta premuto.
+map.keyboard.disable();
+
+// Anche il drag-rotate nativo (tasto destro o Ctrl+trascina) ha una
+// sensibilità piuttosto alta e non regolabile via opzioni. Lo
+// disabilitiamo e implementiamo lo stesso gesto con un fattore di
+// sensibilità ridotto e configurabile (vedi ROTATE_SENSITIVITY /
+// PITCH_SENSITIVITY più sotto).
+map.dragRotate.disable();
+
 // Quanto scalare gli edifici 3D provenienti dai dati OpenFreeMap.
 // Alza questo valore per grattacieli ancora più imponenti.
 const BUILDING_HEIGHT_MULTIPLIER = 4;
@@ -377,6 +391,15 @@ map.on('load', () => {
   addWallLayer();
   addPoiLayer();
   buildPoiList();
+
+  // Solo ora la mappa ha i colori e i layer custom applicati: rimuoviamo
+  // il cover che nascondeva il flash iniziale con lo stile originale
+  // (Stoccolma "vera", non ricolorata).
+  const cover = document.getElementById('map-cover');
+  requestAnimationFrame(() => {
+    cover.style.opacity = '0';
+    setTimeout(() => { cover.style.display = 'none'; }, 450);
+  });
 });
 
 /* =========================================================================
@@ -1134,6 +1157,115 @@ function closePanel() {
 function resetNorth() {
   map.easeTo({ bearing: 0, pitch: 0, duration: 400 });
 }
+
+/* =========================================================================
+   CONTROLLI DA TASTIERA — frecce per il pan, WASD per rotazione/pitch
+   Un unico loop a requestAnimationFrame legge lo stato dei tasti premuti e
+   sposta la camera in modo continuo e proporzionale al tempo trascorso,
+   invece di rifare una mini-animazione ad ogni keydown (che tenendo
+   premuto un tasto si accavallano e si vedono a scatti).
+   ========================================================================= */
+const PAN_SPEED = 500;     // pixel al secondo, sullo schermo (frecce)
+const ROTATE_SPEED = 70;   // gradi di bearing al secondo (A/D)
+const PITCH_SPEED = 45;    // gradi di pitch al secondo (W/S)
+
+const keyState = {
+  ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false,
+  KeyW:false, KeyA:false, KeyS:false, KeyD:false
+};
+let camRAF = null;
+let lastFrameTime = null;
+
+function isTypingTarget(el) {
+  return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+}
+
+window.addEventListener('keydown', (e) => {
+  if (!(e.code in keyState) || isTypingTarget(e.target)) return;
+  keyState[e.code] = true;
+  e.preventDefault();
+  if (!camRAF) {
+    lastFrameTime = performance.now();
+    camRAF = requestAnimationFrame(camLoop);
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if (e.code in keyState) keyState[e.code] = false;
+});
+
+// Se la finestra perde il focus (alt-tab, click fuori, ecc.) i keyup
+// possono andare persi: azzeriamo tutto per evitare che la camera continui
+// a muoversi da sola.
+window.addEventListener('blur', () => {
+  Object.keys(keyState).forEach(k => keyState[k] = false);
+});
+
+function camLoop(now) {
+  const dt = (now - lastFrameTime) / 1000;
+  lastFrameTime = now;
+
+  // Pan (frecce)
+  let dx = 0, dy = 0;
+  if (keyState.ArrowUp) dy -= PAN_SPEED * dt;
+  if (keyState.ArrowDown) dy += PAN_SPEED * dt;
+  if (keyState.ArrowLeft) dx -= PAN_SPEED * dt;
+  if (keyState.ArrowRight) dx += PAN_SPEED * dt;
+  if (dx !== 0 || dy !== 0) {
+    map.panBy([dx, dy], { duration: 0, animate: false });
+  }
+
+  // Rotazione (A/D) e pitch (W/S)
+  let bearingDelta = 0, pitchDelta = 0;
+  if (keyState.KeyA) bearingDelta -= ROTATE_SPEED * dt;
+  if (keyState.KeyD) bearingDelta += ROTATE_SPEED * dt;
+  if (keyState.KeyW) pitchDelta += PITCH_SPEED * dt;
+  if (keyState.KeyS) pitchDelta -= PITCH_SPEED * dt;
+  if (bearingDelta !== 0 || pitchDelta !== 0) {
+    const newPitch = Math.max(0, Math.min(80, map.getPitch() + pitchDelta));
+    map.jumpTo({ bearing: map.getBearing() + bearingDelta, pitch: newPitch });
+  }
+
+  const stillActive = Object.values(keyState).some(v => v);
+  camRAF = stillActive ? requestAnimationFrame(camLoop) : null;
+}
+
+/* =========================================================================
+   ROTAZIONE / PITCH COL MOUSE — sensibilità ridotta
+   Sostituisce il dragRotate nativo (disabilitato sopra) con lo stesso
+   gesto (tasto destro, oppure Ctrl + tasto sinistro) ma con una
+   sensibilità configurabile e più bassa di quella di default.
+   ========================================================================= */
+const ROTATE_SENSITIVITY = 0.15; // gradi di bearing per pixel di trascinamento orizzontale
+const PITCH_SENSITIVITY = 0.15;  // gradi di pitch per pixel di trascinamento verticale
+
+let camDragging = false;
+let camDragStart = { x: 0, y: 0, bearing: 0, pitch: 0 };
+const mapContainer = map.getContainer();
+
+// Il tasto destro di default apre il menu contestuale del browser: lo
+// preveniamo solo sopra la mappa, per poterlo usare come gesto di rotazione.
+mapContainer.addEventListener('contextmenu', (e) => e.preventDefault());
+
+mapContainer.addEventListener('mousedown', (e) => {
+  const isRightClick = e.button === 2;
+  const isCtrlLeftClick = e.button === 0 && e.ctrlKey;
+  if (!isRightClick && !isCtrlLeftClick) return;
+  camDragging = true;
+  camDragStart = { x: e.clientX, y: e.clientY, bearing: map.getBearing(), pitch: map.getPitch() };
+  e.preventDefault();
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!camDragging) return;
+  const dx = e.clientX - camDragStart.x;
+  const dy = e.clientY - camDragStart.y;
+  const newBearing = camDragStart.bearing - dx * ROTATE_SENSITIVITY;
+  const newPitch = Math.max(0, Math.min(80, camDragStart.pitch - dy * PITCH_SENSITIVITY));
+  map.jumpTo({ bearing: newBearing, pitch: newPitch });
+});
+
+window.addEventListener('mouseup', () => { camDragging = false; });
 
 map.on('rotate', () => {
   const needle = document.getElementById('north-needle');
