@@ -105,6 +105,11 @@
   #north-reset:hover{border-color:var(--cy-red);color:var(--cy-red);}
   #north-reset svg{width:20px;height:20px;transition:transform 0.4s ease;}
 
+  #map-cover{
+    position:absolute;inset:0;z-index:60000 !important;background:var(--cy-black);
+    pointer-events:none;transition:opacity 0.4s ease;
+  }
+
   #coord-readout{
     position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:10;
     background:rgba(10,9,8,0.85);border:1px solid rgba(242,237,228,0.25);
@@ -160,6 +165,7 @@
 <div id="bloodwater"></div>
 <div id="vignette"></div>
 <div id="grain"></div>
+<div id="map-cover"></div>
 
 <div id="titleblock">
   <h1><span class="cy">C</span>Y</h1>
