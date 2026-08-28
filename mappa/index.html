@@ -753,7 +753,7 @@ function addMeteorCraterLayer() {
 
   const rimInner = {
     type: "Feature", 
-    properties: { height: 120}, 
+    properties: { height: 125}, 
     geometry: { type: "Polygon", coordinates: [midRing, lakeRing] }
   };
   const rimOuter = {
@@ -774,10 +774,10 @@ function addMeteorCraterLayer() {
     type: 'fill-extrusion',
     source: 'cy-crater-lake',
     paint: {
-      'fill-extrusion-color': '#c8102e', // Il rosso acceso del tuo CSS
+      'fill-extrusion-color': '#36060d', // Il rosso acceso del tuo CSS
       'fill-extrusion-height': 100,        // Leggermente sollevato per non compenetrare col suolo
       'fill-extrusion-base': 0,
-      'fill-extrusion-opacity': 0.85
+      'fill-extrusion-opacity': 1.00
     }
   });
 
