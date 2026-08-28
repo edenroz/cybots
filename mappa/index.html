@@ -700,7 +700,7 @@ function addLandmarkLayer() {
    ========================================================================= */
 function addMeteorCraterLayer() {
   const craterCenter = [18.04103, 59.33949]; // centro di GO
-  const craterRadiusDeg = 0.004;             // raggio del lago visibile (~450m qui)
+  const craterRadiusDeg = 0.0045;             // raggio del lago visibile (~450m qui)
   const exclusionRadiusDeg = craterRadiusDeg * 1.3; // Blast radius
 
   // Funzione per generare gli anelli
@@ -758,7 +758,7 @@ function addMeteorCraterLayer() {
   };
   const rimOuter = {
     type: "Feature", 
-    properties: { height: 35 }, 
+    properties: { height: 55 }, 
     geometry: { type: "Polygon", coordinates: [exclusionRing, midRing] }
   };
 
