@@ -1796,51 +1796,94 @@ function addLandmarkLayer() {
 
 /* =========================================================================
    CRATERE / LAGO DA IMPATTO METEORITE (centro di GO)
-   FIX: la vecchia strategia (un fill 2D piatto sopra tutto, come in
-   addMaskLayer) non funziona per "cancellare" un'area piena di edifici:
-   i building sono fill-extrusion, cioè geometria 3D che si estende in
-   altezza — un fill piatto disegnato sopra copre solo la base, ma le
-   pareti degli edifici restano visibili e spuntano dall'acqua da
-   qualunque angolazione diversa dalla vista dall'alto.
-   La soluzione giusta è togliere del tutto, dal layer dei building dello
-   stile di base, le feature che ricadono nel perimetro del cratere,
-   usando l'espressione di filtro 'within' (supportata da MapLibre per
-   escludere geometrie contenute in un poligono). Il lago viene poi
-   disegnato sopra come un semplice fill colorato.
+   VERSIONE "REALISTICA": ispirata alla morfologia dei crateri da impatto
+   semplici (es. Meteor Crater, Arizona):
+     - fondo piatto (qui: il lago rosso di fuso/acqua)
+     - pareti interne TERRAZZATE da blocchi di frana (slump blocks), che
+       salgono a gradoni verso il bordo
+     - CIGLIO del cratere (rim crest): l'anello più alto, netto
+     - MANTO DI EJECTA esterno, che degrada in altezza verso il terreno
+       originale, con superficie irregolare/collinosa (non liscia)
+   Il contorno è inoltre leggermente poligonale: molti crateri reali non
+   sono perfettamente circolari perché il bordo è condizionato da fratture
+   preesistenti nella roccia bersaglio (Meteor Crater, ad es., ha una
+   pianta quasi "squadrata").
+
+   Il meccanismo per "cancellare" gli edifici resta quello corretto già in
+   uso: i building sono fill-extrusion 3D, quindi non basta un fill piatto
+   sopra — vanno rimossi dal layer dei building con un filtro 'within'
+   sul poligono di esclusione, che qui coincide con il bordo esterno del
+   manto di ejecta.
+
+   NON sono stati cambiati: centro (craterCenter), raggio del lago
+   (craterRadiusDeg), raggio di esclusione (exclusionRadiusDeg), né le
+   altezze chiave del rilievo (125 = ciglio, 55 = ejecta interno,
+   100 = quota del lago).
    ========================================================================= */
 function addMeteorCraterLayer() {
   const craterCenter = [18.04103, 59.33949]; // centro di GO
   const craterRadiusDeg = 0.0045;             // raggio del lago visibile (~450m qui)
   const exclusionRadiusDeg = craterRadiusDeg * 1.3; // Blast radius
 
-  // Funzione per generare gli anelli
+  // --- Hash pseudo-casuale deterministico (stessa mappa = stesso risultato
+  // ogni volta, niente Math.random) usato per "sporcare" le altezze dei
+  // singoli blocchi e ottenere un effetto naturale/irregolare ---
+  function hash(n) {
+    const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453123;
+    return s - Math.floor(s); // 0..1
+  }
+
+  // Profilo angolare condiviso da TUTTI gli anelli. Usando la STESSA
+  // funzione per ogni raggio, gli anelli restano concentrici e "paralleli"
+  // (come le isoipse di un vero cratere) e non si intersecano mai tra loro,
+  // pur avendo un contorno irregolare e leggermente poligonale.
+  function shapeFactor(angle) {
+    const polygonal = 1 + 0.055 * Math.cos(angle * 4 + 0.5); // pianta non perfettamente circolare
+    const noise =
+      1 +
+      0.07 * Math.sin(angle * 3 + 1.1) +
+      0.045 * Math.sin(angle * 7 + 2.4) +
+      0.025 * Math.sin(angle * 13 + 0.3); // bordo frastagliato/eroso
+    return polygonal * noise;
+  }
+
   function makeCraterRing(center, radiusDeg) {
     const [cx, cy] = center;
-    const latCorrection = Math.cos(cy * Math.PI / 180); 
+    const latCorrection = Math.cos((cy * Math.PI) / 180);
     const points = 48;
     const coords = [];
     for (let i = 0; i <= points; i++) {
       const angle = (i / points) * Math.PI * 2;
-      const wobble = 1 + 0.08 * Math.sin(angle * 3) + 0.05 * Math.sin(angle * 7 + 1.2);
-      const r = radiusDeg * wobble;
-      coords.push([cx + Math.cos(angle) * r / latCorrection, cy + Math.sin(angle) * r]);
+      const r = radiusDeg * shapeFactor(angle);
+      coords.push([cx + (Math.cos(angle) * r) / latCorrection, cy + Math.sin(angle) * r]);
     }
     coords[coords.length - 1] = coords[0];
     return coords;
   }
 
-  // Anelli per lago e gradoni
-  const lakeRing = makeCraterRing(craterCenter, craterRadiusDeg);
-  const midRing = makeCraterRing(craterCenter, craterRadiusDeg + (exclusionRadiusDeg - craterRadiusDeg) * 0.5);
-  const exclusionRing = makeCraterRing(craterCenter, exclusionRadiusDeg);
+  // --- Raggi delle fasce, dal fondo del cratere al bordo esterno del manto
+  // di ejecta. Le frazioni t vanno da 0 (bordo del lago, = craterRadiusDeg)
+  // a 1 (raggio di esclusione, = exclusionRadiusDeg): NESSUNA delle due
+  // dimensioni originali viene toccata, si aggiungono solo gradini in mezzo.
+  const R = craterRadiusDeg;
+  const E = exclusionRadiusDeg;
+  const tFractions = [0, 0.02, 0.42, 0.6, 0.78, 1.0];
+  const radii = tFractions.map(t => R + (E - R) * t);
+  const rings = radii.map(r => makeCraterRing(craterCenter, r));
+
+  const lakeRing = rings[0];
+  const exclusionRing = rings[5];
+  const rimCrestRing = rings[3]; // il ciglio: la fascia più alta del cratere
 
   const lakePolygon = {
-    type: "Feature", properties: {},
+    type: "Feature",
+    properties: {},
     geometry: { type: "Polygon", coordinates: [lakeRing] }
   };
-  
+
   const exclusionPolygon = {
-    type: "Feature", properties: {},
+    type: "Feature",
+    properties: {},
     geometry: { type: "Polygon", coordinates: [exclusionRing] }
   };
 
@@ -1855,62 +1898,100 @@ function addMeteorCraterLayer() {
     map.setFilter(layer.id, newFilter);
   });
 
-  // 2. SORGENTI GEOJSON
+  // 2. SORGENTE LAGO (fondo del cratere)
   map.addSource('cy-crater-lake', {
     type: 'geojson',
     data: lakePolygon
   });
 
-  const rimInner = {
-    type: "Feature", 
-    properties: { height: 125}, 
-    geometry: { type: "Polygon", coordinates: [midRing, lakeRing] }
-  };
-  const rimOuter = {
-    type: "Feature", 
-    properties: { height: 55 }, 
-    geometry: { type: "Polygon", coordinates: [exclusionRing, midRing] }
-  };
+  // 3. FASCE DEL RILIEVO: due terrazzi interni, il ciglio, e due fasce di
+  // ejecta esterno. Ogni fascia viene spezzata in settori angolari con
+  // un'altezza leggermente randomizzata (± "roughness") per simulare i
+  // singoli blocchi di frana e le collinette dell'ejecta, invece di un
+  // anello liscio e uniforme che sembrerebbe artificiale.
+  const bands = [
+    { height: 105, roughness: 0.35 }, // terrazza bassa, appena sopra il lago
+    { height: 95, roughness: 0.25 }, // terrazza alta, sotto il ciglio
+    { height: 125, roughness: 0.08 }, // CIGLIO: punto più alto del cratere
+    { height: 55, roughness: 0.3 }, // manto di ejecta, subito fuori dal ciglio
+    { height: 16, roughness: 0.5 } // ejecta esterno, degrada verso il terreno
+  ];
+
+  const blastFeatures = [];
+  const sectorsPerBand = 24;
+  const step = Math.max(1, Math.floor((rings[0].length - 1) / sectorsPerBand));
+
+  bands.forEach((band, bandIdx) => {
+    const innerRing = rings[bandIdx];
+    const outerRing = rings[bandIdx + 1];
+    for (let i = 0; i < innerRing.length - 1; i += step) {
+      const iNext = Math.min(i + step, innerRing.length - 1);
+      const variation = (hash(bandIdx * 1000 + i) - 0.5) * 2 * band.roughness;
+      const sectorHeight = Math.max(4, band.height * (1 + variation));
+      const ring = [
+        innerRing[i],
+        innerRing[iNext],
+        outerRing[iNext],
+        outerRing[i],
+        innerRing[i]
+      ];
+      blastFeatures.push({
+        type: 'Feature',
+        properties: { height: sectorHeight },
+        geometry: { type: 'Polygon', coordinates: [ring] }
+      });
+    }
+  });
 
   map.addSource('cy-crater-blast', {
     type: 'geojson',
-    data: { type: "FeatureCollection", features: [rimInner, rimOuter] }
+    data: { type: 'FeatureCollection', features: blastFeatures }
   });
 
-  // 3. LAYER: LAGO DI ACQUA ROSSA
-  // Aggiunto ORA: Riempe il buco centrale con il rosso sangue della mappa
+  // 4. LAYER: LAGO DI ACQUA ROSSA (fuso da impatto) sul fondo del cratere
   map.addLayer({
     id: 'cy-crater-lake-water',
     type: 'fill-extrusion',
     source: 'cy-crater-lake',
     paint: {
-      'fill-extrusion-color': '#7a0a1c80', // Il rosso acceso del tuo CSS
-      'fill-extrusion-height': 100,        // Leggermente sollevato per non compenetrare col suolo
+      'fill-extrusion-color': '#7a0a1c80',
+      'fill-extrusion-height': 100,
       'fill-extrusion-base': 0,
-      'fill-extrusion-opacity': 1.00
+      'fill-extrusion-opacity': 1.0
     }
   });
 
-  // 4. LAYER: TERRA BRUCIATA 3D (Crater Rim)
+  // 5. LAYER: RILIEVO DEL CRATERE (terrazzi + ciglio + ejecta), a blocchi
+  // irregolari invece di due semplici anelli lisci
   map.addLayer({
     id: 'cy-crater-blast-fill',
     type: 'fill-extrusion',
     source: 'cy-crater-blast',
     paint: {
-      'fill-extrusion-color': '#050404', 
-      'fill-extrusion-height': ['get', 'height'], 
+      'fill-extrusion-color': '#050404',
+      'fill-extrusion-height': ['get', 'height'],
       'fill-extrusion-base': 0,
       'fill-extrusion-opacity': 0.98
     }
   });
 
-  // 5. LAYER: LINEA DI DEMARCAZIONE (Opzionale)
+  // 6. LAYER: LINEA DEL CIGLIO DEL CRATERE (rim crest) — ora traccia il vero
+  // bordo topografico più alto, non più il limite esterno dell'ejecta
+  map.addSource('cy-crater-rim-line', {
+    type: 'geojson',
+    data: {
+      type: 'Feature',
+      properties: {},
+      geometry: { type: 'LineString', coordinates: rimCrestRing }
+    }
+  });
+
   map.addLayer({
     id: 'cy-crater-blast-line',
     type: 'line',
-    source: 'cy-crater-blast',
+    source: 'cy-crater-rim-line',
     paint: {
-      'line-color': '#7a0a1c', // Rosso scuro
+      'line-color': '#7a0a1c',
       'line-width': 2,
       'line-dasharray': [2, 4],
       'line-opacity': 0.8
