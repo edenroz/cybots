@@ -423,15 +423,29 @@ map.on('load', () => {
 function addLandmarkLayer() {
   const landmarkFeatures = [
     {
-      type: "Feature",
-      properties: { name: "@dr_neo101", height: 20, base: 0, color: "#e8c93a",
-        blurb: "Il covo/laboratorio del ripperdoc Dr Neo. Un edificio basso ma pesantemente sorvegliato, meglio citofonare." },
-      geometry: {
-        type: "Polygon",
-        coordinates: [[
-          [17.88993,59.3435097],[17.8900511,59.343619],[17.8886862,59.3439359],
-          [17.8883234,59.3436056],[17.889069,59.3436259],[17.8894094,59.3436005],
-          [17.8897484,59.3435564],[17.88993,59.3435097]
+      "type": "Feature",
+      "properties": {
+        "name": "@dr_neo101",
+        "height": 20,
+        "base": 0,
+        "color": "#e8c93a",
+        "blurb": "Il covo/laboratorio del ripperdoc Dr Neo. Un edificio basso ma pesantemente sorvegliato, meglio citofonare. Piccolo accesso posteriore sul retro."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [17.88993,59.3435097],
+          [17.8900511,59.343619],
+          [17.8886862,59.3439359],
+          [17.8886431,59.3438967],
+          [17.8886892,59.3438835],
+          [17.8886547,59.3438521],
+          [17.8886086,59.3438653],
+          [17.8883234,59.3436056],
+          [17.889069,59.3436259],
+          [17.8894094,59.3436005],
+          [17.8897484,59.3435564],
+          [17.88993,59.3435097]
         ]]
       }
     },
