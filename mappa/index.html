@@ -224,7 +224,8 @@ const districts = [
   { name:"LOW MEADOW",  type:"industries", lng:18.1700, lat:59.2900, blurb:"Cot Square e Sword Lake. L'ironia del nome non sfugge a nessuno." },
   { name:"BURNCHURCH HEX", type:"slums", lng:18.0600, lat:59.2700, blurb:"Drylake e High Lake: sette peccati in cerca di un ottavo." },
   { name:"SVÄRTA",      type:"core",   lng:17.8870, lat:59.3470, blurb:"Il Wreath, corona nera all'ingresso occidentale." },
-  { name:"AQUACULTURE CAGE MAZE", type:"industries", lng:18.2080, lat:59.3360, blurb:"Gabbie su gabbie sull'acqua rossa. Nessuno chiede cosa allevano." },
+  { name:"AQUACULTURE CAGE MAZE", type:"industries", lng:18.21469, lat:59.3360, blurb:"Gabbie su gabbie sull'acqua rossa. Nessuno chiede cosa allevano." },
+  { name:"BORGHOLD", type:"core", lng:17.82853, lat:59.32777, blurb:"Notevole complesso carcerario la rende un'eccezione, con alcune aree vecchie di quasi cinque secoli e altre nuove costruite ogni anno. Gli abitanti del luogo vivono in piccole ville o in case plurifamiliari. Isolati e diffidenti, guardano con sospetto il resto della popolazione di Cy. Conoscono la città attraverso coloro che tengono rinchiusi nelle loro gabbie." },
 ];
 
 const typeColor = {
@@ -1724,6 +1725,37 @@ function addLandmarkLayer() {
                       17.9608895,
                       59.3135082
                     ]
+                ]]
+      }
+    },
+    {
+      type: "Aquaculture Cage Maze",
+      properties: { name: "Undersjön", height: 5, base: 0, color: "#b4bf1b",
+        blurb: "Dedalo di allevamenti di cibo commestibile e non commestibile." },
+      geometry: {
+        type: "Polygon",
+        "coordinates": [
+          [
+            [
+              18.201400927858714,
+              59.3385812
+            ],
+            [
+              18.2124592,
+              59.3385812
+            ],
+            [
+              18.2124592,
+              59.33500700878196
+            ],
+            [
+              18.201400927858714,
+              59.33500700878196
+            ],
+            [
+              18.201400927858714,
+              59.3385812
+            ]
                 ]]
       }
     },
