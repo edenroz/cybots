@@ -388,6 +388,21 @@ function cyberNameExpression() {
 // refreshAddressRegistry più sotto). Chiave: feature id.
 const addressRegistry = new Map();
 
+// Vie che il GM vuole rendere disponibili ai giocatori fin dall'inizio.
+// Usa ESATTAMENTE il nome cyberpunk visualizzato sulla mappa.
+const PRELOADED_STREETS = [
+  {
+    name: "IRON LANE",
+    lng: 18.06838,
+    lat: 59.26100
+  },
+  {
+    name: "FLUX AVENUE",
+    lng: 17.88832,
+    lat: 59.34359
+  }
+];
+
 /* =========================================================================
    MAP INITIALIZATION
    ========================================================================= */
@@ -638,15 +653,27 @@ function addStreetNameLayer() {
 function refreshAddressRegistry() {
   let features = [];
   try {
-    features = map.queryRenderedFeatures({ layers: ['cy-street-name-major', 'cy-street-name-minor'] });
+    features = map.querySourceFeatures('openmaptiles', {
+      sourceLayer: 'transportation_name'
+    });
   } catch (e) {
-    return;
+    try {
+      features = map.queryRenderedFeatures({
+        layers: ['cy-street-name-major', 'cy-street-name-minor']
+      });
+    } catch (e2) {
+      return;
+    }
   }
   let added = 0;
   features.forEach(f => {
     if (f.id === undefined || f.id === null) return;
-    if (addressRegistry.has(f.id)) return;
     const cyName = cyberHash(f.id);
+    const normalizedName = cyName.trim().toUpperCase();
+    const isPreloaded = PRELOADED_STREETS.some(
+      name => name.trim().toUpperCase() === normalizedName
+    );
+    if (!isPreloaded && addressRegistry.has(f.id)) return;
     let coords = null;
     const geom = f.geometry;
     if (geom && geom.type === 'LineString' && geom.coordinates.length) {
@@ -656,8 +683,17 @@ function refreshAddressRegistry() {
       coords = line[Math.floor(line.length / 2)];
     }
     if (!coords) return;
-    addressRegistry.set(f.id, { name: cyName, lng: coords[0], lat: coords[1] });
-    added++;
+    if (!addressRegistry.has(f.id)) {
+      addressRegistry.set(f.id, {
+        name: cyName,
+        lng: coords[0],
+        lat: coords[1],
+        preloaded: isPreloaded
+      });
+      added++;
+    } else if (isPreloaded) {
+      addressRegistry.get(f.id).preloaded = true;
+    }
   });
   if (added > 0) refreshAddrResultsIfOpen();
   updateAddrCount();
@@ -2884,12 +2920,28 @@ function renderAddrResults(query) {
   list.innerHTML = '';
   const q = (query || '').trim().toUpperCase();
   let entries = Array.from(addressRegistry.values());
+
+  // Precarica i nomi anche prima che la relativa tile venga esplorata.
+  PRELOADED_STREETS.forEach(street => {
+    const normalized = street.name.trim().toUpperCase();
+
+    if (!entries.some(e => e.name.trim().toUpperCase() === normalized)) {
+      entries.push({
+        name: normalized,
+        lng: street.lng,
+        lat: street.lat,
+        preloaded: true
+      });
+    }
+  });
+
   // Dedup by name: più segmenti di strada condividono spesso lo stesso
   // nome cyberpunk (via lunga = molte feature); ne teniamo una sola voce.
   const seen = new Set();
   entries = entries.filter(e => {
-    if (seen.has(e.name)) return false;
-    seen.add(e.name);
+    const key = e.name.trim().toUpperCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
   entries.sort((a, b) => a.name.localeCompare(b.name));
@@ -2898,8 +2950,9 @@ function renderAddrResults(query) {
   }
   entries.slice(0, 60).forEach(entry => {
     const li = document.createElement('li');
-    li.innerHTML = `<span>${entry.name}</span><span class="fly-hint">VOLA ↗</span>`;
+    li.innerHTML = `<span>${entry.name}</span><span class="fly-hint">${entry.preloaded ? 'PRECARICATA' : 'VOLA ↗'}</span>`;
     li.addEventListener('click', () => {
+      if (entry.lng === null || entry.lat === null) return;
       map.flyTo({ center: [entry.lng, entry.lat], zoom: 16.5, pitch: 50, duration: 2600, curve: 1.4, speed: 0.7 });
       openPanel({
         name: entry.name,
