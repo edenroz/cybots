@@ -88,6 +88,10 @@
     font-family:Impact,'Arial Narrow',sans-serif;font-size:28px;margin:0 0 6px 0;
   }
   #popup-panel p{font-size:13px;line-height:1.6;color:var(--cy-grey);}
+  #popup-panel .gm-note{
+    margin-top:14px;padding-top:10px;border-top:1px dashed rgba(242,237,228,0.25);
+    font-size:11px;letter-spacing:0.5px;color:var(--cy-neon-cyan);opacity:0.75;
+  }
 
   .maplibregl-ctrl-attrib{background:rgba(10,9,8,0.7)!important;color:var(--cy-grey)!important;}
   .maplibregl-ctrl-attrib a{color:var(--cy-grey)!important;}
@@ -151,11 +155,60 @@
   #poi-list li .poi-name{display:block;color:var(--cy-white);}
   #poi-list li .poi-sub{display:block;font-size:10px;letter-spacing:1px;color:var(--cy-grey);margin-top:2px;}
 
+  /* ADDRESS SEARCH BAR: slide-down bar from the top-center, toggled by a tab
+     button on the right edge (mirrors the POI tab on the left edge). */
+  #addr-toggle{
+    position:absolute;top:50%;right:0;transform:translateY(-50%);z-index:15;
+    background:rgba(10,9,8,0.9);border:1px solid var(--cy-white);border-right:none;
+    color:var(--cy-white);padding:14px 6px;cursor:pointer;
+    font-size:11px;letter-spacing:2px;writing-mode:vertical-rl;
+    transition:border-color 0.15s, color 0.15s;
+  }
+  #addr-toggle:hover{border-color:var(--cy-neon-cyan);color:var(--cy-neon-cyan);}
+  #addr-bar{
+    position:absolute;top:0;left:50%;transform:translate(-50%,-100%);
+    width:420px;max-width:92vw;z-index:17;
+    background:rgba(10,9,8,0.95);border:1px solid rgba(0,255,242,0.4);
+    border-top:none;color:var(--cy-white);
+    transition:transform 0.25s ease;padding:16px 18px 12px 18px;
+  }
+  #addr-bar.open{transform:translate(-50%,0);}
+  #addr-bar h3{
+    font-family:Impact,'Arial Narrow',sans-serif;font-size:16px;margin:0 0 8px 0;
+    letter-spacing:1px;color:var(--cy-neon-cyan);
+  }
+  #addr-input-row{display:flex;gap:6px;}
+  #addr-input{
+    flex:1;background:rgba(242,237,228,0.06);border:1px solid rgba(242,237,228,0.3);
+    color:var(--cy-white);font-family:'Courier New',monospace;font-size:13px;
+    letter-spacing:0.5px;padding:8px 10px;outline:none;
+  }
+  #addr-input:focus{border-color:var(--cy-neon-cyan);}
+  #addr-input::placeholder{color:var(--cy-grey);}
+  #addr-close{
+    background:none;border:1px solid rgba(242,237,228,0.3);color:var(--cy-grey);
+    cursor:pointer;padding:0 12px;font-size:16px;
+  }
+  #addr-close:hover{border-color:var(--cy-red);color:var(--cy-red);}
+  #addr-results{list-style:none;margin:10px 0 4px 0;padding:0;max-height:260px;overflow-y:auto;}
+  #addr-results li{
+    padding:8px 6px;border-bottom:1px solid rgba(242,237,228,0.1);
+    cursor:pointer;font-size:12.5px;letter-spacing:0.5px;
+    display:flex;justify-content:space-between;align-items:center;
+    transition:background 0.15s,padding-left 0.15s;
+  }
+  #addr-results li:hover{background:rgba(0,255,242,0.1);padding-left:12px;}
+  #addr-results li .fly-hint{font-size:10px;color:var(--cy-neon-cyan);opacity:0.7;letter-spacing:1px;}
+  #addr-empty{font-size:11px;color:var(--cy-grey);letter-spacing:0.5px;margin-top:8px;line-height:1.5;}
+  #addr-count{font-size:10px;color:var(--cy-grey);letter-spacing:1px;margin-top:6px;text-align:right;}
+
   /* Mobile: make popup panels touch-friendly, full width, and easy to dismiss */
   @media (max-width: 640px){
     #popup-panel{width:100%;max-width:100%;}
     #poi-panel{width:82%;}
     #poi-toggle{padding:16px 5px;font-size:10px;}
+    #addr-bar{width:96vw;}
+    #addr-toggle{padding:16px 5px;font-size:10px;}
   }
 </style>
 </head>
@@ -187,6 +240,19 @@
   <button class="close" onclick="togglePoiPanel(false)">✕</button>
   <h3>LUOGHI INCONTRATI</h3>
   <ul id="poi-list"></ul>
+</div>
+
+<div id="addr-toggle" onclick="toggleAddrBar()">INDIRIZZI</div>
+<div id="addr-bar">
+  <button id="addr-close" onclick="toggleAddrBar(false)">✕</button>
+  <h3>ARCHIVIO INDIRIZZI // CY</h3>
+  <div id="addr-input-row">
+    <input id="addr-input" type="text" placeholder="cerca una via... es. CHROME"
+      oninput="onAddrInput()" autocomplete="off">
+  </div>
+  <ul id="addr-results"></ul>
+  <div id="addr-empty">Naviga ed esplora la mappa: ogni via che entra in vista viene battezzata e aggiunta qui. Più zoni visiti, più indirizzi trovi.</div>
+  <div id="addr-count"></div>
 </div>
 
 <div id="north-reset" title="Reset direzione a nord" onclick="resetNorth()">
@@ -265,6 +331,62 @@ const pois = [
     blurb: "Discarica industriale dove vivono i Crash Kids"
   }
 ];
+
+/* =========================================================================
+   CYBER STREET NAMES
+   Le vie reali di Stoccolma vengono ribattezzate in modo procedurale e
+   deterministico: ogni via (identificata dal suo feature id nelle vector
+   tile "transportation_name") riceve sempre lo stesso nome cyberpunk,
+   generato combinando un PREFISSO e un SUFFISSO da liste curate. Le
+   parole sono scelte per suonare "cyberpunk/blade runner" restando
+   facilmente leggibili e pronunciabili da un italiano che parla inglese
+   (niente suoni ostici come "th", pochi gruppi consonantici difficili).
+   La STESSA formula di hashing è implementata due volte:
+     - come espressione MapLibre (per disegnare le etichette sulla mappa,
+       a costo zero, senza dover interrogare le feature via JS)
+     - come funzione JS equivalente (per costruire l'archivio indirizzi
+       usato dalla barra di ricerca)
+   ========================================================================= */
+const CYBER_PREFIXES = [
+  "NEON","CHROME","RUST","VOID","GHOST","STATIC","PULSE","CIRCUIT","WIRE",
+  "BLADE","VIPER","CRASH","ECHO","TOXIC","ACID","RAZOR","VECTOR","CIPHER",
+  "SIGNAL","SCRAP","FUSE","GRID","LASER","PHANTOM","VENOM","SPARK","HOLLOW",
+  "CINDER","OXIDE","NITRO","TURBO","SHARD","EMBER","GLITCH","MOLTEN","KROME",
+  "ZERO","EXO","EMBER","EPSILON","NOVA","PLASMA","DRONE","TITAN","ORBIT",
+  "MERCURY","COBALT","QUARTZ","FLUX","BINARY","REBOOT","STORM","IRON","SILO"
+];
+const CYBER_SUFFIXES = [
+  "STREET","AVENUE","ROAD","DRIVE","ALLEY","LANE","CIRCUIT","BOULEVARD",
+  "WAY","ROW","PASSAGE","STRIP","LOOP","JUNCTION","WALK","CROSSING",
+  "TERRACE","ARCADE","CORRIDOR","PLAZA","YARD","GATE","LINE","BLOCK","DOCK"
+];
+
+function cyberHash(rawId) {
+  const id = Math.abs(Math.floor(Number(rawId) || 0));
+  const idx1 = id % CYBER_PREFIXES.length;
+  const idx2 = Math.floor(id / 7) % CYBER_SUFFIXES.length;
+  return CYBER_PREFIXES[idx1] + " " + CYBER_SUFFIXES[idx2];
+}
+
+// Espressione MapLibre gemella di cyberHash(), usata come text-field.
+function cyberNameExpression() {
+  return [
+    "concat",
+    ["at",
+      ["%", ["abs", ["to-number", ["id"]]], CYBER_PREFIXES.length],
+      ["literal", CYBER_PREFIXES]
+    ],
+    " ",
+    ["at",
+      ["%", ["floor", ["/", ["abs", ["to-number", ["id"]]], 7]], CYBER_SUFFIXES.length],
+      ["literal", CYBER_SUFFIXES]
+    ]
+  ];
+}
+
+// Archivio indirizzi popolato man mano che si esplora la mappa (vedi
+// refreshAddressRegistry più sotto). Chiave: feature id.
+const addressRegistry = new Map();
 
 /* =========================================================================
    MAP INITIALIZATION
@@ -399,6 +521,7 @@ map.on('load', () => {
   addWallLayer();
   addMeteorCraterLayer();
   addPoiLayer();
+  addStreetNameLayer();
   buildPoiList();
 
   // Solo ora la mappa ha i colori e i layer custom applicati. 'idle' scatta
@@ -417,7 +540,128 @@ map.on('load', () => {
   }
   map.once('idle', revealMap);
   setTimeout(revealMap, 200);
+
+  // Ogni volta che la mappa finisce di renderizzare (dopo un pan, uno zoom,
+  // o il caricamento di nuove tile), aggiorniamo l'archivio indirizzi con
+  // le vie attualmente visibili, per alimentare la barra di ricerca.
+  map.on('idle', refreshAddressRegistry);
 });
+
+/* =========================================================================
+   STREET NAME LAYER
+   I layer di etichette originali dello stile (con i nomi svedesi reali)
+   restano nascosti (sono stati messi tutti in visibility:none sopra,
+   trattandosi di layer 'symbol'). Qui ne aggiungiamo di nuovi, sulla
+   stessa sorgente/source-layer ("openmaptiles" / "transportation_name"),
+   ma con un text-field generato via espressione (cyberNameExpression),
+   così i giocatori non vedono mai i nomi reali di Stoccolma.
+   ========================================================================= */
+function addStreetNameLayer() {
+  const nameExpr = cyberNameExpression();
+
+  // Strade principali (autostrade, statali, primarie/secondarie/terziarie):
+  // leggibili da zoom cittadino.
+  map.addLayer({
+    id: 'cy-street-name-major',
+    type: 'symbol',
+    source: 'openmaptiles',
+    'source-layer': 'transportation_name',
+    minzoom: 11.5,
+    filter: ['match', ['get', 'class'], ['motorway','trunk','primary','secondary','tertiary'], true, false],
+    layout: {
+      'symbol-placement': 'line',
+      'symbol-spacing': 300,
+      'text-field': nameExpr,
+      'text-font': ['Noto Sans Bold'],
+      'text-rotation-alignment': 'map',
+      'text-letter-spacing': 0.06,
+      'text-size': ['interpolate', ['linear'], ['zoom'], 11.5, 10, 16, 13]
+    },
+    paint: {
+      'text-color': '#00fff2',
+      'text-halo-color': '#0a0908',
+      'text-halo-width': 1.4
+    }
+  });
+
+  // Vie minori/di servizio: leggibili solo zoomando in un quartiere,
+  // esattamente dove serve dare un indirizzo preciso al party.
+  map.addLayer({
+    id: 'cy-street-name-minor',
+    type: 'symbol',
+    source: 'openmaptiles',
+    'source-layer': 'transportation_name',
+    minzoom: 14.5,
+    filter: ['match', ['get', 'class'], ['minor','service','track'], true, false],
+    layout: {
+      'symbol-placement': 'line',
+      'symbol-spacing': 250,
+      'text-field': nameExpr,
+      'text-font': ['Noto Sans Regular'],
+      'text-rotation-alignment': 'map',
+      'text-letter-spacing': 0.04,
+      'text-size': ['interpolate', ['linear'], ['zoom'], 14.5, 10, 18, 12]
+    },
+    paint: {
+      'text-color': '#ff8cf1',
+      'text-halo-color': '#0a0908',
+      'text-halo-width': 1.2
+    }
+  });
+
+  // Click su un'etichetta stradale: apre il pannello con l'indirizzo,
+  // utile per "volarci sopra" e confermare al volo un nome ai giocatori.
+  ['cy-street-name-major','cy-street-name-minor'].forEach(layerId => {
+    map.on('click', layerId, (e) => {
+      const f = e.features[0];
+      const cyName = cyberHash(f.id);
+      openPanel({
+        name: cyName,
+        type: 'via',
+        color: layerId === 'cy-street-name-major' ? '#00fff2' : '#ff8cf1',
+        blurb: 'Arteria di Cy. Usa questo nome come indirizzo di riferimento per il party.'
+      });
+    });
+    map.on('mouseenter', layerId, () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
+  });
+}
+
+/* =========================================================================
+   ARCHIVIO INDIRIZZI (per la barra di ricerca)
+   Interroga le feature stradali attualmente renderizzate (quindi già
+   presenti nelle tile caricate) e le aggiunge all'archivio con il loro
+   nome cyberpunk e una coordinata di riferimento (punto medio della
+   geometria) su cui poter "volare". Viene richiamata a ogni 'idle', quindi
+   l'archivio cresce man mano che ci si muove sulla mappa.
+   ========================================================================= */
+function refreshAddressRegistry() {
+  let features = [];
+  try {
+    features = map.queryRenderedFeatures({ layers: ['cy-street-name-major', 'cy-street-name-minor'] });
+  } catch (e) {
+    return;
+  }
+  let added = 0;
+  features.forEach(f => {
+    if (f.id === undefined || f.id === null) return;
+    if (addressRegistry.has(f.id)) return;
+    const cyName = cyberHash(f.id);
+    let coords = null;
+    const geom = f.geometry;
+    if (geom && geom.type === 'LineString' && geom.coordinates.length) {
+      coords = geom.coordinates[Math.floor(geom.coordinates.length / 2)];
+    } else if (geom && geom.type === 'MultiLineString' && geom.coordinates.length) {
+      const line = geom.coordinates[Math.floor(geom.coordinates.length / 2)];
+      coords = line[Math.floor(line.length / 2)];
+    }
+    if (!coords) return;
+    addressRegistry.set(f.id, { name: cyName, lng: coords[0], lat: coords[1] });
+    added++;
+  });
+  if (added > 0) refreshAddrResultsIfOpen();
+  updateAddrCount();
+}
 
 /* =========================================================================
    LANDMARK BUILDINGS (3D)
@@ -2605,6 +2849,74 @@ function togglePoiPanel(force) {
   const panel = document.getElementById('poi-panel');
   const open = force !== undefined ? force : !panel.classList.contains('open');
   panel.classList.toggle('open', open);
+}
+
+/* =========================================================================
+   ADDRESS SEARCH BAR
+   Filtra l'archivio indirizzi (popolato incrementalmente da
+   refreshAddressRegistry) in base al testo digitato e mostra i risultati.
+   Cliccando su un risultato la mappa "ci vola sopra" con un flyTo, e si
+   apre il pannello con il nome della via come indirizzo di riferimento.
+   ========================================================================= */
+function toggleAddrBar(force) {
+  const bar = document.getElementById('addr-bar');
+  const open = force !== undefined ? force : !bar.classList.contains('open');
+  bar.classList.toggle('open', open);
+  if (open) {
+    document.getElementById('addr-input').focus();
+    renderAddrResults(document.getElementById('addr-input').value);
+  }
+}
+
+function onAddrInput() {
+  renderAddrResults(document.getElementById('addr-input').value);
+}
+
+function refreshAddrResultsIfOpen() {
+  const bar = document.getElementById('addr-bar');
+  if (bar.classList.contains('open')) {
+    renderAddrResults(document.getElementById('addr-input').value);
+  }
+}
+
+function renderAddrResults(query) {
+  const list = document.getElementById('addr-results');
+  list.innerHTML = '';
+  const q = (query || '').trim().toUpperCase();
+  let entries = Array.from(addressRegistry.values());
+  // Dedup by name: più segmenti di strada condividono spesso lo stesso
+  // nome cyberpunk (via lunga = molte feature); ne teniamo una sola voce.
+  const seen = new Set();
+  entries = entries.filter(e => {
+    if (seen.has(e.name)) return false;
+    seen.add(e.name);
+    return true;
+  });
+  entries.sort((a, b) => a.name.localeCompare(b.name));
+  if (q) {
+    entries = entries.filter(e => e.name.includes(q));
+  }
+  entries.slice(0, 60).forEach(entry => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${entry.name}</span><span class="fly-hint">VOLA ↗</span>`;
+    li.addEventListener('click', () => {
+      map.flyTo({ center: [entry.lng, entry.lat], zoom: 16.5, pitch: 50, duration: 2600, curve: 1.4, speed: 0.7 });
+      openPanel({
+        name: entry.name,
+        type: 'via',
+        color: '#00fff2',
+        blurb: 'Arteria di Cy. Usa questo nome come indirizzo di riferimento per il party.'
+      });
+      if (isMobile) toggleAddrBar(false);
+    });
+    list.appendChild(li);
+  });
+}
+
+function updateAddrCount() {
+  const names = new Set(Array.from(addressRegistry.values()).map(e => e.name));
+  document.getElementById('addr-count').textContent =
+    names.size + (names.size === 1 ? ' via catalogata' : ' vie catalogate');
 }
 
 function openPanel(p) {
