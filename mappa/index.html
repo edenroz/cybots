@@ -207,8 +207,21 @@
     #popup-panel{width:100%;max-width:100%;}
     #poi-panel{width:82%;}
     #poi-toggle{padding:16px 5px;font-size:10px;}
-    #addr-bar{width:96vw;}
-    #addr-toggle{padding:16px 5px;font-size:10px;}
+
+    #addr-bar{
+      width:96vw;
+      max-width:96vw;
+      left:50%;
+    }
+
+    #addr-toggle{
+      padding:16px 5px;
+      font-size:10px;
+    }
+
+    #addr-bar.open{
+      transform:translate(-50%, 0);
+    }
   }
 </style>
 </head>
