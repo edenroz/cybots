@@ -671,7 +671,7 @@ function refreshAddressRegistry() {
     const cyName = cyberHash(f.id);
     const normalizedName = cyName.trim().toUpperCase();
     const isPreloaded = PRELOADED_STREETS.some(
-      name => name.trim().toUpperCase() === normalizedName
+      street => street.name.trim().toUpperCase() === normalizedName
     );
     if (!isPreloaded && addressRegistry.has(f.id)) return;
     let coords = null;
