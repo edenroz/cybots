@@ -6,6 +6,7 @@
 <title>THE MAP OF CY</title>
 <!-- https://geojson.io/?map=12.89/59.31889/18.10386/21.1 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.12.0/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-delaunay@6"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.12.0/maplibre-gl.css" rel="stylesheet">
 <style>
   :root{
@@ -680,6 +681,7 @@ map.on('load', () => {
 
   addDistrictLayer();
   addMaskLayer();
+  addDistrictTerritoryLayer();
   addLandmarkLayer();
   addWallLayer();
   addMeteorCraterLayer();
@@ -688,6 +690,10 @@ map.on('load', () => {
   addBuildingClickHandlers();
   buildPoiList();
 
+  // Riordino sicuro: qui tutti i layer esistono già.
+  if (map.getLayer('cy-landmark-extrusion')) {
+    map.moveLayer('cy-district-territory-fill', 'cy-landmark-extrusion');
+  }
   // Solo ora la mappa ha i colori e i layer custom applicati. 'idle' scatta
   // quando MapLibre ha finito di renderizzare tutte le modifiche pendenti
   // (a differenza di un requestAnimationFrame, che può scattare un frame
@@ -3520,6 +3526,91 @@ function haversineKm(a, b) {
   const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/* =========================================================================
+   DISTRICT TERRITORY (Voronoi)
+   Genera un poligono per ciascun distretto (cella di Voronoi attorno al
+   suo punto) e lo colora col colore del type, per un effetto "mappa
+   politica" invece dei soli puntini con alone.
+   ========================================================================= */
+function addDistrictTerritoryLayer() {
+  // Bounding box entro cui ritagliare le celle: usa l'estensione della
+  // città (stessa area della maxBounds della mappa, un po' più larga
+  // per evitare celle troncate ai bordi).
+  const BOUNDS = [17.55, 59.10, 18.75, 59.55]; // [minLng, minLat, maxLng, maxLat]
+
+  // Correzione approssimativa per la latitudine (le celle di Voronoi
+  // vanno calcolate in uno spazio ~equidistante, altrimenti a Stoccolma
+  // (lat ~59.3) le distanze est-ovest risultano schiacciate).
+  const latCorrection = Math.cos((59.33 * Math.PI) / 180);
+  const toXY = (lng, lat) => [lng * latCorrection, lat];
+  const toLngLat = (x, y) => [x / latCorrection, y];
+
+  const points = districts.map(d => toXY(d.lng, d.lat));
+  const [minX, minY] = toXY(BOUNDS[0], BOUNDS[1]);
+  const [maxX, maxY] = toXY(BOUNDS[2], BOUNDS[3]);
+
+  const delaunay = d3.Delaunay.from(points);
+  const voronoi = delaunay.voronoi([minX, minY, maxX, maxY]);
+
+  const features = districts.map((d, i) => {
+    const cell = voronoi.cellPolygon(i);
+    if (!cell) return null;
+    const ring = cell.map(([x, y]) => toLngLat(x, y));
+    return {
+      type: "Feature",
+      properties: { name: d.name, color: typeColor[d.type] },
+      geometry: { type: "Polygon", coordinates: [ring] }
+    };
+  }).filter(Boolean);
+
+  map.addSource('cy-district-territory', {
+    type: 'geojson',
+    data: { type: "FeatureCollection", features }
+  });
+
+  // Riempimento morbido
+  map.addLayer({
+    id: 'cy-district-territory-fill',
+    type: 'fill',
+    source: 'cy-district-territory',
+    paint: {
+      'fill-color': ['get', 'color'],
+      'fill-opacity': [
+        'interpolate', ['linear'], ['zoom'],
+        9, 0.16,
+        13, 0.10,
+        16, 0.05
+      ]
+    }
+  });
+
+  // Bordo sfumato: più linee sovrapposte a opacità decrescente per
+  // simulare un blur (i fill layer non supportano fill-blur).
+  [
+    { width: 10, opacity: 0.03 },
+    { width: 5,  opacity: 0.05 },
+    { width: 2,  opacity: 0.08 }
+  ].forEach((b, i) => {
+    map.addLayer({
+      id: `cy-district-territory-line-${i}`,
+      type: 'line',
+      source: 'cy-district-territory',
+      paint: {
+        'line-color': ['get', 'color'],
+        'line-width': b.width,
+        'line-opacity': b.opacity,
+        'line-blur': b.width
+      }
+    });
+  });
+
+  // NOTA: nessuna moveLayer qui dentro — a questo punto della sequenza di
+  // caricamento layer come 'cy-landmark-extrusion' non esistono ancora, e
+  // moveLayer con un beforeId inesistente lancia un'eccezione che
+  // interrompe l'intera callback map.on('load', ...) (mappa tutta nera,
+  // vedi nota nel blocco 'load' più sotto per il riordino sicuro).
 }
 
 function formatDuration(minutes) {
