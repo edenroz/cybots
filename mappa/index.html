@@ -448,16 +448,16 @@ const pois = [
    ========================================================================= */
 const CYBER_PREFIXES = [
   "NEON","CHROME","RUST","VOID","GHOST","STATIC","PULSE","CIRCUIT","WIRE",
-  "BLADE","VIPER","CRASH","ECHO","TOXIC","ACID","RAZOR","VECTOR","CIPHER",
-  "TG LABS","Alliansen","FUSE","GRID","PHANTOM","VENOM","SPARK","HOLLOW",
-  "CINDER","OXIDE","NITRO","TURBO","REBOOT","GLITCH","IRON","ACGS",
-  "United Citadel Security","Tulles&deVerte","EMBER","EPSILON","NOVA","PLASMA","DRONE","TITAN",
-  "COBALT","QUARTZ","FLUX","BINARY","SHARD","STORM","MOLTEN","Kaytell Makers"
+  "BLADE","VIPER","CRASH","ECHO","FLUX","ACID","RAZOR","VECTOR","CIPHER",
+  "TG LABS","Alliansen™","FUSE","GRID","PHANTOM","VENOM","SPARK","HOLLOW",
+  "CINDER","OXIDE","NITRO","TURBO","REBOOT","GLITCH","IRON","ACGS™",
+  "United Citadel Security™","Tulles&deVerte™","EMBER","EPSILON","NOVA","PLASMA","TRANS","TITAN",
+  "COBALT","QUARTZ","TOXIC","BINARY","SHARD","STORM","MOLTEN","Kaytell Makers™"
 ];
 const CYBER_SUFFIXES = [
   "STREET","AVENUE","ROAD","DRIVE","ALLEY","LANE","CIRCUIT","BOULEVARD",
-  "WAY","ROW","PASSAGE","PLAZA","LOOP","JUNCTION","WALK","CROSSING",
-  "TERRACE","ARCADE","CORRIDOR","STRIP","YARD","GATE","LINE","BLOCK"
+  "WAY","ROW","YARD","PLAZA","LOOP","JUNCTION","WALK","CROSSING",
+  "TERRACE","ARCADE","CORRIDOR","STRIP","PASSAGE","GATE","LINE","BLOCK"
 ];
 
 // Costanti dell'hash a mixing (vedi nota sopra). Usate sia dalla versione
@@ -514,7 +514,7 @@ const PRELOADED_STREETS = [
     lat: 59.35089
   },
   {
-    name: "VECTOR ALLEY",
+    name: "TOXIC YARD",
     lng: 18.04120,
     lat: 59.250015
   }
@@ -3075,7 +3075,7 @@ function renderAddrResults(query) {
   }
   entries.slice(0, 60).forEach(entry => {
     const li = document.createElement('li');
-    li.innerHTML = `<span>${entry.name}</span><span class="fly-hint">${entry.preloaded ? 'PRECARICATA' : 'VOLA ↗'}</span>`;
+    li.innerHTML = `<span>${entry.name}</span><span class="fly-hint">${entry.preloaded ? 'VOLA →' : 'VOLA ↗'}</span>`;
     li.addEventListener('click', () => {
       if (entry.lng === null || entry.lat === null) return;
       map.flyTo({ center: [entry.lng, entry.lat], zoom: 16.5, pitch: 50, duration: 2600, curve: 1.4, speed: 0.7 });
