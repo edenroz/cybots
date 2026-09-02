@@ -499,7 +499,7 @@ const CYBER_HASH_MULT_A = 48271;      // moltiplicatore Park-Miller
 const CYBER_HASH_MULT_B = 16807;      // moltiplicatore MINSTD (scorrelato da MULT_A)
 const CYBER_HASH_RANGE  = 2147483647; // 2^31 - 1
 
-function cyberHash(rawId, type = 'minor') {
+function cyberHash(rawId, type) {
 
   const suffixes =
     type === 'major'
@@ -522,6 +522,8 @@ function cyberHash(rawId, type = 'minor') {
 
   const idx1 = x % CYBER_PREFIXES.length;
   const idx2 = y % suffixes.length;
+
+  console.log(`cyberHash: rawId=${rawId}, type=${type}, x=${x}, y=${y}, idx1=${idx1}, idx2=${idx2}`);
 
   return `${CYBER_PREFIXES[idx1]} ${suffixes[idx2]}`;
 }
@@ -818,26 +820,52 @@ function addStreetNameLayer() {
 
   // Click su un'etichetta stradale: apre il pannello con l'indirizzo,
   // utile per "volarci sopra" e confermare al volo un nome ai giocatori.
-  ['cy-street-name-major','cy-street-name-minor'].forEach(layerId => {
-    map.on('click', layerId, (e) => {
-      if (selectingPoint) return;
-      const f = e.features[0];
+['cy-street-name-major', 'cy-street-name-minor'].forEach(layerId => {
+  map.on('click', layerId, (e) => {
+    if (selectingPoint) return;
 
-      const layerId = f.layer && f.layer.id ? f.layer.id : '';
-      const streetType = layerId.includes('major') ? 'major' : 'minor';      const cyName = cyberHash(f.id, streetType);
+    const f = e.features[0];
 
-      if (!isMobile) {
+    const MyLayerId = f.layer && f.layer.id ? f.layer.id : layerId;
+    const streetType = MyLayerId.includes('major') ? 'major' : 'minor';
+
+    console.log(
+      `Clicked on ${streetType} street feature id=${f.id} layer=${layerId}`
+    );
+
+    // Usa il nome già registrato, invece di rigenerarlo
+    const entry = addressRegistry.get(f.id);
+
+    // Se la feature non è ancora nel registry, fallback deterministico
+    const cyName = cyberHash(f.id, streetType);
+
+    if (!isMobile) {
       openPanel({
         name: cyName,
-        type: 'via',
-        color: layerId === 'cy-street-name-major' ? '#00fff2' : '#ff8cf1',
-        blurb: 'Strada di Cy.<br>[DLC LOCKED]<br>Questo contenuto non è stato acquistato. La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>[ACQUISTA DLC]<br>699.99¤<br>L\'infrastruttura ringrazia.'
+        type: streetType,
+        color: layerId === 'cy-street-name-major'
+          ? '#00fff2'
+          : '#ff8cf1',
+        blurb:
+          'Strada di Cy.<br>' +
+          '[DLC LOCKED]<br>' +
+          'Questo contenuto non è stato acquistato. ' +
+          'La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>' +
+          '[ACQUISTA DLC]<br>' +
+          '699.99¤<br>' +
+          'L\'infrastruttura ringrazia.'
       });
     }
-    });
-    map.on('mouseenter', layerId, () => map.getCanvas().style.cursor = 'pointer');
-    map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
   });
+
+  map.on('mouseenter', layerId, () => {
+    map.getCanvas().style.cursor = 'pointer';
+  });
+
+  map.on('mouseleave', layerId, () => {
+    map.getCanvas().style.cursor = '';
+  });
+});
 }
 
 /* =========================================================================
@@ -1073,7 +1101,7 @@ function refreshBuildingAddresses() {
     if (f.id === undefined || f.id === null) return;
     if (buildingAddressRegistry.has(f.id)) return;
 
-        const layerId = f.layer && f.layer.id ? f.layer.id : '';
+    const layerId = f.layer && f.layer.id ? f.layer.id : '';
     const streetType = layerId.includes('major') ? 'major' : 'minor';
 
     const addr = buildingAddressForFeature(f, streetType);
@@ -1209,7 +1237,7 @@ function addLandmarkLayer() {
         "height": 100,
         "base": 0,
         "color": "#e8c93a",
-        "blurb": "Il covo/laboratorio del ripperdoc Dr Neo. Un edificio basso ma pesantemente sorvegliato, meglio citofonare. Piccolo accesso posteriore sul retro."
+        "blurb": "Il covo/laboratorio del ripperdoc Dr Neo. Un edificio alto e pesantemente sorvegliato, meglio citofonare. Piccolo accesso posteriore sul retro."
       },
       "geometry": {
         "type": "Polygon",
@@ -3414,15 +3442,21 @@ function renderAddrResults(query) {
   entries.slice(0, 60).forEach(entry => {
     const li = document.createElement('li');
     li.innerHTML = `<span>${entry.name}</span><span class="fly-hint">${entry.preloaded ? 'VOLA →' : 'VOLA ↗'}</span>`;
+
+    const layerId = entry.layer && entry.layer.id ? entry.layer.id : '';
+    const streetType = layerId.includes('major') ? 'major' : 'minor';      
+    
+    const cyName = cyberHash(entry.id, streetType);
+
     li.addEventListener('click', () => {
       if (entry.lng === null || entry.lat === null) return;
       map.flyTo({ center: [entry.lng, entry.lat], zoom: 16.5, pitch: 50, duration: 2600, curve: 1.4, speed: 0.7 });
       if (!isMobile) {
       openPanel({
-        name: entry.name,
-        type: 'via',
+        name: cyName,
+        type: streetType,
         color: '#00fff2',
-        blurb: 'Strada di Cy.<br>[DLC LOCKED]<br>Questo contenuto non è stato acquistato. La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>[ACQUISTA DLC]<br>699.99¤<br>L\'infrastruttura ringrazia.'
+        blurb: 'Strada di Cy.<br>[DLC LOCKED]<br>Questo contenuto non è stato acquistato. La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>[ACQUISTA DLC]<br>799.99¤<br>L\'infrastruttura ringrazia.'
       });
       }
       if (isMobile) toggleAddrBar(false);
