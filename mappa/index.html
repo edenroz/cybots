@@ -3529,65 +3529,171 @@ function haversineKm(a, b) {
 }
 
 /* =========================================================================
-   DISTRICT TERRITORY (Voronoi)
-   Genera un poligono per ciascun distretto (cella di Voronoi attorno al
-   suo punto) e lo colora col colore del type, per un effetto "mappa
-   politica" invece dei soli puntini con alone.
+   DISTRICT TERRITORY (Voronoi, smussato, con aggancio opportunistico
+   alle vie già scoperte)
    ========================================================================= */
-function addDistrictTerritoryLayer() {
-  // Bounding box entro cui ritagliare le celle: usa l'estensione della
-  // città (stessa area della maxBounds della mappa, un po' più larga
-  // per evitare celle troncate ai bordi).
-  const BOUNDS = [17.55, 59.10, 18.75, 59.55]; // [minLng, minLat, maxLng, maxLat]
+const TERRITORY_BOUNDS = [17.55, 59.10, 18.75, 59.55];
+const TERRITORY_LAT_CORRECTION = Math.cos((59.33 * Math.PI) / 180);
+const TERRITORY_SNAP_MAX_DIST = 0.0035; // raggio di "cattura" verso una via (~ 390m)
+const TERRITORY_SNAP_BLEND = 0.4;       // 0 = ignora le vie, 1 = aggancio totale
+const TERRITORY_SMOOTH_ITERATIONS = 2;  // più iterazioni = bordi più morbidi/arrotondati
 
-  // Correzione approssimativa per la latitudine (le celle di Voronoi
-  // vanno calcolate in uno spazio ~equidistante, altrimenti a Stoccolma
-  // (lat ~59.3) le distanze est-ovest risultano schiacciate).
-  const latCorrection = Math.cos((59.33 * Math.PI) / 180);
-  const toXY = (lng, lat) => [lng * latCorrection, lat];
-  const toLngLat = (x, y) => [x / latCorrection, y];
+let lastTerritoryStreetSnapshotSize = -1;
 
-  const points = districts.map(d => toXY(d.lng, d.lat));
-  const [minX, minY] = toXY(BOUNDS[0], BOUNDS[1]);
-  const [maxX, maxY] = toXY(BOUNDS[2], BOUNDS[3]);
+function territoryToXY(lng, lat) { return [lng * TERRITORY_LAT_CORRECTION, lat]; }
+function territoryToLngLat(x, y) { return [x / TERRITORY_LAT_CORRECTION, y]; }
+
+// Corner-cutting di Chaikin: ad ogni iterazione sostituisce ogni spigolo
+// con due punti al 25%/75% del segmento, arrotondando progressivamente
+// gli angoli vivi del poligono di Voronoi senza alterarne la forma generale.
+function chaikinSmoothRing(ring, iterations) {
+  let pts = ring.slice();
+  for (let iter = 0; iter < iterations; iter++) {
+    const next = [];
+    const n = pts.length;
+    for (let i = 0; i < n; i++) {
+      const p0 = pts[i], p1 = pts[(i + 1) % n];
+      next.push(
+        [p0[0]*0.75 + p1[0]*0.25, p0[1]*0.75 + p1[1]*0.25],
+        [p0[0]*0.25 + p1[0]*0.75, p0[1]*0.25 + p1[1]*0.75]
+      );
+    }
+    pts = next;
+  }
+  return pts;
+}
+
+// Converte le geometrie stradali già in cache (popolata da
+// refreshAddressRegistry man mano che si esplora la mappa) nello stesso
+// spazio XY corretto per la latitudine usato dal Voronoi.
+function collectStreetLinesXY() {
+  const lines = [];
+  streetLineCache.forEach(f => {
+    const geom = f.geometry;
+    if (!geom) return;
+    const raw = geom.type === 'LineString' ? [geom.coordinates]
+      : geom.type === 'MultiLineString' ? geom.coordinates : [];
+    raw.forEach(line => {
+      if (line && line.length >= 2) {
+        lines.push(line.map(([lng, lat]) => territoryToXY(lng, lat)));
+      }
+    });
+  });
+  return lines;
+}
+
+function nearestPointOnStreetsXY(p, streetsXY, maxDistSq) {
+  let best = null;
+  streetsXY.forEach(line => {
+    for (let i = 0; i < line.length - 1; i++) {
+      const a = line[i], b = line[i + 1];
+      const dx = b[0]-a[0], dy = b[1]-a[1];
+      const lenSq = dx*dx + dy*dy;
+      let t = lenSq > 0 ? ((p[0]-a[0])*dx + (p[1]-a[1])*dy) / lenSq : 0;
+      t = Math.max(0, Math.min(1, t));
+      const projX = a[0] + t*dx, projY = a[1] + t*dy;
+      const ddx = p[0]-projX, ddy = p[1]-projY;
+      const distSq = ddx*ddx + ddy*ddy;
+      if (distSq <= maxDistSq && (!best || distSq < best.distSq)) {
+        best = { distSq, point: [projX, projY] };
+      }
+    }
+  });
+  return best ? best.point : null;
+}
+
+function buildDistrictTerritoryFeatures() {
+  const [minX, minY] = territoryToXY(TERRITORY_BOUNDS[0], TERRITORY_BOUNDS[1]);
+  const [maxX, maxY] = territoryToXY(TERRITORY_BOUNDS[2], TERRITORY_BOUNDS[3]);
+  const points = districts.map(d => territoryToXY(d.lng, d.lat));
 
   const delaunay = d3.Delaunay.from(points);
   const voronoi = delaunay.voronoi([minX, minY, maxX, maxY]);
+  const streetsXY = collectStreetLinesXY();
+  const maxDistSq = TERRITORY_SNAP_MAX_DIST * TERRITORY_SNAP_MAX_DIST;
 
   const features = districts.map((d, i) => {
     const cell = voronoi.cellPolygon(i);
     if (!cell) return null;
-    const ring = cell.map(([x, y]) => toLngLat(x, y));
+
+    let ring = cell.slice(0, cell.length - 1); // apri l'anello (era chiuso)
+    ring = chaikinSmoothRing(ring, TERRITORY_SMOOTH_ITERATIONS);
+
+    if (streetsXY.length) {
+      ring = ring.map(pt => {
+        const near = nearestPointOnStreetsXY(pt, streetsXY, maxDistSq);
+        if (!near) return pt;
+        return [
+          pt[0] + (near[0] - pt[0]) * TERRITORY_SNAP_BLEND,
+          pt[1] + (near[1] - pt[1]) * TERRITORY_SNAP_BLEND
+        ];
+      });
+    }
+
+    ring.push(ring[0]); // richiudi
+    const lngLatRing = ring.map(([x, y]) => territoryToLngLat(x, y));
+
     return {
       type: "Feature",
       properties: { name: d.name, color: typeColor[d.type] },
-      geometry: { type: "Polygon", coordinates: [ring] }
+      geometry: { type: "Polygon", coordinates: [lngLatRing] }
     };
   }).filter(Boolean);
 
+  return { type: "FeatureCollection", features };
+}
+
+function rebuildDistrictTerritory() {
+  if (typeof d3 === 'undefined' || !d3.Delaunay) return;
+  const source = map.getSource('cy-district-territory');
+  if (source) source.setData(buildDistrictTerritoryFeatures());
+}
+
+// Richiamata ad ogni 'idle': ricalcola il territorio solo se il numero di
+// vie note è cambiato in modo significativo, per non rifare Voronoi +
+// smoothing + snapping ad ogni singolo pan/zoom (costoso e inutile se
+// nel frattempo non si è scoperta nessuna nuova via).
+function maybeRebuildDistrictTerritory() {
+  if (typeof d3 === 'undefined' || !d3.Delaunay) return;
+  const currentSize = streetLineCache.length;
+  if (currentSize === lastTerritoryStreetSnapshotSize) return;
+  if (lastTerritoryStreetSnapshotSize >= 0 &&
+      Math.abs(currentSize - lastTerritoryStreetSnapshotSize) < 15) return;
+  lastTerritoryStreetSnapshotSize = currentSize;
+  rebuildDistrictTerritory();
+}
+
+function addDistrictTerritoryLayer() {
+  if (typeof d3 === 'undefined' || !d3.Delaunay) {
+    console.warn('[CY] d3-delaunay non disponibile: territory layer saltato.');
+    return;
+  }
+
   map.addSource('cy-district-territory', {
     type: 'geojson',
-    data: { type: "FeatureCollection", features }
+    data: buildDistrictTerritoryFeatures()
   });
 
-  // Riempimento morbido
+  // Sparisce del tutto da vicino (maxzoom + opacità a 0): oltre quel
+  // livello ci sono già edifici, strade e POI, e la macchia territoriale
+  // sarebbe solo un velo colorato fastidioso.
   map.addLayer({
     id: 'cy-district-territory-fill',
     type: 'fill',
     source: 'cy-district-territory',
+    maxzoom: 15,
     paint: {
       'fill-color': ['get', 'color'],
       'fill-opacity': [
         'interpolate', ['linear'], ['zoom'],
-        9, 0.16,
-        13, 0.10,
-        16, 0.05
+        9,  0.18,
+        12, 0.12,
+        14, 0.05,
+        15, 0
       ]
     }
   });
 
-  // Bordo sfumato: più linee sovrapposte a opacità decrescente per
-  // simulare un blur (i fill layer non supportano fill-blur).
   [
     { width: 10, opacity: 0.03 },
     { width: 5,  opacity: 0.05 },
@@ -3597,20 +3703,21 @@ function addDistrictTerritoryLayer() {
       id: `cy-district-territory-line-${i}`,
       type: 'line',
       source: 'cy-district-territory',
+      maxzoom: 15,
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
         'line-color': ['get', 'color'],
         'line-width': b.width,
-        'line-opacity': b.opacity,
+        'line-opacity': [
+          'interpolate', ['linear'], ['zoom'],
+          9,  b.opacity,
+          14, b.opacity * 0.4,
+          15, 0
+        ],
         'line-blur': b.width
       }
     });
   });
-
-  // NOTA: nessuna moveLayer qui dentro — a questo punto della sequenza di
-  // caricamento layer come 'cy-landmark-extrusion' non esistono ancora, e
-  // moveLayer con un beforeId inesistente lancia un'eccezione che
-  // interrompe l'intera callback map.on('load', ...) (mappa tutta nera,
-  // vedi nota nel blocco 'load' più sotto per il riordino sicuro).
 }
 
 function formatDuration(minutes) {
