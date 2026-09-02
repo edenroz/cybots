@@ -462,23 +462,33 @@ const pois = [
    ========================================================================= */
 const CYBER_PREFIXES = [
   "NEON","CHROME","RUST","VOID","GHOST","STATIC","PULSE","CIRCUIT","WIRE",
-  "BLADE","VIPER","CRASH","SPARK","FLUX","ACID","RAZOR","VECTOR","KAYTELL MAKERS™",
+  "BLADE","VIPER","CRASH","SPARK","FLUX","TOXIC","RAZOR","VECTOR","KAYTELL MAKERS™",
   "TG LABS","ALLIANSEN™","FUSE","PLASMA","PHANTOM","MOLTEN","SPECTRAL FT BANKS™","HOLLOW",
-  "CINDER","OXIDE","CYENERGY™","GRID","REBOOT","GLITCH","IRON","ACGS™",
+  "CINDER","OXIDE","CYENERGY™","GRID","OMEGA","GLITCH","IRON","ACGS™",
   "UNITED CITADEL SECURITY™","TULLES&DEVERTE™","EMBER","EPSILON","NOVA","ROYALWEST™","TRANS","TITAN",
-  "COBALT","QUARTZ","TOXIC","BINARY","GRAVF MELLBERG TOSK™","STORM","VENOM","CIPHER"
+  "COBALT","QUARTZ","ACID","BINARY","GRAVF MELLBERG TOSK™","STORM","VENOM","CIPHER",
+  "MATRIX", "PROTOCOL", "QUANTUM", "SYNTH", "OVERCLOCK", "ROOT", "KERNEL", 
+  "NULL", "ZERO", "ABYSS", "REBOOT", "ZENITH", "SYNAPSE", "DRIFT", "GEAR", 
+  "STRIKE", "CORE", "NEURO", "CHIP", "FRACTURE", "NANO", "OMNICORP™", 
+  "NECROTRONIC™", "HYPERION™", "FOSSE LABS™", "SYNDICATE™", "NEURALNET™", 
+  "FUTURA MALUM™", "HEAVYMETAL™", "HAX INSTITUTE™", "SUB-0", "OVERRIDE", "BLACKOUT",
+  "SCRAP", "SLAG", "ASH", "TAR", "FRACTAL", "NEXUS-9", "SYNTHETIC"
 ];
+
 const CYBER_SUFFIXES_MAJOR = [
   "STREET", "AVENUE", "ROAD", "DRIVE", "BOULEVARD", "HIGHWAY", 
   "CIRCUIT", "CORRIDOR", "PLAZA", "SQUARE", "JUNCTION", "LOOP", 
   "BLOCK", "CROSSING", "EXPRESSWAY", "PARKWAY", "SPINE", "ARTERY", 
-  "NEXUS", "OVERPASS", "GRID"
+  "NEXUS", "OVERPASS", "GRID",
+  "CONDUIT", "PROMENADE", "SKYWAY", "SUPERHIGHWAY", "INTERCHANGE", "RINGROAD", "TUNNEL", "VIADUCT",
+  "EXPANSE", "HIGH-GRID", "MAG-RAIL", "BOREALIS", "SPRAWL"
 ];
 
 const CYBER_SUFFIXES_MINOR = [
   "ALLEY", "LANE", "WAY", "ROW", "LINE", "WALK", "TERRACE", 
-  "ARCADE", "STRIP", "PASSAGE", "GATE", "YARD", "PATH", 
-  "COURT", "CATWALK", "VENT", "TRENCH", "SLIP", "ALCOVE", "STEP"
+  "ARCADE", "STRIP", "PASSAGE", "GATE", "SIDE", "PATH", 
+  "COURT", "CATWALK", "VENT", "TRENCH", "SLIP", "ALCOVE", "STEP", "SHAFT", "HOLE", "CHUTE", 
+  "YARD", "HIDEOUT"
 ];
 
 // Costanti dell'hash a mixing (vedi nota sopra). Usate sia dalla versione
@@ -538,17 +548,17 @@ const buildingAddressRegistry = new Map();
 // Usa ESATTAMENTE il nome cyberpunk visualizzato sulla mappa.
 const PRELOADED_STREETS = [
   {
-    name: "EMBER WAY",
+    name: "VECTOR PATH",
     lng: 18.06838,
     lat: 59.26100
   },
   {
-    name: "MOLTEN YARD, #1",
+    name: "DRIFT TRENCH, #1",
     lng: 17.87422,
     lat: 59.35089
   },
   {
-    name: "TOXIC ALCOVE",
+    name: "TOXIC YARD",
     lng: 18.04120,
     lat: 59.250015
   },
