@@ -384,11 +384,11 @@ const districts = [
   { name:"OAK ISLES",   type:"hills",  lng:17.790988, lat:59.279305, blurb:"Diversi nuovi edifici sulle Oak Isles sono costruiti secondo stili architettonici stranamente antichi e occulti. Non esistono registri pubblici riguardo alla proprietà o alla funzione di queste strutture, che si stagliano minacciosamente contro lo skyline." },
   { name:"MOSSLAKE",    type:"slums",   lng:17.805800, lat:59.4300, blurb:"Il confine nord-ovest, dove la città inizia a perdere forma." },
   { name:"EVERGREEN BAY", type:"core", lng:18.2200, lat:59.3900, blurb:"La baia orientale, verde solo di nome." },
-  { name:"OPTIMA DEPTHS", type:"core", lng:17.840, lat:59.2050, blurb:"Zona sud-ovest, poco battuta, poco raccomandata." },
+  { name:"OPTIMA DEPTHS", type:"slums", lng:17.840, lat:59.2050, blurb:"Zona sud-ovest, poco battuta, poco raccomandata." },
   { name:"LOW MEADOW",  type:"industries", lng:18.1700, lat:59.2900, blurb:"Cot Square e Sword Lake. L'ironia del nome non sfugge a nessuno." },
   { name:"BURNCHURCH HEX", type:"inbetween", lng:18.02896, lat:59.2700, blurb:"Gli impiegati salariati, gli zombie da cubicolo, gli ingranaggi della macchina vivono qui, ammassati in interminabili file di anonimi casermoni popolari. È attualmente in piena espansione, con bancarelle di cibo improvvisate che vendono carne micobiotica, coltivata illegalmente sott'acqua a G0." },
   { name:"SVÄRTA",      type:"inbetween",   lng:17.8870, lat:59.3470, blurb:"Qui vive la massa dei lavoratori di Cy: impiegati senza volto, schiavi dello stipendio e ingranaggi di un sistema che non si ferma mai. Intere famiglie sono stipate in interminabili distese di anonimi palazzoni, tutti uguali e privi di qualsiasi personalità. È stata recentemente l'epicentro di una moda sfrenata delle cyberbike, giunta a una fine violenta quando clan rivali di roadrunner bombardarono gran parte della zona, in una lotta per il dominio contro gli abitanti del posto." },
-  { name:"AQUACULTURE CAGE MAZE", type:"industries", lng:18.21469, lat:59.3360, blurb:" L'industria deve alimentare l'eterna fame consumistica di Cy.La nauseante coltre di smog avvolge soprattutto la parte occidentale di Mosscroft, alimentata dagli impianti tessili chimici della Kaytell Makers e dalla fabbrica d'armi dell'ACGS. Ma è a sud che la puzza diventa davvero insopportabile, dove AST trasforma pesce e altra biomassa in prodotti commestibili e non commestibili." },
+  { name:"AQUACULTURE CAGE MAZE", type:"industries", lng:18.24330, lat:59.3360, blurb:" L'industria deve alimentare l'eterna fame consumistica di Cy.La nauseante coltre di smog avvolge soprattutto la parte occidentale di Mosscroft, alimentata dagli impianti tessili chimici della Kaytell Makers e dalla fabbrica d'armi dell'ACGS. Ma è a sud che la puzza diventa davvero insopportabile, dove AST trasforma pesce e altra biomassa in prodotti commestibili e non commestibili." },
   { name:"BORGHOLD", type:"inbetween", lng:17.885693, lat:59.321276, blurb:"Qui viene parcheggiata la forza lavoro di Cy. Giorno dopo giorno, migliaia di persone escono dai loro appartamenti, lavorano fino allo sfinimento e tornano a dormire in enormi blocchi residenziali tutti uguali. Sorge qui il notevole complesso carcerario la rende un'eccezione, con alcune aree vecchie di quasi cinque secoli e altre nuove costruite ogni anno. Gli abitanti del luogo vivono in piccole ville o in case plurifamiliari. Isolati e diffidenti, guardano con sospetto il resto della popolazione di Cy. Conoscono la città attraverso coloro che tengono rinchiusi nelle loro gabbie." },
 ];
 
@@ -522,7 +522,7 @@ const addressRegistry = new Map();
 // più vicini (vedi sezione "NUMERI CIVICI DEGLI EDIFICI" più sotto).
 // Viene riassegnata a ogni 'idle' da refreshAddressRegistry.
 let streetLineCache = [];
-
+let streetMLineCache = [];
 // Archivio dei civici già calcolati per gli edifici 3D. Chiave: feature id
 // dell'edificio (vector tile "building"). Valore: {streetName, number, lng, lat}.
 const buildingAddressRegistry = new Map();
@@ -819,6 +819,9 @@ function refreshAddressRegistry() {
   try {
     features = map.queryRenderedFeatures({
       layers: ['cy-street-name-major', 'cy-street-name-minor']
+    });
+    streetMLineCache = map.queryRenderedFeatures({
+      layers: ['cy-street-name-major']
     });
   } catch (e) {
     try {
@@ -3535,8 +3538,8 @@ function haversineKm(a, b) {
 const TERRITORY_BOUNDS = [17.55, 59.10, 18.75, 59.55];
 const TERRITORY_LAT_CORRECTION = Math.cos((59.33 * Math.PI) / 180);
 const TERRITORY_SNAP_MAX_DIST = 0.0035; // raggio di "cattura" verso una via (~ 390m)
-const TERRITORY_SNAP_BLEND = 0.4;       // 0 = ignora le vie, 1 = aggancio totale
-const TERRITORY_SMOOTH_ITERATIONS = 2;  // più iterazioni = bordi più morbidi/arrotondati
+const TERRITORY_SNAP_BLEND = 0.8;       // 0 = ignora le vie, 1 = aggancio totale
+const TERRITORY_SMOOTH_ITERATIONS = 1;  // più iterazioni = bordi più morbidi/arrotondati
 
 let lastTerritoryStreetSnapshotSize = -1;
 
@@ -3568,7 +3571,7 @@ function chaikinSmoothRing(ring, iterations) {
 // spazio XY corretto per la latitudine usato dal Voronoi.
 function collectStreetLinesXY() {
   const lines = [];
-  streetLineCache.forEach(f => {
+  streetMLineCache.forEach(f => {
     const geom = f.geometry;
     if (!geom) return;
     const raw = geom.type === 'LineString' ? [geom.coordinates]
@@ -3655,7 +3658,7 @@ function rebuildDistrictTerritory() {
 // nel frattempo non si è scoperta nessuna nuova via).
 function maybeRebuildDistrictTerritory() {
   if (typeof d3 === 'undefined' || !d3.Delaunay) return;
-  const currentSize = streetLineCache.length;
+  const currentSize = streetMLineCache.length;
   if (currentSize === lastTerritoryStreetSnapshotSize) return;
   if (lastTerritoryStreetSnapshotSize >= 0 &&
       Math.abs(currentSize - lastTerritoryStreetSnapshotSize) < 15) return;
