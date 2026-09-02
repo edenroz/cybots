@@ -202,6 +202,54 @@
   #addr-empty{font-size:11px;color:var(--cy-grey);letter-spacing:0.5px;margin-top:8px;line-height:1.5;}
   #addr-count{font-size:10px;color:var(--cy-grey);letter-spacing:1px;margin-top:6px;text-align:right;}
 
+  /* ROUTE / DISTANCE MEASURE TOOL: small toggle button (stacked above the
+     north-reset compass) that opens a compact card panel to the left of
+     it, for picking two points and computing travel time in 4 modes. */
+  #route-toggle{
+    position:absolute;top:130px;right:10px;z-index:15;
+    width:38px;height:38px;
+    background:rgba(10,9,8,0.9);border:1px solid var(--cy-white);
+    color:var(--cy-white);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-size:16px;
+    transition:border-color 0.15s, color 0.15s;
+  }
+  #route-toggle:hover{border-color:var(--cy-yellow);color:var(--cy-yellow);}
+  #route-panel{
+    position:absolute;top:130px;right:56px;z-index:16;
+    width:280px;max-width:85vw;
+    background:rgba(10,9,8,0.95);border:1px solid rgba(232,201,58,0.5);
+    color:var(--cy-white);padding:16px 16px 14px 16px;
+    transform:translateX(120%);opacity:0;pointer-events:none;
+    transition:transform 0.25s ease, opacity 0.25s ease;
+  }
+  #route-panel.open{transform:translateX(0);opacity:1;pointer-events:auto;}
+  #route-panel h3{
+    font-family:Impact,'Arial Narrow',sans-serif;font-size:16px;margin:0 0 10px 0;
+    letter-spacing:1px;color:var(--cy-yellow);
+  }
+  #route-panel .route-hint{font-size:10px;color:var(--cy-grey);line-height:1.5;margin:0 0 10px 0;}
+  #route-panel .route-pick-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:11px;}
+  #route-panel .route-pick-btn{
+    background:rgba(242,237,228,0.08);border:1px solid rgba(242,237,228,0.35);
+    color:var(--cy-white);cursor:pointer;padding:5px 8px;font-size:11px;
+    letter-spacing:0.5px;flex:none;font-family:'Courier New',monospace;
+  }
+  #route-panel .route-pick-btn.picking{border-color:var(--cy-yellow);color:var(--cy-yellow);}
+  #route-panel .route-pick-label{font-size:10.5px;color:var(--cy-grey);letter-spacing:0.5px;flex:1;word-break:break-all;}
+  #route-calc-row{display:flex;gap:8px;margin-top:8px;}
+  #route-calc, #route-reset{
+    font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;
+    padding:7px 10px;cursor:pointer;background:rgba(232,201,58,0.12);
+    border:1px solid var(--cy-yellow);color:var(--cy-yellow);flex:1;
+  }
+  #route-calc:disabled{opacity:0.35;cursor:not-allowed;}
+  #route-reset{background:none;border-color:rgba(242,237,228,0.3);color:var(--cy-grey);flex:none;}
+  #route-results{margin-top:12px;font-size:12px;}
+  #route-results .route-dist{color:var(--cy-neon-cyan);margin-bottom:8px;letter-spacing:0.5px;}
+  #route-results .route-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(242,237,228,0.12);}
+  #route-results .route-note{margin-top:8px;font-size:10px;color:var(--cy-grey);line-height:1.5;}
+  #route-results .route-loading{color:var(--cy-grey);letter-spacing:1px;}
+
   /* Mobile: make popup panels touch-friendly, full width, and easy to dismiss */
   @media (max-width: 640px){
     #popup-panel{width:100%;max-width:100%;}
@@ -221,6 +269,17 @@
 
     #addr-bar.open{
       transform:translate(-50%, 0);
+    }
+
+    #route-toggle{
+      top:70px;right:10px;
+    }
+    #route-panel{
+      top:70px;right:auto;left:50%;width:92vw;max-width:92vw;
+      transform:translate(-50%,-140%);
+    }
+    #route-panel.open{
+      transform:translate(-50%,0);
     }
   }
 </style>
@@ -266,6 +325,25 @@
   <ul id="addr-results"></ul>
   <div id="addr-empty">Naviga ed esplora la mappa: ogni via che entra in vista viene battezzata e aggiunta qui. Più zoni visiti, più indirizzi trovi.</div>
   <div id="addr-count"></div>
+</div>
+
+<div id="route-toggle" title="Misura tempo di percorrenza" onclick="toggleRouteBar()">⏱</div>
+<div id="route-panel">
+  <h3>MISURA ROTTA</h3>
+  <div class="route-hint">Scegli due punti sulla mappa (clic su "PUNTO A"/"PUNTO B", poi clic sulla mappa) per calcolare il tempo di percorrenza reale.</div>
+  <div class="route-pick-row">
+    <button id="route-pick-a" class="route-pick-btn" onclick="startPicking('A')">PUNTO A</button>
+    <span id="route-label-a" class="route-pick-label">non impostato</span>
+  </div>
+  <div class="route-pick-row">
+    <button id="route-pick-b" class="route-pick-btn" onclick="startPicking('B')">PUNTO B</button>
+    <span id="route-label-b" class="route-pick-label">non impostato</span>
+  </div>
+  <div id="route-calc-row">
+    <button id="route-calc" onclick="calcRoute()" disabled>CALCOLA</button>
+    <button id="route-reset" onclick="resetRoute()">RESET</button>
+  </div>
+  <div id="route-results"></div>
 </div>
 
 <div id="north-reset" title="Reset direzione a nord" onclick="resetNorth()">
@@ -359,12 +437,20 @@ const pois = [
        a costo zero, senza dover interrogare le feature via JS)
      - come funzione JS equivalente (per costruire l'archivio indirizzi
        usato dalla barra di ricerca)
+
+   NOTA SULL'HASH: idx1 e idx2 vengono derivati con due moltiplicatori
+   primi scorrelati (Park-Miller / MINSTD) invece che con "id % 48" e
+   "floor(id/7) % 24": la vecchia formula aveva un periodo combinato di
+   soli 336 id (mcm(48,168)), molto più corto degli 1152 nomi teorici
+   (48x24), quindi vie completamente diverse ma con id distanti un
+   multiplo di 336 ricevevano lo stesso identico nome. La nuova formula
+   usa l'intero spazio di combinazioni in modo molto più uniforme.
    ========================================================================= */
 const CYBER_PREFIXES = [
   "NEON","CHROME","RUST","VOID","GHOST","STATIC","PULSE","CIRCUIT","WIRE",
   "BLADE","VIPER","CRASH","ECHO","TOXIC","ACID","RAZOR","VECTOR","CIPHER",
-  "TG LABS","Alliansen","FUSE","GRID","PHANTOM","REBOOT","SPARK","HOLLOW",
-  "CINDER","OXIDE","NITRO","TURBO","VENOM","GLITCH","IRON","ACGS",
+  "TG LABS","Alliansen","FUSE","GRID","PHANTOM","VENOM","SPARK","HOLLOW",
+  "CINDER","OXIDE","NITRO","TURBO","REBOOT","GLITCH","IRON","ACGS",
   "United Citadel Security","Tulles&deVerte","EMBER","EPSILON","NOVA","PLASMA","DRONE","TITAN",
   "COBALT","QUARTZ","FLUX","BINARY","SHARD","STORM","MOLTEN","Kaytell Makers"
 ];
@@ -374,29 +460,39 @@ const CYBER_SUFFIXES = [
   "TERRACE","ARCADE","CORRIDOR","STRIP","YARD","GATE","LINE","BLOCK"
 ];
 
-const HASH_MOD   = 1000003;     // primo, limita la grandezza prima del mixing
-const MULT_A     = 48271;       // moltiplicatore Park–Miller
-const MULT_B     = 16807;       // moltiplicatore MINSTD (diverso da MULT_A)
-const HASH_RANGE = 2147483647;  // 2^31 - 1
+// Costanti dell'hash a mixing (vedi nota sopra). Usate sia dalla versione
+// JS (cyberHash) sia dalla gemella espressione MapLibre
+// (cyberNameExpression): DEVONO restare identiche nelle due funzioni.
+const CYBER_HASH_MOD   = 1000003;     // primo, limita la grandezza prima del mixing
+const CYBER_HASH_MULT_A = 48271;      // moltiplicatore Park-Miller
+const CYBER_HASH_MULT_B = 16807;      // moltiplicatore MINSTD (scorrelato da MULT_A)
+const CYBER_HASH_RANGE  = 2147483647; // 2^31 - 1
 
 function cyberHash(rawId) {
-  const id = Math.abs(Math.floor(Number(rawId) || 0)) % HASH_MOD;
-  const h1 = (id * MULT_A) % HASH_RANGE;
-  const h2 = (id * MULT_B) % HASH_RANGE;
+  const id = Math.abs(Math.floor(Number(rawId) || 0)) % CYBER_HASH_MOD;
+  const h1 = (id * CYBER_HASH_MULT_A) % CYBER_HASH_RANGE;
+  const h2 = (id * CYBER_HASH_MULT_B) % CYBER_HASH_RANGE;
   const idx1 = h1 % CYBER_PREFIXES.length;
   const idx2 = h2 % CYBER_SUFFIXES.length;
   return CYBER_PREFIXES[idx1] + " " + CYBER_SUFFIXES[idx2];
 }
 
+// Espressione MapLibre gemella di cyberHash(), usata come text-field.
 function cyberNameExpression() {
-  const idMod = ["%", ["abs", ["to-number", ["id"]]], HASH_MOD];
-  const h1 = ["%", ["*", idMod, MULT_A], HASH_RANGE];
-  const h2 = ["%", ["*", idMod, MULT_B], HASH_RANGE];
+  const idMod = ["%", ["abs", ["to-number", ["id"]]], CYBER_HASH_MOD];
+  const h1 = ["%", ["*", idMod, CYBER_HASH_MULT_A], CYBER_HASH_RANGE];
+  const h2 = ["%", ["*", idMod, CYBER_HASH_MULT_B], CYBER_HASH_RANGE];
   return [
     "concat",
-    ["at", ["%", h1, CYBER_PREFIXES.length], ["literal", CYBER_PREFIXES]],
+    ["at",
+      ["%", h1, CYBER_PREFIXES.length],
+      ["literal", CYBER_PREFIXES]
+    ],
     " ",
-    ["at", ["%", h2, CYBER_SUFFIXES.length], ["literal", CYBER_SUFFIXES]]
+    ["at",
+      ["%", h2, CYBER_SUFFIXES.length],
+      ["literal", CYBER_SUFFIXES]
+    ]
   ];
 }
 
@@ -408,17 +504,17 @@ const addressRegistry = new Map();
 // Usa ESATTAMENTE il nome cyberpunk visualizzato sulla mappa.
 const PRELOADED_STREETS = [
   {
-    name: "EMBER LINE",
+    name: "IRON LANE",
     lng: 18.06838,
     lat: 59.26100
   },
   {
-    name: "REBOOT CROSSING",
+    name: "REBOOT LANE",
     lng: 17.87836,
     lat: 59.35089
   },
   {
-    name: "RAZOR TERRACE",
+    name: "VECTOR ALLEY",
     lng: 18.04120,
     lat: 59.250015
   }
@@ -649,6 +745,7 @@ function addStreetNameLayer() {
   // utile per "volarci sopra" e confermare al volo un nome ai giocatori.
   ['cy-street-name-major','cy-street-name-minor'].forEach(layerId => {
     map.on('click', layerId, (e) => {
+      if (selectingPoint) return;
       const f = e.features[0];
       const cyName = cyberHash(f.id);
       if (!isMobile) {
@@ -2228,6 +2325,7 @@ function addLandmarkLayer() {
   });
 
   map.on('click', 'cy-landmark-extrusion', (e) => {
+    if (selectingPoint) return;
     const p = e.features[0].properties;
     openPanel({ name: p.name, type: 'landmark', blurb: p.blurb, color: p.color });
   });
@@ -2830,7 +2928,10 @@ function addDistrictLayer() {
   // correttamente i tap (senza trascinamento) in eventi 'click' anche su
   // touch, quindi il gestore 'click' qui sotto basta da solo — non serve
   // alcun listener 'touchend' aggiuntivo.
-  map.on('click', 'cy-district-dot', (e) => openPanel(e.features[0].properties));
+  map.on('click', 'cy-district-dot', (e) => {
+    if (selectingPoint) return;
+    openPanel(e.features[0].properties);
+  });
 }
 
 /* =========================================================================
@@ -2867,6 +2968,7 @@ function addPoiLayer() {
   map.on('mouseenter', 'cy-poi-marker', () => map.getCanvas().style.cursor = 'pointer');
   map.on('mouseleave', 'cy-poi-marker', () => map.getCanvas().style.cursor = '');
   map.on('click', 'cy-poi-marker', (e) => {
+    if (selectingPoint) return;
     const p = e.features[0].properties;
     openPanel({ name: p.name, type: p.category, blurb: p.blurb, color: '#c8102e' });
   });
@@ -3132,6 +3234,191 @@ map.on('rotate', () => {
 map.on('mousemove', (e) => {
   document.getElementById('coord-lng').textContent = e.lngLat.lng.toFixed(5);
   document.getElementById('coord-lat').textContent = e.lngLat.lat.toFixed(5);
+});
+
+/* =========================================================================
+   MISURA ROTTA — tempo di percorrenza reale tra due punti
+   4 modalità:
+     - A PIEDI / AUTO: routing reale sulla vera rete stradale di Stoccolma
+       (le coordinate del mondo di gioco sono le coordinate geografiche
+       reali), tramite l'istanza pubblica gratuita OSRM di FOSSGIS
+       (routing.openstreetmap.de) — nessuna chiave richiesta. È un servizio
+       demo gratuito e a volte lento/instabile: in caso di errore il
+       risultato per quella modalità viene mostrato come "n/d".
+     - MEZZI PUBBLICI: nessun routing reale su linee/orari (richiederebbe
+       una chiave gratuita Trafiklab/ResRobot, non configurata qui) — STIMA
+       basata su una velocità media di trasporto pubblico urbano più un
+       margine fisso per cammino verso la fermata + attesa/interscambio.
+     - ELICOTTERO: distanza in linea retta (formula di Haversine sulle
+       vere coordinate geografiche) a velocità di crociera costante di
+       300 km/h.
+   ========================================================================= */
+let selectingPoint = null; // 'A' | 'B' | null
+const routePoints = { A: null, B: null };
+const routeMarkers = { A: null, B: null };
+
+const OSRM_BASE = 'https://routing.openstreetmap.de';
+const OSRM_PROFILES = {
+  foot: { service: 'routed-foot', mode: 'foot' },
+  car:  { service: 'routed-car',  mode: 'driving' }
+};
+const HELICOPTER_SPEED_KMH = 300;
+const TRANSIT_AVG_SPEED_KMH = 22; // velocità media stimata mezzi pubblici urbani (soste incluse)
+const TRANSIT_OVERHEAD_MIN = 9;   // stima fissa: cammino verso la fermata + attesa media + eventuale cambio
+
+function haversineKm(a, b) {
+  const R = 6371;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function formatDuration(minutes) {
+  if (!isFinite(minutes) || minutes < 0) return '—';
+  const totalMin = Math.round(minutes);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h <= 0) return `${m} min`;
+  return `${h}h ${String(m).padStart(2, '0')}min`;
+}
+
+function toggleRouteBar(force) {
+  const bar = document.getElementById('route-panel');
+  const open = force !== undefined ? force : !bar.classList.contains('open');
+  bar.classList.toggle('open', open);
+  if (!open) {
+    selectingPoint = null;
+    updateRouteButtons();
+  }
+}
+
+function updateRouteButtons() {
+  const btnA = document.getElementById('route-pick-a');
+  const btnB = document.getElementById('route-pick-b');
+  btnA.classList.toggle('picking', selectingPoint === 'A');
+  btnB.classList.toggle('picking', selectingPoint === 'B');
+  document.getElementById('route-label-a').textContent = routePoints.A
+    ? `${routePoints.A.lat.toFixed(5)}, ${routePoints.A.lng.toFixed(5)}` : 'non impostato';
+  document.getElementById('route-label-b').textContent = routePoints.B
+    ? `${routePoints.B.lat.toFixed(5)}, ${routePoints.B.lng.toFixed(5)}` : 'non impostato';
+  document.getElementById('route-calc').disabled = !(routePoints.A && routePoints.B);
+}
+
+function startPicking(which) {
+  selectingPoint = selectingPoint === which ? null : which;
+  updateRouteButtons();
+}
+
+function setRoutePoint(which, lngLat) {
+  routePoints[which] = { lng: lngLat.lng, lat: lngLat.lat };
+  if (routeMarkers[which]) routeMarkers[which].remove();
+  const el = document.createElement('div');
+  el.style.width = '16px';
+  el.style.height = '16px';
+  el.style.borderRadius = '50%';
+  el.style.background = which === 'A' ? '#00fff2' : '#ff2ee6';
+  el.style.border = '2px solid #f2ede4';
+  el.style.boxShadow = '0 0 6px rgba(0,0,0,0.7)';
+  routeMarkers[which] = new maplibregl.Marker({ element: el })
+    .setLngLat([lngLat.lng, lngLat.lat])
+    .addTo(map);
+  selectingPoint = null;
+  updateRouteButtons();
+  drawRouteLine();
+  document.getElementById('route-results').innerHTML = '';
+}
+
+function drawRouteLine() {
+  if (!routePoints.A || !routePoints.B) return;
+  const data = {
+    type: 'Feature',
+    properties: {},
+    geometry: {
+      type: 'LineString',
+      coordinates: [[routePoints.A.lng, routePoints.A.lat], [routePoints.B.lng, routePoints.B.lat]]
+    }
+  };
+  if (map.getSource('cy-route-line')) {
+    map.getSource('cy-route-line').setData(data);
+  } else {
+    map.addSource('cy-route-line', { type: 'geojson', data });
+    map.addLayer({
+      id: 'cy-route-line-layer',
+      type: 'line',
+      source: 'cy-route-line',
+      paint: {
+        'line-color': '#e8c93a',
+        'line-width': 2,
+        'line-dasharray': [1, 2],
+        'line-opacity': 0.85
+      }
+    });
+  }
+}
+
+async function fetchOsrmMinutes(profileKey, a, b) {
+  const profile = OSRM_PROFILES[profileKey];
+  const url = `${OSRM_BASE}/${profile.service}/route/v1/${profile.mode}/${a.lng},${a.lat};${b.lng},${b.lat}?overview=false`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('OSRM error ' + res.status);
+  const json = await res.json();
+  if (!json.routes || !json.routes.length) throw new Error('Nessuna rotta trovata');
+  return json.routes[0].duration / 60; // secondi -> minuti
+}
+
+async function calcRoute() {
+  if (!routePoints.A || !routePoints.B) return;
+  const resultsEl = document.getElementById('route-results');
+  resultsEl.innerHTML = '<div class="route-loading">CALCOLO IN CORSO…</div>';
+
+  const distKm = haversineKm(routePoints.A, routePoints.B);
+  const heliMin = (distKm / HELICOPTER_SPEED_KMH) * 60;
+  const transitMin = (distKm / TRANSIT_AVG_SPEED_KMH) * 60 + TRANSIT_OVERHEAD_MIN;
+
+  let footMin = null, carMin = null, footErr = false, carErr = false;
+  try {
+    footMin = await fetchOsrmMinutes('foot', routePoints.A, routePoints.B);
+  } catch (e) { footErr = true; }
+  try {
+    carMin = await fetchOsrmMinutes('car', routePoints.A, routePoints.B);
+  } catch (e) { carErr = true; }
+
+  resultsEl.innerHTML = `
+    <div class="route-dist">Distanza in linea retta: ${distKm.toFixed(2)} km</div>
+    <div class="route-row"><span>🚶 A piedi</span><span>${footErr ? 'n/d' : formatDuration(footMin)}</span></div>
+    <div class="route-row"><span>🚌 Mezzi pubblici (stima)</span><span>${formatDuration(transitMin)}</span></div>
+    <div class="route-row"><span>🚗 Auto</span><span>${carErr ? 'n/d' : formatDuration(carMin)}</span></div>
+    <div class="route-row"><span>🚁 Elicottero</span><span>${formatDuration(heliMin)}</span></div>
+    ${(footErr || carErr) ? '<div class="route-note">Il routing gratuito a volte è lento o non disponibile: se manca un valore, riprova tra poco premendo di nuovo CALCOLA.</div>' : ''}
+    <div class="route-note">Mezzi pubblici: stima approssimata (velocità media + attesa), non un vero routing su linee e orari reali.</div>
+  `;
+}
+
+function resetRoute() {
+  routePoints.A = null;
+  routePoints.B = null;
+  selectingPoint = null;
+  ['A', 'B'].forEach(k => {
+    if (routeMarkers[k]) { routeMarkers[k].remove(); routeMarkers[k] = null; }
+  });
+  if (map.getLayer('cy-route-line-layer')) map.removeLayer('cy-route-line-layer');
+  if (map.getSource('cy-route-line')) map.removeSource('cy-route-line');
+  document.getElementById('route-results').innerHTML = '';
+  updateRouteButtons();
+}
+
+// Cattura il prossimo clic sulla mappa come punto A o B quando la relativa
+// selezione è attiva. È un listener generico (non su un layer specifico):
+// tutti gli altri gestori 'click' su layer già presenti nel file
+// controllano `selectingPoint` a inizio callback e non fanno nulla mentre
+// una selezione è in corso, per non aprire per sbaglio il pannello di un
+// distretto/POI/via/palazzo mentre si sta scegliendo un punto rotta.
+map.on('click', (e) => {
+  if (!selectingPoint) return;
+  setRoutePoint(selectingPoint, e.lngLat);
 });
 </script>
 </body>
