@@ -3545,8 +3545,8 @@ function haversineKm(a, b) {
 const TERRITORY_BOUNDS = [17.55, 59.10, 18.75, 59.55];
 const TERRITORY_LAT_CORRECTION = Math.cos((59.33 * Math.PI) / 180);
 const TERRITORY_SNAP_MAX_DIST = 0.0035; // raggio di "cattura" verso una via (~ 390m)
-const TERRITORY_SNAP_BLEND = 0.8;       // 0 = ignora le vie, 1 = aggancio totale
-const TERRITORY_SMOOTH_ITERATIONS = 3;  // più iterazioni = bordi più morbidi/arrotondati
+const TERRITORY_SNAP_BLEND = 1;       // 0 = ignora le vie, 1 = aggancio totale
+const TERRITORY_SMOOTH_ITERATIONS = 0;  // più iterazioni = bordi più morbidi/arrotondati
 
 let lastTerritoryStreetSnapshotSize = -1;
 
