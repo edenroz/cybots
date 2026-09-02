@@ -374,26 +374,29 @@ const CYBER_SUFFIXES = [
   "TERRACE","ARCADE","CORRIDOR","STRIP","YARD","GATE","LINE","BLOCK"
 ];
 
+const HASH_MOD   = 1000003;     // primo, limita la grandezza prima del mixing
+const MULT_A     = 48271;       // moltiplicatore Park–Miller
+const MULT_B     = 16807;       // moltiplicatore MINSTD (diverso da MULT_A)
+const HASH_RANGE = 2147483647;  // 2^31 - 1
+
 function cyberHash(rawId) {
-  const id = Math.abs(Math.floor(Number(rawId) || 0));
-  const idx1 = id % CYBER_PREFIXES.length;
-  const idx2 = Math.floor(id / 7) % CYBER_SUFFIXES.length;
+  const id = Math.abs(Math.floor(Number(rawId) || 0)) % HASH_MOD;
+  const h1 = (id * MULT_A) % HASH_RANGE;
+  const h2 = (id * MULT_B) % HASH_RANGE;
+  const idx1 = h1 % CYBER_PREFIXES.length;
+  const idx2 = h2 % CYBER_SUFFIXES.length;
   return CYBER_PREFIXES[idx1] + " " + CYBER_SUFFIXES[idx2];
 }
 
-// Espressione MapLibre gemella di cyberHash(), usata come text-field.
 function cyberNameExpression() {
+  const idMod = ["%", ["abs", ["to-number", ["id"]]], HASH_MOD];
+  const h1 = ["%", ["*", idMod, MULT_A], HASH_RANGE];
+  const h2 = ["%", ["*", idMod, MULT_B], HASH_RANGE];
   return [
     "concat",
-    ["at",
-      ["%", ["abs", ["to-number", ["id"]]], CYBER_PREFIXES.length],
-      ["literal", CYBER_PREFIXES]
-    ],
+    ["at", ["%", h1, CYBER_PREFIXES.length], ["literal", CYBER_PREFIXES]],
     " ",
-    ["at",
-      ["%", ["floor", ["/", ["abs", ["to-number", ["id"]]], 7]], CYBER_SUFFIXES.length],
-      ["literal", CYBER_SUFFIXES]
-    ]
+    ["at", ["%", h2, CYBER_SUFFIXES.length], ["literal", CYBER_SUFFIXES]]
   ];
 }
 
