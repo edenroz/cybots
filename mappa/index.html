@@ -3389,11 +3389,11 @@ async function calcRoute() {
   resultsEl.innerHTML = `
     <div class="route-dist">Distanza in linea retta: ${distKm.toFixed(2)} km</div>
     <div class="route-row"><span>🚶 A piedi</span><span>${footErr ? 'n/d' : formatDuration(footMin)}</span></div>
-    <div class="route-row"><span>🚌 Mezzi pubblici (stima)</span><span>${formatDuration(transitMin)}</span></div>
+    <div class="route-row"><span>🚌 Mezzi pubblici</span><span>${formatDuration(transitMin)}</span></div>
     <div class="route-row"><span>🚗 Auto</span><span>${carErr ? 'n/d' : formatDuration(carMin)}</span></div>
-    <div class="route-row"><span>🚁 Elicottero</span><span>${formatDuration(heliMin)}</span></div>
+    <div class="route-row"><span>🚁 Octoptero</span><span>${formatDuration(heliMin)}</span></div>
     ${(footErr || carErr) ? '<div class="route-note">Il routing gratuito a volte è lento o non disponibile: se manca un valore, riprova tra poco premendo di nuovo CALCOLA.</div>' : ''}
-    <div class="route-note">Mezzi pubblici: stima approssimata (velocità media + attesa), non un vero routing su linee e orari reali.</div>
+    <div class="route-note"></div>
   `;
 }
 
