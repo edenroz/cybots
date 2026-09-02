@@ -500,14 +500,30 @@ const CYBER_HASH_MULT_B = 16807;      // moltiplicatore MINSTD (scorrelato da MU
 const CYBER_HASH_RANGE  = 2147483647; // 2^31 - 1
 
 function cyberHash(rawId, type = 'minor') {
-  const suffixes = (type === 'major') ? CYBER_SUFFIXES_MAJOR : CYBER_SUFFIXES_MINOR;
-  const id = Math.abs(Math.floor(Number(rawId) || 0)) % CYBER_HASH_MOD;
-  const h1 = (id * CYBER_HASH_MULT_A) % CYBER_HASH_RANGE;
-  const h2 = (id * CYBER_HASH_MULT_B) % CYBER_HASH_RANGE;
-  const idx1 = h1 % CYBER_PREFIXES.length;
-  const idx2 = h2 % suffixes.length;
 
-  return CYBER_PREFIXES[idx1] + " " + suffixes[idx2];
+  const suffixes =
+    type === 'major'
+      ? CYBER_SUFFIXES_MAJOR
+      : CYBER_SUFFIXES_MINOR;
+
+  // Normalizza l'ID
+  let x = Math.abs(Math.floor(Number(rawId) || 0)) >>> 0;
+
+  // 32-bit integer hash (avalanche)
+  x = Math.imul(x ^ (x >>> 16), 0x21f0aaad);
+  x = Math.imul(x ^ (x >>> 15), 0x735a2d97);
+  x ^= x >>> 15;
+
+  // Secondo valore derivato indipendentemente
+  let y = Math.imul(x ^ 0x9e3779b9, 0x85ebca6b);
+  y ^= y >>> 13;
+  y = Math.imul(y, 0xc2b2ae35);
+  y ^= y >>> 16;
+
+  const idx1 = x % CYBER_PREFIXES.length;
+  const idx2 = y % suffixes.length;
+
+  return `${CYBER_PREFIXES[idx1]} ${suffixes[idx2]}`;
 }
 
 // Espressione MapLibre gemella di cyberHash(), usata come text-field.
@@ -806,8 +822,9 @@ function addStreetNameLayer() {
     map.on('click', layerId, (e) => {
       if (selectingPoint) return;
       const f = e.features[0];
-      const streetType = layerId.includes('major') ? 'major' : 'minor';
-      const cyName = cyberHash(f.id, streetType);
+
+      const layerId = f.layer && f.layer.id ? f.layer.id : '';
+      const streetType = layerId.includes('major') ? 'major' : 'minor';      const cyName = cyberHash(f.id, streetType);
 
       if (!isMobile) {
       openPanel({
@@ -990,12 +1007,13 @@ function civicNumberFor(t, side) {
 // Calcola (senza toccare i registri) l'indirizzo di un singolo edificio,
 // usando la cache di vie attualmente caricate. Ritorna null se non c'è
 // abbastanza contesto (nessuna via in cache, geometria non valida, ecc.).
-function buildingAddressForFeature(feature) {
+function buildingAddressForFeature(feature, type = 'minor') {
+
   const centroid = computeBuildingCentroid(feature.geometry);
   if (!centroid || !streetLineCache.length) return null;
   const nearest = nearestStreetForPoint(centroid, streetLineCache);
   if (!nearest) return null;
-  const streetName = cyberHash(nearest.feature.id);
+  const streetName = cyberHash(nearest.feature.id, type);
   const number = civicNumberFor(nearest.t, nearest.side);
   return { streetName, number, lng: centroid[0], lat: centroid[1] };
 }
@@ -1051,9 +1069,14 @@ function refreshBuildingAddresses() {
   }
   let added = 0;
   features.forEach(f => {
+
     if (f.id === undefined || f.id === null) return;
     if (buildingAddressRegistry.has(f.id)) return;
-    const addr = buildingAddressForFeature(f);
+
+        const layerId = f.layer && f.layer.id ? f.layer.id : '';
+    const streetType = layerId.includes('major') ? 'major' : 'minor';
+
+    const addr = buildingAddressForFeature(f, streetType);
     if (!addr) return;
     buildingAddressRegistry.set(f.id, addr);
     added++;
@@ -1175,6 +1198,49 @@ function addLandmarkLayer() {
             ],
             [
               17.88993,
+              59.3435097
+            ]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "@dr_neo101",
+        "height": 100,
+        "base": 0,
+        "color": "#e8c93a",
+        "blurb": "Il covo/laboratorio del ripperdoc Dr Neo. Un edificio basso ma pesantemente sorvegliato, meglio citofonare. Piccolo accesso posteriore sul retro."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              17.8899299,
+              59.3435097
+            ],
+            [
+              17.8900511,
+              59.343619
+            ],
+            [
+              17.8890146,
+              59.3438596
+            ],
+            [
+              17.889069,
+              59.3436259
+            ],
+            [
+              17.8894094,
+              59.3436005
+            ],
+            [
+              17.8897485,
+              59.3435564
+            ],
+            [
+              17.8899299,
               59.3435097
             ]]]
       }
