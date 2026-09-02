@@ -3375,15 +3375,17 @@ async function calcRoute() {
   resultsEl.innerHTML = '<div class="route-loading">CALCOLO IN CORSO…</div>';
 
   const distKm = haversineKm(routePoints.A, routePoints.B);
-  const heliMin = (distKm / HELICOPTER_SPEED_KMH) * 60;
-  const transitMin = (distKm / TRANSIT_AVG_SPEED_KMH) * 60 + TRANSIT_OVERHEAD_MIN;
+  const heliMin = (distKm / HELICOPTER_SPEED_KMH) * 60 * 2;
+  const transitMin = (distKm / TRANSIT_AVG_SPEED_KMH) * 60 + TRANSIT_OVERHEAD_MIN * 1.8;
 
   let footMin = null, carMin = null, footErr = false, carErr = false;
   try {
     footMin = await fetchOsrmMinutes('foot', routePoints.A, routePoints.B);
+    footMin = footMin * 2; // stima cammino verso la fermata + attesa media
   } catch (e) { footErr = true; }
   try {
     carMin = await fetchOsrmMinutes('car', routePoints.A, routePoints.B);
+    carMin = carMin * 2; // stima cammino verso la fermata + attesa media
   } catch (e) { carErr = true; }
 
   resultsEl.innerHTML = `
