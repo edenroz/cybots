@@ -500,6 +500,16 @@ function cyberNameExpression() {
 // refreshAddressRegistry più sotto). Chiave: feature id.
 const addressRegistry = new Map();
 
+// Cache delle geometrie stradali (linee complete, non solo il punto medio)
+// attualmente caricate, usata per calcolare i numeri civici degli edifici
+// più vicini (vedi sezione "NUMERI CIVICI DEGLI EDIFICI" più sotto).
+// Viene riassegnata a ogni 'idle' da refreshAddressRegistry.
+let streetLineCache = [];
+
+// Archivio dei civici già calcolati per gli edifici 3D. Chiave: feature id
+// dell'edificio (vector tile "building"). Valore: {streetName, number, lng, lat}.
+const buildingAddressRegistry = new Map();
+
 // Vie che il GM vuole rendere disponibili ai giocatori fin dall'inizio.
 // Usa ESATTAMENTE il nome cyberpunk visualizzato sulla mappa.
 const PRELOADED_STREETS = [
@@ -549,7 +559,7 @@ map.keyboard.disable();
 // Anche il drag-rotate nativo (tasto destro o Ctrl+trascina) ha una
 // sensibilità piuttosto alta e non regolabile via opzioni. Lo
 // disabilitiamo e implementiamo lo stesso gesto con un fattore di
-// sensibilità ridotto e configurabile (vedi ROTATE_SENSITIVITY /
+// sensibilità ridotta e configurabile (vedi ROTATE_SENSITIVITY /
 // PITCH_SENSITIVITY più sotto).
 map.dragRotate.disable();
 
@@ -654,6 +664,7 @@ map.on('load', () => {
   addMeteorCraterLayer();
   addPoiLayer();
   addStreetNameLayer();
+  addBuildingClickHandlers();
   buildPoiList();
 
   // Solo ora la mappa ha i colori e i layer custom applicati. 'idle' scatta
@@ -677,6 +688,10 @@ map.on('load', () => {
   // o il caricamento di nuove tile), aggiorniamo l'archivio indirizzi con
   // le vie attualmente visibili, per alimentare la barra di ricerca.
   map.on('idle', refreshAddressRegistry);
+  // ...e, di conseguenza (usa la cache di geometrie stradali appena
+  // aggiornata sopra), calcoliamo i numeri civici dei nuovi edifici 3D
+  // entrati in vista.
+  map.on('idle', refreshBuildingAddresses);
 });
 
 /* =========================================================================
@@ -785,6 +800,10 @@ function refreshAddressRegistry() {
       return;
     }
   }
+  // Teniamo da parte le geometrie complete (non solo il punto medio): ci
+  // servono per calcolare i civici degli edifici più vicini a ogni via
+  // (vedi refreshBuildingAddresses più sotto).
+  streetLineCache = features;
   let added = 0;
   features.forEach(f => {
     if (f.id === undefined || f.id === null) return;
@@ -817,6 +836,197 @@ function refreshAddressRegistry() {
   });
   if (added > 0) refreshAddrResultsIfOpen();
   updateAddrCount();
+}
+
+/* =========================================================================
+   NUMERI CIVICI DEGLI EDIFICI
+   Gli edifici 3D (vector tile "building") non portano con sé alcun
+   indirizzo. Per dare comunque un civico coerente a ogni palazzo:
+     1. si calcola il centroide del poligono dell'edificio;
+     2. si proietta quel centroide sulla via cyberpunk più vicina tra
+        quelle attualmente in cache (streetLineCache), ottenendo sia la
+        distanza (per scegliere la via più vicina) sia un parametro "t"
+        (0..1 = posizione lungo la via) e il "lato" della strada su cui
+        si trova l'edificio (destra/sinistra rispetto alla direzione
+        della via);
+     3. il civico è derivato in modo puramente geometrico da t e lato
+        (numeri pari da un lato, dispari dall'altro, come da convenzione
+        europea) — niente hash casuale, quindi resta stabile nel tempo
+        finché la geometria di via/edificio non cambia.
+   Il risultato viene mostrato sia come etichetta numerica sugli edifici
+   (da zoom 15.5 in su) sia nel pannello quando si clicca un edificio.
+   ========================================================================= */
+function computeBuildingCentroid(geom) {
+  let ring = null;
+  if (geom && geom.type === 'Polygon' && geom.coordinates.length) {
+    ring = geom.coordinates[0];
+  } else if (geom && geom.type === 'MultiPolygon' && geom.coordinates.length && geom.coordinates[0].length) {
+    ring = geom.coordinates[0][0];
+  }
+  if (!ring || !ring.length) return null;
+  let sx = 0, sy = 0;
+  ring.forEach(c => { sx += c[0]; sy += c[1]; });
+  return [sx / ring.length, sy / ring.length];
+}
+
+// Distanza (al quadrato, in gradi) tra il punto p e il segmento a-b, più
+// il parametro t (0..1) del punto proiettato lungo il segmento e il lato
+// (>=0 / <0) su cui giace p rispetto alla direzione a->b.
+function pointToSegmentInfo(p, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const lenSq = dx * dx + dy * dy;
+  let t = lenSq > 0 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / lenSq : 0;
+  t = Math.max(0, Math.min(1, t));
+  const projX = a[0] + t * dx, projY = a[1] + t * dy;
+  const ddx = p[0] - projX, ddy = p[1] - projY;
+  const distSq = ddx * ddx + ddy * ddy;
+  const cross = dx * (p[1] - a[1]) - dy * (p[0] - a[0]);
+  return { t, distSq, side: cross >= 0 ? 1 : -1 };
+}
+
+// Trova, tra le feature stradali fornite, il punto più vicino a p e
+// restituisce la via, la posizione lungo l'intera via (0..1) e il lato.
+function nearestStreetForPoint(p, streetFeatures) {
+  let best = null;
+  streetFeatures.forEach(f => {
+    const geom = f.geometry;
+    if (!geom) return;
+    const lines = geom.type === 'LineString' ? [geom.coordinates]
+      : geom.type === 'MultiLineString' ? geom.coordinates
+      : [];
+    lines.forEach(line => {
+      if (!line || line.length < 2) return;
+      const segLens = [];
+      for (let i = 0; i < line.length - 1; i++) {
+        const dx = line[i + 1][0] - line[i][0], dy = line[i + 1][1] - line[i][1];
+        segLens.push(Math.sqrt(dx * dx + dy * dy));
+      }
+      const totalLen = segLens.reduce((a, b) => a + b, 0) || 1;
+      let acc = 0;
+      for (let i = 0; i < line.length - 1; i++) {
+        const info = pointToSegmentInfo(p, line[i], line[i + 1]);
+        if (!best || info.distSq < best.distSq) {
+          const along = (acc + info.t * segLens[i]) / totalLen;
+          best = { feature: f, distSq: info.distSq, t: along, side: info.side };
+        }
+        acc += segLens[i];
+      }
+    });
+  });
+  return best;
+}
+
+// Numero civico puramente geometrico: pari/dispari a seconda del lato,
+// crescente lungo la via (t=0 -> vicino all'inizio, t=1 -> vicino alla fine).
+function civicNumberFor(t, side) {
+  let n = Math.max(1, Math.round(t * 120)) * 2;
+  if (side < 0) n -= 1;
+  if (n < 1) n = side < 0 ? 1 : 2;
+  return n;
+}
+
+// Calcola (senza toccare i registri) l'indirizzo di un singolo edificio,
+// usando la cache di vie attualmente caricate. Ritorna null se non c'è
+// abbastanza contesto (nessuna via in cache, geometria non valida, ecc.).
+function buildingAddressForFeature(feature) {
+  const centroid = computeBuildingCentroid(feature.geometry);
+  if (!centroid || !streetLineCache.length) return null;
+  const nearest = nearestStreetForPoint(centroid, streetLineCache);
+  if (!nearest) return null;
+  const streetName = cyberHash(nearest.feature.id);
+  const number = civicNumberFor(nearest.t, nearest.side);
+  return { streetName, number, lng: centroid[0], lat: centroid[1] };
+}
+
+// Ricostruisce (o crea al primo utilizzo) il layer di etichette numeriche
+// sugli edifici a partire dal contenuto corrente di buildingAddressRegistry.
+function rebuildBuildingAddressSource() {
+  const feats = [];
+  buildingAddressRegistry.forEach(addr => {
+    feats.push({
+      type: 'Feature',
+      properties: { number: String(addr.number), street: addr.streetName },
+      geometry: { type: 'Point', coordinates: [addr.lng, addr.lat] }
+    });
+  });
+  const data = { type: 'FeatureCollection', features: feats };
+  if (map.getSource('cy-building-addresses')) {
+    map.getSource('cy-building-addresses').setData(data);
+  } else {
+    map.addSource('cy-building-addresses', { type: 'geojson', data });
+    map.addLayer({
+      id: 'cy-building-address-label',
+      type: 'symbol',
+      source: 'cy-building-addresses',
+      minzoom: 15.5,
+      layout: {
+        'text-field': ['get', 'number'],
+        'text-font': ['Noto Sans Regular'],
+        'text-size': 10,
+        'text-allow-overlap': false,
+        'text-anchor': 'center'
+      },
+      paint: {
+        'text-color': '#e8c93a',
+        'text-halo-color': '#0a0908',
+        'text-halo-width': 1.2
+      }
+    });
+  }
+}
+
+// Ad ogni 'idle' (dopo refreshAddressRegistry, che aggiorna streetLineCache),
+// calcola il civico dei nuovi edifici 3D entrati in vista. Limitato a zoom
+// 15+ per evitare di processare migliaia di edifici quando la mappa è
+// ancora molto lontana.
+function refreshBuildingAddresses() {
+  if (map.getZoom() < 15 || !streetLineCache.length) return;
+  let features = [];
+  try {
+    features = map.querySourceFeatures('openmaptiles', { sourceLayer: 'building' });
+  } catch (e) {
+    return;
+  }
+  let added = 0;
+  features.forEach(f => {
+    if (f.id === undefined || f.id === null) return;
+    if (buildingAddressRegistry.has(f.id)) return;
+    const addr = buildingAddressForFeature(f);
+    if (!addr) return;
+    buildingAddressRegistry.set(f.id, addr);
+    added++;
+  });
+  if (added > 0) rebuildBuildingAddressSource();
+}
+
+// Aggiunge i gestori di click a tutti i layer di edifici 3D originali
+// dello stile (quelli il cui id contiene "building"), mostrando nel
+// pannello laterale la via cyberpunk più vicina e il civico assegnato.
+function addBuildingClickHandlers() {
+  const style = map.getStyle();
+  style.layers.forEach(layer => {
+    if (layer.type !== 'fill-extrusion') return;
+    if (!layer.id.toLowerCase().includes('building')) return;
+    map.on('click', layer.id, (e) => {
+      if (selectingPoint) return;
+      const f = e.features[0];
+      let addr = (f.id !== undefined && f.id !== null) ? buildingAddressRegistry.get(f.id) : null;
+      if (!addr) addr = buildingAddressForFeature(f);
+      if (!addr) return;
+      openPanel({
+        name: addr.streetName + ' ' + addr.number,
+        type: 'edificio',
+        color: '#e8c93a',
+        blurb: 'Edificio anonimo di Cy. Nessun dato ulteriore in archivio.<br>[DLC LOCKED]<br>Questo contenuto non è stato acquistato. La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>[ACQUISTA DLC]<br>499.99¤'
+      });
+      if (f.id !== undefined && f.id !== null && !buildingAddressRegistry.has(f.id)) {
+        buildingAddressRegistry.set(f.id, addr);
+        rebuildBuildingAddressSource();
+      }
+    });
+    map.on('mouseenter', layer.id, () => { if (!selectingPoint) map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', layer.id, () => { map.getCanvas().style.cursor = ''; });
+  });
 }
 
 /* =========================================================================
