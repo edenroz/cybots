@@ -3374,9 +3374,9 @@ async function calcRoute() {
   const resultsEl = document.getElementById('route-results');
   resultsEl.innerHTML = '<div class="route-loading">CALCOLO IN CORSO…</div>';
 
-  const distKm = haversineKm(routePoints.A, routePoints.B);
-  const heliMin = (distKm / HELICOPTER_SPEED_KMH) * 60 * 2;
-  const transitMin = (distKm / TRANSIT_AVG_SPEED_KMH) * 60 + TRANSIT_OVERHEAD_MIN * 1.8;
+  const distKm = haversineKm(routePoints.A, routePoints.B) * 2;
+  const heliMin = (distKm / HELICOPTER_SPEED_KMH) * 60;
+  const transitMin = (distKm / TRANSIT_AVG_SPEED_KMH) * 60 + TRANSIT_OVERHEAD_MIN;
 
   let footMin = null, carMin = null, footErr = false, carErr = false;
   try {
