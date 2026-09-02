@@ -454,11 +454,17 @@ const CYBER_PREFIXES = [
   "UNITED CITADEL SECURITY™","TULLES&DEVERTE™","EMBER","EPSILON","NOVA","ROYALWEST™","TRANS","TITAN",
   "COBALT","QUARTZ","TOXIC","BINARY","GRAVF MELLBERG TOSK™","STORM","MOLTEN","CIPHER"
 ];
-const CYBER_SUFFIXES = [
-  "STREET","AVENUE","ROAD","DRIVE","ALLEY","LANE","CIRCUIT","BOULEVARD",
-  "WAY","ROW","LINE","PLAZA","LOOP","JUNCTION","WALK","CROSSING",
-  "TERRACE","ARCADE","CORRIDOR","STRIP","PASSAGE","GATE","YARD","BLOCK",
-  "HIGHWAY","SQUARE"
+const CYBER_SUFFIXES_MAJOR = [
+  "STREET", "AVENUE", "ROAD", "DRIVE", "BOULEVARD", "HIGHWAY", 
+  "CIRCUIT", "CORRIDOR", "PLAZA", "SQUARE", "JUNCTION", "LOOP", 
+  "BLOCK", "CROSSING", "EXPRESSWAY", "PARKWAY", "SPINE", "ARTERY", 
+  "NEXUS", "OVERPASS", "GRID"
+];
+
+const CYBER_SUFFIXES_MINOR = [
+  "ALLEY", "LANE", "WAY", "ROW", "LINE", "WALK", "TERRACE", 
+  "ARCADE", "STRIP", "PASSAGE", "GATE", "YARD", "PATH", 
+  "COURT", "CATWALK", "VENT", "TRENCH", "SLIP", "ALCOVE", "STEP"
 ];
 
 // Costanti dell'hash a mixing (vedi nota sopra). Usate sia dalla versione
@@ -469,17 +475,20 @@ const CYBER_HASH_MULT_A = 48271;      // moltiplicatore Park-Miller
 const CYBER_HASH_MULT_B = 16807;      // moltiplicatore MINSTD (scorrelato da MULT_A)
 const CYBER_HASH_RANGE  = 2147483647; // 2^31 - 1
 
-function cyberHash(rawId) {
+function cyberHash(rawId, type = 'minor') {
+  const suffixes = (type === 'major') ? CYBER_SUFFIXES_MAJOR : CYBER_SUFFIXES_MINOR;
   const id = Math.abs(Math.floor(Number(rawId) || 0)) % CYBER_HASH_MOD;
   const h1 = (id * CYBER_HASH_MULT_A) % CYBER_HASH_RANGE;
   const h2 = (id * CYBER_HASH_MULT_B) % CYBER_HASH_RANGE;
   const idx1 = h1 % CYBER_PREFIXES.length;
-  const idx2 = h2 % CYBER_SUFFIXES.length;
-  return CYBER_PREFIXES[idx1] + " " + CYBER_SUFFIXES[idx2];
+  const idx2 = h2 % suffixes.length;
+
+  return CYBER_PREFIXES[idx1] + " " + suffixes[idx2];
 }
 
 // Espressione MapLibre gemella di cyberHash(), usata come text-field.
-function cyberNameExpression() {
+function cyberNameExpression(rawId, type = 'minor') {
+  const suffixes = (type === 'major') ? CYBER_SUFFIXES_MAJOR : CYBER_SUFFIXES_MINOR;
   const idMod = ["%", ["abs", ["to-number", ["id"]]], CYBER_HASH_MOD];
   const h1 = ["%", ["*", idMod, CYBER_HASH_MULT_A], CYBER_HASH_RANGE];
   const h2 = ["%", ["*", idMod, CYBER_HASH_MULT_B], CYBER_HASH_RANGE];
@@ -491,8 +500,8 @@ function cyberNameExpression() {
     ],
     " ",
     ["at",
-      ["%", h2, CYBER_SUFFIXES.length],
-      ["literal", CYBER_SUFFIXES]
+      ["%", h2, suffixes.length],
+      ["literal", suffixes]
     ]
   ];
 }
@@ -515,22 +524,22 @@ const buildingAddressRegistry = new Map();
 // Usa ESATTAMENTE il nome cyberpunk visualizzato sulla mappa.
 const PRELOADED_STREETS = [
   {
-    name: "EMBER LINE",
+    name: "EMBER WAY",
     lng: 18.06838,
     lat: 59.26100
   },
   {
-    name: "VENOM LANE, #1",
+    name: "VENOM PARKWAY, #1",
     lng: 17.87422,
     lat: 59.35089
   },
   {
-    name: "TOXIC YARD",
+    name: "TOXIC ALCOVE",
     lng: 18.04120,
     lat: 59.250015
   },
   {
-    name: "REBOOT DRIVE, #31a",
+    name: "REBOOT PASSAGE, #31a",
     lng: 17.88201,
     lat: 59.34821
   }
@@ -768,7 +777,9 @@ function addStreetNameLayer() {
     map.on('click', layerId, (e) => {
       if (selectingPoint) return;
       const f = e.features[0];
-      const cyName = cyberHash(f.id);
+      const streetType = layerId.includes('major') ? 'major' : 'minor';
+      const cyName = cyberHash(f.id, streetType);
+
       if (!isMobile) {
       openPanel({
         name: cyName,
@@ -794,31 +805,40 @@ function addStreetNameLayer() {
 function refreshAddressRegistry() {
   let features = [];
   try {
-    features = map.querySourceFeatures('openmaptiles', {
-      sourceLayer: 'transportation_name'
+    features = map.queryRenderedFeatures({
+      layers: ['cy-street-name-major', 'cy-street-name-minor']
     });
   } catch (e) {
     try {
-      features = map.queryRenderedFeatures({
-        layers: ['cy-street-name-major', 'cy-street-name-minor']
+      features = map.querySourceFeatures('openmaptiles', {
+        sourceLayer: 'transportation_name'
       });
     } catch (e2) {
       return;
     }
   }
-  // Teniamo da parte le geometrie complete (non solo il punto medio): ci
-  // servono per calcolare i civici degli edifici più vicini a ogni via
-  // (vedi refreshBuildingAddresses più sotto).
+
+  // Teniamo da parte le geometrie complete
   streetLineCache = features;
   let added = 0;
+
   features.forEach(f => {
     if (f.id === undefined || f.id === null) return;
-    const cyName = cyberHash(f.id);
+
+    // 1. Riconosciamo se la via appartiene a major o minor dal layer Mapbox
+    const layerId = f.layer && f.layer.id ? f.layer.id : '';
+    const streetType = layerId.includes('major') ? 'major' : 'minor';
+
+    // 2. Passiamo il tipo a cyberHash per scegliere il suffisso corretto
+    const cyName = cyberHash(f.id, streetType);
     const normalizedName = cyName.trim().toUpperCase();
+    
     const isPreloaded = PRELOADED_STREETS.some(
       street => street.name.trim().toUpperCase() === normalizedName
     );
+
     if (!isPreloaded && addressRegistry.has(f.id)) return;
+
     let coords = null;
     const geom = f.geometry;
     if (geom && geom.type === 'LineString' && geom.coordinates.length) {
@@ -827,19 +847,23 @@ function refreshAddressRegistry() {
       const line = geom.coordinates[Math.floor(geom.coordinates.length / 2)];
       coords = line[Math.floor(line.length / 2)];
     }
+
     if (!coords) return;
+
     if (!addressRegistry.has(f.id)) {
       addressRegistry.set(f.id, {
         name: cyName,
         lng: coords[0],
         lat: coords[1],
-        preloaded: isPreloaded
+        preloaded: isPreloaded,
+        type: streetType // Salviamo il tipo per usi futuri
       });
       added++;
     } else if (isPreloaded) {
       addressRegistry.get(f.id).preloaded = true;
     }
   });
+
   if (added > 0) refreshAddrResultsIfOpen();
   updateAddrCount();
 }
