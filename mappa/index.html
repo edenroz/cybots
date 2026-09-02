@@ -18,6 +18,7 @@
     --cy-white:#f2ede4;
     --cy-neon-cyan:#00fff2;
     --cy-neon-magenta:#ff2ee6;
+    --cy-dark-gray:#333131;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;height:100%;background:var(--cy-black);overflow:hidden;
@@ -300,6 +301,7 @@
   <div class="row"><div class="sw" style="background:var(--cy-purple)"></div>SLUMS</div>
   <div class="row"><div class="sw" style="background:var(--cy-yellow);opacity:0.85"></div>INDUSTRIES</div>
   <div class="row"><div class="sw" style="background:var(--cy-grey)"></div>HILLS</div>
+  <div class="row"><div class="sw" style="background:var(--cy-dark-gray)"></div>INBETWEEN</div>
 </div>
 
 <div id="popup-panel">
@@ -372,7 +374,7 @@ const districts = [
   { name:"MOSSCROFT",   type:"industries", lng:18.1600, lat:59.3600, blurb:"L'isola d'acciaio di Mosscroft è la più fetida di tutte, un inferno tossico grande quasi quanto Central. Un labirinto di filo spinato, fabbriche che vomitano fumi velenosi e centrali elettriche spinte ben oltre il limite, dove lavoratori sfruttati e sottopagati vengono ammassati come bestiame e mandati a sgobbare finché non crollano." },
   { name:"BARNYARD FIELDS", type:"slums", lng:18.085335, lat:59.340571, blurb:"Gli Heirs celebrano i loro sacramenti neri e rituali di sangue Nanomantici nei Barnyard Fields, tingendoli di rosso in nome dei demoni alieni a due teste che venerano." },
   { name:"NORTH CENTRAL", type:"core", lng:17.9570, lat:59.3230, blurb:"Un tempo zona di boschi e ville, Central è salita alla ribalta dopo l'Incidente. I suoi terreni un tempo modesti sono stati devastati e trasformati in un orizzonte d'acciaio fatto di grattacieli e arcologie, il tutto sotto lo sguardo calcolatore degli uffici delle corporation. Un coffin apartment costa più di quanto potresti guadagnare in dieci vite. E non ti permetterà di dimenticarlo. Le SecCorps sono onnipresenti; le loro giurisdizioni sono limitate e regolamentate da contratti ferrei, in una competizione diretta e spietata. Sono il pugno coercitivo destinato agli estranei e agli intrusi. Qui i crimini sono da colletti bianchi: finanziari, ad alto rendimento e con poche condanne. I ricchi restano al di sopra della legge." },
-  { name:"SOUTH CENTRAL", type:"core", lng:17.9700, lat:59.2750, blurb:"South Central è dominata dalla megacorporation Alliansen Inc., dallo studio legale mafioso Gravf/Mellberg/Tosk e dall'attuale coppia di superstar Tulles&deVerte. Il Neon Pillar proietta un sole fluorescente su North Central: qui si trovano il quartier generale di Spectral FT Banks & Holdings e un megatempio della società-chiesa affiliata Fideistic Transformation, che promette la singolarità eterna e una coscienza caricata in una mente-cloud divina." },
+  { name:"SOUTH CENTRAL", type:"core", lng:17.964809, lat:59.298416, blurb:"South Central è dominata dalla megacorporation Alliansen Inc., dallo studio legale mafioso Gravf/Mellberg/Tosk e dall'attuale coppia di superstar Tulles&deVerte. Il Neon Pillar proietta un sole fluorescente su North Central: qui si trovano il quartier generale di Spectral FT Banks & Holdings e un megatempio della società-chiesa affiliata Fideistic Transformation, che promette la singolarità eterna e una coscienza caricata in una mente-cloud divina." },
   { name:"THE ARCS",    type:"core",   lng:17.9200, lat:59.3050, blurb:"Tre grandi sconfinate arcologie." },
   { name:"LAKETON",     type:"slums",  lng:18.106968, lat:59.304988, blurb:"A Laketon, i muri sono marci e impregnati di umidità; fanghi contaminati filtrano dalla G0 e provocano epidemie di nanomuffa nelle riserve d'acqua." },
   { name:"GALGBACKEN",  type:"hills",  lng:18.103013, lat:59.293701, blurb:"È un quartiere della vecchia élite. Qui vivono tre delle persone più influenti di Cy: il CEO di UCS, United Citadel Security, il signor O.B.P. Gunner; la presidente del consiglio di amministrazione di Alliansen Inc., la signora Lia; e il dottor Daevy, capo ricercatore di TG Labs." },
@@ -382,17 +384,18 @@ const districts = [
   { name:"EVERGREEN BAY", type:"core", lng:18.2200, lat:59.3900, blurb:"La baia orientale, verde solo di nome." },
   { name:"OPTIMA DEPTHS", type:"core", lng:17.840, lat:59.2050, blurb:"Zona sud-ovest, poco battuta, poco raccomandata." },
   { name:"LOW MEADOW",  type:"industries", lng:18.1700, lat:59.2900, blurb:"Cot Square e Sword Lake. L'ironia del nome non sfugge a nessuno." },
-  { name:"BURNCHURCH HEX", type:"slums", lng:18.0600, lat:59.2700, blurb:"Gli impiegati salariati, gli zombie da cubicolo, gli ingranaggi della macchina vivono qui, ammassati in interminabili file di anonimi casermoni popolari. È attualmente in piena espansione, con bancarelle di cibo improvvisate che vendono carne micobiotica, coltivata illegalmente sott'acqua a G0." },
-  { name:"SVÄRTA",      type:"core",   lng:17.8870, lat:59.3470, blurb:"Qui vive la massa dei lavoratori di Cy: impiegati senza volto, schiavi dello stipendio e ingranaggi di un sistema che non si ferma mai. Intere famiglie sono stipate in interminabili distese di anonimi palazzoni, tutti uguali e privi di qualsiasi personalità. È stata recentemente l'epicentro di una moda sfrenata delle cyberbike, giunta a una fine violenta quando clan rivali di roadrunner bombardarono gran parte della zona, in una lotta per il dominio contro gli abitanti del posto." },
+  { name:"BURNCHURCH HEX", type:"inbetween", lng:18.02896, lat:59.2700, blurb:"Gli impiegati salariati, gli zombie da cubicolo, gli ingranaggi della macchina vivono qui, ammassati in interminabili file di anonimi casermoni popolari. È attualmente in piena espansione, con bancarelle di cibo improvvisate che vendono carne micobiotica, coltivata illegalmente sott'acqua a G0." },
+  { name:"SVÄRTA",      type:"inbetween",   lng:17.8870, lat:59.3470, blurb:"Qui vive la massa dei lavoratori di Cy: impiegati senza volto, schiavi dello stipendio e ingranaggi di un sistema che non si ferma mai. Intere famiglie sono stipate in interminabili distese di anonimi palazzoni, tutti uguali e privi di qualsiasi personalità. È stata recentemente l'epicentro di una moda sfrenata delle cyberbike, giunta a una fine violenta quando clan rivali di roadrunner bombardarono gran parte della zona, in una lotta per il dominio contro gli abitanti del posto." },
   { name:"AQUACULTURE CAGE MAZE", type:"industries", lng:18.21469, lat:59.3360, blurb:" L'industria deve alimentare l'eterna fame consumistica di Cy.La nauseante coltre di smog avvolge soprattutto la parte occidentale di Mosscroft, alimentata dagli impianti tessili chimici della Kaytell Makers e dalla fabbrica d'armi dell'ACGS. Ma è a sud che la puzza diventa davvero insopportabile, dove AST trasforma pesce e altra biomassa in prodotti commestibili e non commestibili." },
-  { name:"BORGHOLD", type:"core", lng:17.885693, lat:59.321276, blurb:"Qui viene parcheggiata la forza lavoro di Cy. Giorno dopo giorno, migliaia di persone escono dai loro appartamenti, lavorano fino allo sfinimento e tornano a dormire in enormi blocchi residenziali tutti uguali. Sorge qui il notevole complesso carcerario la rende un'eccezione, con alcune aree vecchie di quasi cinque secoli e altre nuove costruite ogni anno. Gli abitanti del luogo vivono in piccole ville o in case plurifamiliari. Isolati e diffidenti, guardano con sospetto il resto della popolazione di Cy. Conoscono la città attraverso coloro che tengono rinchiusi nelle loro gabbie." },
+  { name:"BORGHOLD", type:"inbetween", lng:17.885693, lat:59.321276, blurb:"Qui viene parcheggiata la forza lavoro di Cy. Giorno dopo giorno, migliaia di persone escono dai loro appartamenti, lavorano fino allo sfinimento e tornano a dormire in enormi blocchi residenziali tutti uguali. Sorge qui il notevole complesso carcerario la rende un'eccezione, con alcune aree vecchie di quasi cinque secoli e altre nuove costruite ogni anno. Gli abitanti del luogo vivono in piccole ville o in case plurifamiliari. Isolati e diffidenti, guardano con sospetto il resto della popolazione di Cy. Conoscono la città attraverso coloro che tengono rinchiusi nelle loro gabbie." },
 ];
 
 const typeColor = {
   core:      "#c8102e",
   slums:     "#8c3a7a",
   industries:"#e8c93a",
-  hills:     "#b9b6b0"
+  hills:     "#b9b6b0",
+  inbetween:  "#333131"
 };
 
 /* =========================================================================
