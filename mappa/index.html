@@ -1418,7 +1418,60 @@ function addBuildingClickHandlers() {
     map.on('mouseleave', layer.id, () => { map.getCanvas().style.cursor = ''; });
   });
 }
+function registerLandmarkAddresses(features) {
+  // Controllo di sicurezza per evitare errori se l'array è vuoto o non definito
+  if (!features || !Array.isArray(features)) return;
 
+  features.forEach((feature, idx) => {
+    const props = feature.properties;
+    if (!props || !props.address) return;
+
+    const fullAddress = props.address.trim().toUpperCase();
+    const match = fullAddress.match(/^([^#]+),\s*#?(\d+)/);
+    const street = match ? match[1].trim() : fullAddress;
+    const number = match ? parseInt(match[2], 10) : null;
+
+    const centroid = computeBuildingCentroid(feature.geometry);
+    if (!centroid) return;
+    const [lng, lat] = centroid;
+
+    // Registra nella barra di ricerca indirizzi
+    const addrKey = `landmark:${street}#${number || idx}`;
+    if (!addressRegistry.has(addrKey)) {
+      addressRegistry.set(addrKey, {
+        name: fullAddress,
+        lng: lng,
+        lat: lat,
+        preloaded: true,
+        type: 'major',
+        custom: true
+      });
+    }
+
+    // Registra per la logica delle descrizioni custom
+    const customEntry = {
+      street: street,
+      number: number,
+      lng: lng,
+      lat: lat,
+      radius: 0.0008,
+      name: props.name || (number ? `Edificio #${number}` : fullAddress),
+      color: props.color || "#e8c93a",
+      blurb: props.blurb
+    };
+
+    if (street && number !== null) {
+      const key = `${street}#${number}`;
+      if (!customBuildingByAddress.has(key)) {
+        customBuildingByAddress.set(key, customEntry);
+      }
+    }
+    customBuildingByCoords.push(customEntry);
+  });
+
+  refreshAddrResultsIfOpen();
+  updateAddrCount();
+}
 /* =========================================================================
    LANDMARK BUILDINGS (3D)
    ========================================================================= */
@@ -1431,6 +1484,7 @@ function addLandmarkLayer() {
         "height": 20,
         "base": 0,
         "color": "#e8c93a",
+        "address": "BLADE AVENUE, #56",
         "blurb": "Il covo/laboratorio del ripperdoc Dr Neo. Un edificio basso ma pesantemente sorvegliato, meglio citofonare. Piccolo accesso posteriore sul retro."
       },
       "geometry": {
@@ -3190,6 +3244,7 @@ function addLandmarkLayer() {
     }
   ];
 
+  registerLandmarkAddresses(landmarkFeatures);
   map.addSource('cy-landmarks', {
     type: 'geojson',
     data: { type: "FeatureCollection", features: landmarkFeatures }
@@ -3207,12 +3262,25 @@ function addLandmarkLayer() {
     }
   });
 
+  registerLandmarkAddresses();
+
+  // Gestione click sul layer landmark
   map.on('click', 'cy-landmark-extrusion', (e) => {
     if (selectingPoint) return;
     const p = e.features[0].properties;
-    openPanel({ name: p.name, type: 'landmark', blurb: p.blurb, color: p.color });
+    const addrTag = p.address 
+      ? `<br><span style="opacity:0.55;font-size:10px;letter-spacing:1px;">${p.address}</span>` 
+      : '';
+
+    openPanel({
+      name: p.name || 'Landmark',
+      type: 'landmark',
+      color: p.color || '#e8c93a',
+      blurb: (p.blurb || '') + addrTag
+    });
   });
-  map.on('mouseenter', 'cy-landmark-extrusion', () => map.getCanvas().style.cursor = 'pointer');
+
+  map.on('mouseenter', 'cy-landmark-extrusion', () => { if (!selectingPoint) map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'cy-landmark-extrusion', () => map.getCanvas().style.cursor = '');
 }
 
