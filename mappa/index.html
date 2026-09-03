@@ -650,7 +650,7 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     lat: 59.34843,
     radius: 0.0006,
     name: "Edificio #31 — Reboot Passage",
-    rotation: 30, // opzionale, in gradi (0 = nord)
+    rotation: 50, // opzionale, in gradi (0 = nord)
     color: "#00fff2",
     blurb: "Scrivi qui la descrizione speciale di questo edificio."
   }
@@ -793,7 +793,7 @@ function addCustomBuildingLayer() {
     source: 'cy-custom-building-cubes',
     paint: {
       'fill-extrusion-color': ['get', 'color'],
-      'fill-extrusion-height': 14,
+      'fill-extrusion-height': 1,
       'fill-extrusion-base': 0,
       'fill-extrusion-opacity': 0.95
     }
