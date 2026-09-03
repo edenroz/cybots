@@ -4026,7 +4026,7 @@ function renderAddrResults(query) {
   }
   entries.slice(0, 60).forEach(entry => {
     const li = document.createElement('li');
-    li.innerHTML = `<span>${entry.name}</span><span class="fly-hint">${entry.preloaded ? 'VOLA →' : 'VOLA ↗'}</span>`;
+    li.innerHTML = `<span>${entry.name}</span><span class="fly-hint">${entry.preloaded ? '👤 VOLA' : '↗ VOLA'}</span>`;
 
     // BUG PRECEDENTE: qui si ricalcolava un nome con cyberHash(entry.id, ...),
     // ma entry.id ed entry.layer non esistono MAI sugli oggetti salvati in
