@@ -728,22 +728,12 @@ function findCustomDescriptionForStreet(streetName) {
   if (ret == null) {
     console.log(`findCustomDescriptionForStreet: no exact match for ${streetName}, trying street-only match`);
 
-    ret = landmarkFeatures.find(entry => {
-      //console.log(entry);
-      const entryStreet = entry.properties?.street?.trim().toUpperCase();
-      const entryNumber = Number(entry.properties?.number);
-
-      // console.log("Comparing:", {
-      //   wantedStreet: street,
-      //   entryStreet,
-      //   wantedNumber: number,
-      //   entryNumber
-      // });
+    ret = landmarkFeatures.find(entry => 
       entry.properties?.street &&
-      number === entry.properties?.number &&
-      street.includes(entry.properties?.street.trim().toUpperCase())
-    }) || null;
-
+      number === Number(entry.properties?.number) &&
+      street.includes(entry.properties?.street?.trim().toUpperCase())
+    ) || null;
+    console.log("street-only match result:", ret);
     return ret?.properties
   }
   console.log("return ret =", ret);
@@ -3165,7 +3155,7 @@ function addLandmarkLayer() {
               height: 0.3, 
               base: 0, 
               color: "#1FD400",
-              street: "DRIFT TRENCH, #1",
+              street: "DRIFT TRENCH",
               number: 1,
               subAddress: "a0_1",
               blurb: "Un'discarica clandestina dove veicoli e cyberware rubati cambiano identità nel giro di una notte." },
