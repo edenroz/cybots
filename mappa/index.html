@@ -690,6 +690,51 @@ function findCustomBuildingDescription(addr) {
   return null;
 }
 
+// Ritorna la (prima) voce di CUSTOM_BUILDING_DESCRIPTIONS il cui campo
+// "street" corrisponde al nome cyberpunk della via passata, oppure null.
+// Usata per far comparire, nel pannello descrittivo di UNA STRADA (non di
+// un edificio), il blurb personalizzato che l'hai associata a quella via
+// tramite { street: "...", ... } — al posto del testo generico
+// "Strada di Cy. [DLC LOCKED]...".
+function findCustomDescriptionForStreet(streetName) {
+  if (!streetName) return null;
+
+  const match = streetName.match(
+    /^\s*(.+?)\s*,\s*#(\d+)\s+§(.+?)\s*$/i
+  );
+
+  if (!match) return null;
+
+  const street = match[1].trim().toUpperCase();
+  const number = Number(match[2]);
+  const subAddress = match[3].trim().toLowerCase();
+
+  return CUSTOM_BUILDING_DESCRIPTIONS.find(entry =>
+    entry.street &&
+    entry.street.trim().toUpperCase() === street &&
+    Number(entry.number) === number &&
+    entry.subAddress &&
+    entry.subAddress.trim().toLowerCase() === subAddress
+  ) || null;
+}
+
+// Costruisce il blurb da mostrare nel pannello di una via: se esiste una
+// voce di CUSTOM_BUILDING_DESCRIPTIONS agganciata a quella via (tramite
+// "street"), usa il suo blurb (con eventuale civico in coda); altrimenti
+// ricade sul testo generico "[DLC LOCKED]" con il prezzo indicato.
+function streetPanelBlurb(streetName, dlcPrice) {
+  const custom = findCustomDescriptionForStreet(streetName);
+  console.log(streetName, custom, CUSTOM_BUILDING_DESCRIPTIONS);
+  if (custom && custom.blurb) {
+    const addrTag = custom.number !== undefined
+      ? `<br><span style="opacity:0.55;font-size:10px;letter-spacing:1px;">${streetName}, #${custom.number}</span>`
+      : '';
+    return custom.blurb + addrTag;
+  }
+  return 'Strada di Cy.<br>[DLC LOCKED]<br>Questo contenuto non è stato acquistato. La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>[ACQUISTA DLC]<br>' +
+    dlcPrice + '¤<br>L\'infrastruttura ringrazia.';
+}
+
 /* =========================================================================
    CUBI DEGLI EDIFICI PERSONALIZZATI + REGISTRAZIONE NELL'ARCHIVIO INDIRIZZI
    Per ogni edificio con una descrizione in CUSTOM_BUILDING_DESCRIPTIONS:
@@ -1074,14 +1119,10 @@ function addStreetNameLayer() {
         color: layerId === 'cy-street-name-major'
           ? '#00fff2'
           : '#ff8cf1',
-        blurb:
-          'Strada di Cy.<br>' +
-          '[DLC LOCKED]<br>' +
-          'Questo contenuto non è stato acquistato. ' +
-          'La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>' +
-          '[ACQUISTA DLC]<br>' +
-          '699.99¤<br>' +
-          'L\'infrastruttura ringrazia.'
+        // Se questa via ha una descrizione personalizzata (CUSTOM_BUILDING_
+        // DESCRIPTIONS con street: cyName), la mostriamo al posto del
+        // testo generico "[DLC LOCKED]".
+        blurb: streetPanelBlurb(cyName, '699.99')
       });
     }
   });
@@ -3253,7 +3294,16 @@ function addLandmarkLayer() {
     paint: {
       'fill-extrusion-color': ['get', 'color'],
       'fill-extrusion-height': ['get', 'height'],
-      'fill-extrusion-base': ['get', 'base'],
+      // FIX "base troppo alta": la specifica fill-extrusion di MapLibre/
+      // Mapbox GL richiede che la base sia SEMPRE <= dell'altezza. Se
+      // (ri)alzando manualmente il campo "base" di un edificio in
+      // landmarkFeatures questo finisce per superare "height", il
+      // renderer produce geometria degenere: pareti che si intersecano,
+      // poligoni invertiti/z-fighting, o l'edificio che sparisce del
+      // tutto — esattamente il bug segnalato. L'espressione ['min', ...]
+      // clampa la base al valore dell'altezza in fase di rendering,
+      // qualunque valore venga scritto in "base": non serve più stare
+      // attenti a non superare "height" a mano.
       'fill-extrusion-base': ['min', ['get', 'base'], ['get', 'height']],
       'fill-extrusion-opacity': 0.9
     }
@@ -4042,7 +4092,10 @@ function renderAddrResults(query) {
         name: entry.name,
         type: entry.type || 'minor',
         color: '#00fff2',
-        blurb: 'Strada di Cy.<br>[DLC LOCKED]<br>Questo contenuto non è stato acquistato. La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>[ACQUISTA DLC]<br>799.99¤<br>L\'infrastruttura ringrazia.'
+        // Come per il click diretto sull'etichetta stradale: se questa
+        // via ha una descrizione personalizzata, la mostriamo al posto
+        // del testo generico "[DLC LOCKED]".
+        blurb: streetPanelBlurb(entry.name, '799.99')
       });
       }
       if (isMobile) toggleAddrBar(false);
