@@ -607,6 +607,92 @@ const PRELOADED_STREETS = [
 ];
 
 /* =========================================================================
+   DESCRIZIONI PERSONALIZZATE DEGLI EDIFICI
+   Per default ogni edificio cliccato mostra il testo generico "[DLC
+   LOCKED]". Per dare a un edificio specifico un nome e una descrizione
+   tue, aggiungi una voce qui sotto. Puoi agganciarla in due modi
+   (anche insieme, usa quello più comodo):
+
+   1) PER INDIRIZZO — comodo da scrivere, usa via + civico esattamente
+      come appaiono nel pannello dell'edificio o sull'etichetta numerica
+      gialla che compare sopra i palazzi da zoom 15.5 in su:
+        { street: "REBOOT PASSAGE", number: 31, ... }
+      Limite da conoscere: il civico è calcolato in base alla posizione
+      lungo la via TRA QUELLE GIÀ ESPLORATE in quella sessione di gioco.
+      Se in futuro esplori la mappa in un ordine diverso (o dopo un
+      refresh della pagina), lo stesso edificio potrebbe in teoria
+      ricevere un civico leggermente diverso.
+
+   2) PER COORDINATE — un filo più scomodo da scrivere ma sempre stabile,
+      perché non dipende da nessun civico calcolato: apri la mappa,
+      passa il mouse sull'edificio che vuoi e leggi lng/lat dal
+      riquadro in basso al centro, poi:
+        { lng: 17.88201, lat: 59.34821, radius: 0.0006, ... }
+      "radius" è il raggio di cattura in gradi (0.0006 ≈ 60-70 metri):
+      qualunque edificio con centro entro questa distanza dal punto
+      indicato userà questa descrizione.
+
+   Se un edificio combacia con PIÙ voci, vince la prima trovata in questo
+   array (indirizzo prima, poi coordinate), quindi metti le voci più
+   specifiche in cima se mai dovessero sovrapporsi.
+   ========================================================================= */
+const CUSTOM_BUILDING_DESCRIPTIONS = [
+  {
+    // Esempio già pronto: l'edificio #31 di REBOOT PASSAGE che hai
+    // citato. Ho anche aggiunto l'aggancio per coordinate, usando lo
+    // stesso punto già presente in PRELOADED_STREETS qui sopra, così hai
+    // subito un fallback stabile — modifica pure name/blurb come vuoi,
+    // oppure elimina la riga lng/lat/radius se preferisci affidarti solo
+    // al civico.
+    street: "REBOOT PASSAGE",
+    number: 31,
+    lng: 17.88201,
+    lat: 59.34821,
+    radius: 0.0006,
+    name: "Edificio #31 — Reboot Passage",
+    color: "#00fff2",
+    blurb: "Scrivi qui la descrizione speciale di questo edificio."
+  }
+  // Aggiungi altre voci qui, separate da virgola, seguendo lo stesso schema.
+];
+
+// Costruito automaticamente dall'array sopra: indice per indirizzo
+// (lookup immediato) e lista separata per le voci a coordinate (che
+// vanno invece confrontate per distanza).
+const customBuildingByAddress = new Map();
+const customBuildingByCoords = [];
+CUSTOM_BUILDING_DESCRIPTIONS.forEach(entry => {
+  if (entry.street !== undefined && entry.number !== undefined) {
+    const key = `${entry.street.trim().toUpperCase()}#${entry.number}`;
+    if (!customBuildingByAddress.has(key)) customBuildingByAddress.set(key, entry);
+  }
+  if (entry.lng !== undefined && entry.lat !== undefined) {
+    customBuildingByCoords.push(entry);
+  }
+});
+
+// Ritorna la voce di CUSTOM_BUILDING_DESCRIPTIONS che corrisponde
+// all'indirizzo dell'edificio (addr = {streetName, number, lng, lat}
+// come restituito da buildingAddressForFeature), oppure null se non c'è
+// nessuna descrizione speciale per quell'edificio.
+function findCustomBuildingDescription(addr) {
+  if (!addr) return null;
+
+  const addressKey = `${(addr.streetName || '').trim().toUpperCase()}#${addr.number}`;
+  const byAddress = customBuildingByAddress.get(addressKey);
+  if (byAddress) return byAddress;
+
+  for (const entry of customBuildingByCoords) {
+    const dx = addr.lng - entry.lng;
+    const dy = addr.lat - entry.lat;
+    const radius = entry.radius || 0.0006;
+    if ((dx * dx + dy * dy) <= radius * radius) return entry;
+  }
+
+  return null;
+}
+
+/* =========================================================================
    MAP INITIALIZATION
    ========================================================================= */
 const map = new maplibregl.Map({
@@ -1089,9 +1175,14 @@ function buildingAddressForFeature(feature) {
 function rebuildBuildingAddressSource() {
   const feats = [];
   buildingAddressRegistry.forEach(addr => {
+    const custom = findCustomBuildingDescription(addr);
     feats.push({
       type: 'Feature',
-      properties: { number: String(addr.number), street: addr.streetName },
+      properties: {
+        number: String(addr.number),
+        street: addr.streetName,
+        custom: !!custom
+      },
       geometry: { type: 'Point', coordinates: [addr.lng, addr.lat] }
     });
   });
@@ -1108,12 +1199,17 @@ function rebuildBuildingAddressSource() {
       layout: {
         'text-field': ['get', 'number'],
         'text-font': ['Noto Sans Regular'],
-        'text-size': 10,
+        // Gli edifici con una descrizione personalizzata (vedi
+        // CUSTOM_BUILDING_DESCRIPTIONS) hanno il numero civico un po' più
+        // grande, per farli spiccare durante l'esplorazione.
+        'text-size': ['case', ['get', 'custom'], 13, 10],
         'text-allow-overlap': false,
         'text-anchor': 'center'
       },
       paint: {
-        'text-color': '#e8c93a',
+        // Numero ciano per gli edifici con descrizione personalizzata,
+        // giallo (colore originale) per tutti gli altri.
+        'text-color': ['case', ['get', 'custom'], '#00fff2', '#e8c93a'],
         'text-halo-color': '#0a0908',
         'text-halo-width': 1.2
       }
@@ -1161,12 +1257,26 @@ function addBuildingClickHandlers() {
       let addr = (f.id !== undefined && f.id !== null) ? buildingAddressRegistry.get(f.id) : null;
       if (!addr) addr = buildingAddressForFeature(f);
       if (!addr) return;
-      openPanel({
-        name: 'Edificio #' + addr.number,
-        type: 'edificio',
-        color: '#e8c93a',
-        blurb: 'Edificio anonimo di Cy. Nessun dato ulteriore in archivio.<br>[DLC LOCKED]<br>Questo contenuto non è stato acquistato. La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>[ACQUISTA DLC]<br>499.99¤'
-      });
+
+      // Se questo edificio compare in CUSTOM_BUILDING_DESCRIPTIONS (per
+      // indirizzo o per coordinate), mostriamo la descrizione tua invece
+      // del testo generico "[DLC LOCKED]".
+      const custom = findCustomBuildingDescription(addr);
+      if (custom) {
+        openPanel({
+          name: custom.name || ('Edificio #' + addr.number),
+          type: 'edificio',
+          color: custom.color || '#e8c93a',
+          blurb: `${custom.blurb}<br><span style="opacity:0.55;font-size:10px;letter-spacing:1px;">${addr.streetName}, #${addr.number}</span>`
+        });
+      } else {
+        openPanel({
+          name: 'Edificio #' + addr.number,
+          type: 'edificio',
+          color: '#e8c93a',
+          blurb: 'Edificio anonimo di Cy. Nessun dato ulteriore in archivio.<br>[DLC LOCKED]<br>Questo contenuto non è stato acquistato. La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>[ACQUISTA DLC]<br>499.99¤'
+        });
+      }
       if (f.id !== undefined && f.id !== null && !buildingAddressRegistry.has(f.id)) {
         buildingAddressRegistry.set(f.id, addr);
         rebuildBuildingAddressSource();
