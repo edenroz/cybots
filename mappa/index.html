@@ -699,33 +699,54 @@ function findCustomBuildingDescription(addr) {
 function findCustomDescriptionForStreet(streetName) {
   if (!streetName) return null;
 
+  console.log(streetName);
   const match = streetName.match(
-    /^\s*(.+?)\s*,\s*#(\d+)\s+§(.+?)\s*$/i
+    /^\s*(.+?)\s*,\s*#(\d+)(?:\s+§(.+?))?\s*$/i
   );
 
   if (!match) return null;
 
   const street = match[1].trim().toUpperCase();
   const number = Number(match[2]);
-  const subAddress = match[3].trim().toLowerCase();
-
+  const subAddress = match[3]?.trim().toLowerCase() || null;
+  console.log("lavoro con");
+  console.log(street, number, subAddress);
   let ret = CUSTOM_BUILDING_DESCRIPTIONS.find(entry =>
     entry.street &&
     entry.street.trim().toUpperCase() === street &&
     Number(entry.number) === number &&
-    entry.subAddress &&
-    entry.subAddress.trim().toLowerCase() === subAddress
+    (
+      subAddress === null ||
+      (
+        entry.subAddress &&
+        entry.subAddress.trim().toLowerCase() === subAddress
+      )
+    )
   ) || null;
 
-  if (!ret) {
-    ret = landmarkFeatures.find(entry =>
-    entry.street &&
-    entry.street.trim().toUpperCase() === street &&
-    Number(entry.number) === number &&
-    entry.subAddress &&
-    entry.subAddress.trim().toLowerCase() === subAddress
-  ) || null;
+  console.log(street);
+  if (ret == null) {
+    console.log(`findCustomDescriptionForStreet: no exact match for ${streetName}, trying street-only match`);
+
+    ret = landmarkFeatures.find(entry => {
+      //console.log(entry);
+      const entryStreet = entry.properties?.street?.trim().toUpperCase();
+      const entryNumber = Number(entry.properties?.number);
+
+      // console.log("Comparing:", {
+      //   wantedStreet: street,
+      //   entryStreet,
+      //   wantedNumber: number,
+      //   entryNumber
+      // });
+      entry.properties?.street &&
+      number === entry.properties?.number &&
+      street.includes(entry.properties?.street.trim().toUpperCase())
+    }) || null;
+
+    return ret?.properties
   }
+  console.log("return ret =", ret);
   return ret;
 }
 
@@ -736,6 +757,7 @@ function findCustomDescriptionForStreet(streetName) {
 function streetPanelBlurb(streetName, dlcPrice) {
   const custom = findCustomDescriptionForStreet(streetName);
   console.log(streetName, custom, CUSTOM_BUILDING_DESCRIPTIONS);
+
   if (custom && custom.blurb) {
     const addrTag = custom.number !== undefined
       ? `<br><span style="opacity:0.55;font-size:10px;letter-spacing:1px;">${streetName}, #${custom.number}</span>`
@@ -1520,11 +1542,12 @@ function registerLandmarkAddresses(features) {
   refreshAddrResultsIfOpen();
   updateAddrCount();
 }
+landmarkFeatures = []
 /* =========================================================================
    LANDMARK BUILDINGS (3D)
    ========================================================================= */
 function addLandmarkLayer() {
-  const landmarkFeatures = [
+  landmarkFeatures = [
     {
       "type": "Feature",
       "properties": {
