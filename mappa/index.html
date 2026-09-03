@@ -1442,11 +1442,46 @@ function addBuildingClickHandlers() {
   style.layers.forEach(layer => {
     if (layer.type !== 'fill-extrusion') return;
     if (!layer.id.toLowerCase().includes('building')) return;
+
+    // FIX: 'cy-custom-building-cube' (il layer dei cubi degli edifici
+    // personalizzati) contiene "building" nell'id, quindi rientrava anche
+    // in questo loop generico oltre ad avere già il suo handler dedicato
+    // (vedi addCustomBuildingLayer, sopra). Risultato: un tap su un
+    // edificio custom con lng/lat noti faceva scattare DUE handler sullo
+    // stesso click — prima quello corretto (legge nome/colore/blurb dalle
+    // properties del feature, istantaneo), poi questo qui sotto, che
+    // ricalcola tutto da capo passando per buildingAddressForFeature() e
+    // sovrascriveva il pannello appena aperto. Da desktop il ricalcolo
+    // arrivava quasi sempre allo stesso risultato per puro caso (match
+    // per coordinate una volta che streetLineCache era popolata), quindi
+    // il problema non si notava; da mobile, subito dopo un flyTo dalla
+    // barra di ricerca, streetLineCache non è ancora pronta e il
+    // ricalcolo produceva il default, sovrascrivendo quello giusto.
+    if (layer.id === 'cy-custom-building-cube') return;
+
     map.on('click', layer.id, (e) => {
       if (selectingPoint) return;
       const f = e.features[0];
       let addr = (f.id !== undefined && f.id !== null) ? buildingAddressRegistry.get(f.id) : null;
       if (!addr) addr = buildingAddressForFeature(f);
+
+      // FIX MOBILE: buildingAddressForFeature dipende da streetLineCache,
+      // che viene ripopolata solo sull'evento 'idle'. Su mobile è comune
+      // toccare un edificio appena dopo un flyTo (dalla barra indirizzi)
+      // o dopo un pan/pinch: il tap arriva prima che 'idle' sia scattato
+      // per la nuova zona, streetLineCache è ancora vuota o riferita alla
+      // zona precedente, e la funzione ritorna null → il pannello non si
+      // apriva mai, senza errori visibili. Da desktop il problema non si
+      // vedeva quasi mai perché mouse/rotellina lasciano più tempo tra un
+      // movimento e il click successivo, e 'idle' fa in tempo a scattare.
+      // querySourceFeatures (dentro refreshAddressRegistry) non dipende da
+      // 'idle': legge le tile già scaricate nel momento in cui viene
+      // chiamata, quindi possiamo forzare un refresh sincrono qui e
+      // ritentare una sola volta prima di arrenderci davvero.
+      if (!addr) {
+        refreshAddressRegistry();
+        addr = buildingAddressForFeature(f);
+      }
       if (!addr) return;
 
       // Se questo edificio compare in CUSTOM_BUILDING_DESCRIPTIONS (per
