@@ -3254,6 +3254,7 @@ function addLandmarkLayer() {
       'fill-extrusion-color': ['get', 'color'],
       'fill-extrusion-height': ['get', 'height'],
       'fill-extrusion-base': ['get', 'base'],
+      'fill-extrusion-base': ['min', ['get', 'base'], ['get', 'height']],
       'fill-extrusion-opacity': 0.9
     }
   });
