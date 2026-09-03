@@ -646,12 +646,12 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     // al civico.
     street: "REBOOT PASSAGE",
     number: 31,
-    lng: 17.88231,
-    lat: 59.34840,
+    lng: 17.882245,
+    lat: 59.34839,
     radius: 0.0006,
     name: "Edificio #31 — Reboot Passage",
     rotation: 50, // opzionale, in gradi (0 = nord)
-    color: "#00fff2",
+    color: "#1FD400",
     blurb: "Scrivi qui la descrizione speciale di questo edificio."
   }
   // Aggiungi altre voci qui, separate da virgola, seguendo lo stesso schema.
@@ -767,10 +767,10 @@ function addCustomBuildingCube(entry, lng, lat) {
     type: 'Feature',
     properties: {
       name: entry.name || 'Edificio personalizzato',
-      color: entry.color || '#00fff2',
+      color: entry.color || '#1FD400',
       blurb: entry.blurb || ''
     },
-    geometry: { type: 'Polygon', coordinates: [makeCubePolygonRing(lng, lat, 0.000007, entry.rotation)] }
+    geometry: { type: 'Polygon', coordinates: [makeCubePolygonRing(lng, lat, 0.00001, entry.rotation)] }
   });
 
   const source = map.getSource('cy-custom-building-cubes');
@@ -793,7 +793,7 @@ function addCustomBuildingLayer() {
     source: 'cy-custom-building-cubes',
     paint: {
       'fill-extrusion-color': ['get', 'color'],
-      'fill-extrusion-height': 1,
+      'fill-extrusion-height': 1.5,
       'fill-extrusion-base': 0,
       'fill-extrusion-opacity': 0.95
     }
@@ -3029,7 +3029,7 @@ function addLandmarkLayer() {
     },
     {
       type: "Feature",
-      properties: { name: "Edificio #1: officina di @chopshop__1147", height: 0.3, base: 0, color: "#9f05b3",
+      properties: { name: "Edificio #1: officina di @chopshop__1147", height: 0.3, base: 0, color: "#1FD400",
         blurb: "Un'discarica clandestina dove veicoli e cyberware rubati cambiano identità nel giro di una notte." },
       geometry: {
         type: "Polygon",
@@ -3043,7 +3043,7 @@ function addLandmarkLayer() {
     },
     {
       type: "Feature",
-      properties: { name: "Edificio #1: officina di @chopshop__1147", height: 1.5, base: 0, color: "#9f05b3",
+      properties: { name: "Edificio #1: officina di @chopshop__1147", height: 1.5, base: 0, color: "#1FD400",
         blurb: "Un'discarica clandestina dove veicoli e cyberware rubati cambiano identità nel giro di una notte." },
       geometry: {
         type: "Polygon",
