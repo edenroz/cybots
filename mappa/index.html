@@ -1442,11 +1442,55 @@ function addBuildingClickHandlers() {
   style.layers.forEach(layer => {
     if (layer.type !== 'fill-extrusion') return;
     if (!layer.id.toLowerCase().includes('building')) return;
+
+    // FIX: 'cy-custom-building-cube' (il layer dei cubi degli edifici
+    // personalizzati) contiene "building" nell'id, quindi rientrava anche
+    // in questo loop generico oltre ad avere già il suo handler dedicato
+    // (vedi addCustomBuildingLayer, sopra). Risultato: un tap su un
+    // edificio custom con lng/lat noti faceva scattare DUE handler sullo
+    // stesso click — prima quello corretto (legge nome/colore/blurb dalle
+    // properties del feature, istantaneo), poi questo qui sotto, che
+    // ricalcola tutto da capo passando per buildingAddressForFeature() e
+    // sovrascriveva il pannello appena aperto. Da desktop il ricalcolo
+    // arrivava quasi sempre allo stesso risultato per puro caso (match
+    // per coordinate una volta che streetLineCache era popolata), quindi
+    // il problema non si notava; da mobile, subito dopo un flyTo dalla
+    // barra di ricerca, streetLineCache non è ancora pronta e il
+    // ricalcolo produceva il default, sovrascrivendo quello giusto.
+    if (layer.id === 'cy-custom-building-cube') return;
+
     map.on('click', layer.id, (e) => {
       if (selectingPoint) return;
       const f = e.features[0];
-      let addr = (f.id !== undefined && f.id !== null) ? buildingAddressRegistry.get(f.id) : null;
-      if (!addr) addr = buildingAddressForFeature(f);
+
+      // FIX: qui NON ci fidiamo più della cache in buildingAddressRegistry
+      // come prima cosa. Quella cache viene scritta in background ad ogni
+      // 'idle' da refreshBuildingAddresses, e una volta scritta per un
+      // dato f.id non viene MAI ricalcolata. Se il primo 'idle' utile per
+      // questo edificio arriva quando streetLineCache è ancora
+      // incompleta (tile delle strade non ancora tutte arrivate — molto
+      // più comune su mobile, dove il tap spesso arriva a ridosso di un
+      // flyTo/pan appena fatto), la via più vicina calcolata in quel
+      // momento può essere quella sbagliata — e ci resta agganciata per
+      // sempre: da lì in poi ogni tap su quell'edificio (anche con
+      // streetLineCache poi completa) rilegge sempre lo stesso indirizzo
+      // sbagliato dalla cache, quindi CUSTOM_BUILDING_DESCRIPTIONS non
+      // trova mai il match e si vede sempre il default. Ricomparire solo
+      // "rivolando" perché un nuovo giro di tile può assegnare un f.id
+      // diverso allo stesso edificio, bypassando la voce di cache
+      // corrotta.
+      // Ricalcoliamo quindi sempre al momento del click (streetLineCache
+      // a quel punto è quasi certamente completa, ed eventualmente la
+      // forziamo comunque con un refresh sincrono), e usiamo la cache
+      // solo come ultima spiaggia se anche il ricalcolo fresco fallisce.
+      let addr = buildingAddressForFeature(f);
+      if (!addr) {
+        refreshAddressRegistry();
+        addr = buildingAddressForFeature(f);
+      }
+      if (!addr && f.id !== undefined && f.id !== null) {
+        addr = buildingAddressRegistry.get(f.id);
+      }
       if (!addr) return;
 
       // Se questo edificio compare in CUSTOM_BUILDING_DESCRIPTIONS (per
@@ -1469,7 +1513,12 @@ function addBuildingClickHandlers() {
           blurb: 'Edificio anonimo di Cy. Nessun dato ulteriore in archivio.<br>[DLC LOCKED]<br>Questo contenuto non è stato acquistato. La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>[ACQUISTA DLC]<br>499.99¤'
         });
       }
-      if (f.id !== undefined && f.id !== null && !buildingAddressRegistry.has(f.id)) {
+      // FIX: aggiorniamo SEMPRE la cache con l'indirizzo appena
+      // ricalcolato (non solo se assente), altrimenti un valore sbagliato
+      // scritto in precedenza da refreshBuildingAddresses (idle troppo
+      // presto) sarebbe rimasto lì per sempre nonostante qui sopra
+      // l'avessimo appena ricalcolato correttamente.
+      if (f.id !== undefined && f.id !== null) {
         buildingAddressRegistry.set(f.id, addr);
         rebuildBuildingAddressSource();
       }
