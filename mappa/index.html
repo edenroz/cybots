@@ -1336,6 +1336,22 @@ function civicNumberFor(t, side) {
 // Calcola (senza toccare i registri) l'indirizzo di un singolo edificio,
 // usando la cache di vie attualmente caricate. Ritorna null se non c'è
 // abbastanza contesto (nessuna via in cache, geometria non valida, ecc.).
+// FIX: distanza massima (in gradi, circa 200m) oltre la quale una via
+// "più vicina" trovata in streetLineCache non viene più considerata
+// affidabile. Senza questo controllo, subito dopo un flyTo verso un
+// nuovo punto (pitch 50, zoom 16.5) streetLineCache può contenere già
+// QUALCHE via ma non ancora quella davvero più vicina all'edificio di
+// destinazione: nearestStreetForPoint restituisce comunque "la più
+// vicina tra quelle che ha", anche se è lontanissima — un risultato
+// NON nullo ma sbagliato, che quindi non faceva scattare il retry
+// sincrono in buildingAddressForFeature/click handler (quel retry parte
+// solo quando il risultato è null). Questo è esattamente il caso che
+// l'utente descrive: "il volo corrompe la descrizione fino al refresh".
+// Con questo limite, un match troppo lontano viene trattato come
+// "nessun match" invece che come "match valido ma sbagliato", quindi
+// rientra nel percorso di retry già esistente.
+const MAX_STREET_MATCH_DIST_SQ_DEG = 0.002 * 0.002; // ~200m in gradi, al quadrato
+
 function buildingAddressForFeature(feature) {
   // BUG PRECEDENTE: il chiamante passava un "type" dedotto dal layer
   // dell'EDIFICIO (che non contiene mai "major"/"minor" e risultava
@@ -1348,10 +1364,30 @@ function buildingAddressForFeature(feature) {
   if (!centroid || !streetLineCache.length) return null;
   const nearest = nearestStreetForPoint(centroid, streetLineCache);
   if (!nearest) return null;
+  if (nearest.distSq > MAX_STREET_MATCH_DIST_SQ_DEG) return null;
   const streetType = classToStreetType(nearest.feature.properties && nearest.feature.properties.class);
   const streetName = cyberHash(nearest.feature.id, streetType);
   const number = civicNumberFor(nearest.t, nearest.side);
   return { streetName, number, lng: centroid[0], lat: centroid[1] };
+}
+
+// FIX: chiave di cache stabile per un edificio, basata sul suo centroide
+// geometrico invece che su feature.id. L'id che MapLibre assegna a una
+// feature dentro una tile vettoriale NON è garantito stabile per lo
+// stesso edificio fisico tra un caricamento di tile e l'altro — su
+// mobile è comune che una tile venga ri-scaricata (memoria limitata,
+// resize del canvas all'apertura/chiusura del pannello, zoom leggermente
+// diverso dopo un flyTo) e lo stesso edificio si ripresenti con un f.id
+// diverso. Quando succede, indicizzando per f.id la cache buona
+// "spariva" (chiave non più trovata) e veniva ricalcolata da capo,
+// qualche volta male (via diversa quasi equidistante). Il centroide di
+// un dato edificio invece è sempre lo stesso a meno di differenze in
+// virgola mobile trascurabili, quindi arrotondandolo otteniamo una
+// chiave stabile indipendente da quale istanza di tile lo ha prodotto.
+function buildingCacheKey(feature) {
+  const centroid = computeBuildingCentroid(feature.geometry);
+  if (!centroid) return null;
+  return centroid[0].toFixed(6) + ',' + centroid[1].toFixed(6);
 }
 
 // Ricostruisce (o crea al primo utilizzo) il layer di etichette numeriche
@@ -1416,12 +1452,13 @@ function refreshBuildingAddresses() {
   let added = 0;
   features.forEach(f => {
 
-    if (f.id === undefined || f.id === null) return;
-    if (buildingAddressRegistry.has(f.id)) return;
+    const key = buildingCacheKey(f);
+    if (!key) return;
+    if (buildingAddressRegistry.has(key)) return;
 
     const addr = buildingAddressForFeature(f);
     if (!addr) return;
-    buildingAddressRegistry.set(f.id, addr);
+    buildingAddressRegistry.set(key, addr);
     added++;
 
     // Se questo edificio corrisponde a una voce di
@@ -1461,49 +1498,61 @@ function addBuildingClickHandlers() {
 
     map.on('click', layer.id, (e) => {
       if (selectingPoint) return;
+
+      // FIX: i landmark (layer 'cy-landmark-extrusion', vedi
+      // addLandmarkLayer) sono disegnati esattamente sopra l'edificio OSM
+      // reale alle stesse coordinate (es. BLADE AVENUE #101 = @dr_neo101).
+      // Quel layer ha già il suo handler dedicato, registrato PRIMA di
+      // questo (riga ~1012 vs ~1018), che apre il pannello giusto
+      // leggendo nome/colore/blurb direttamente dalle properties — non
+      // gli serve nessun calcolo di indirizzo. Ma un tap su quel punto fa
+      // scattare ANCHE questo handler generico (perché lo stesso click
+      // cade pure sul poligono dell'edificio OSM reale sottostante), che
+      // ricalcola tutto da zero e sovrascriveva il pannello del landmark
+      // con uno sbagliato/di default — stesso identico pattern già visto
+      // con cy-custom-building-cube, ma qui non possiamo escludere
+      // l'intero layer 'building' dal loop generico perché serve per
+      // tutti gli edifici non-landmark. Controlliamo quindi punto per
+      // punto: se il click cade anche su un landmark, quello ha già
+      // mostrato il pannello corretto, quindi non facciamo nulla qui.
+      if (map.getLayer('cy-landmark-extrusion')) {
+        const landmarkHere = map.queryRenderedFeatures(e.point, { layers: ['cy-landmark-extrusion'] });
+        if (landmarkHere && landmarkHere.length) return;
+      }
+
       const f = e.features[0];
 
-      // FIX: qui NON ci fidiamo più della cache in buildingAddressRegistry
-      // come prima cosa. Quella cache viene scritta in background ad ogni
-      // 'idle' da refreshBuildingAddresses, e una volta scritta per un
-      // dato f.id non viene MAI ricalcolata. Se il primo 'idle' utile per
-      // questo edificio arriva quando streetLineCache è ancora
-      // incompleta (tile delle strade non ancora tutte arrivate — molto
-      // più comune su mobile, dove il tap spesso arriva a ridosso di un
-      // flyTo/pan appena fatto), la via più vicina calcolata in quel
-      // momento può essere quella sbagliata — e ci resta agganciata per
-      // sempre: da lì in poi ogni tap su quell'edificio (anche con
-      // streetLineCache poi completa) rilegge sempre lo stesso indirizzo
-      // sbagliato dalla cache, quindi CUSTOM_BUILDING_DESCRIPTIONS non
-      // trova mai il match e si vede sempre il default. Ricomparire solo
-      // "rivolando" perché un nuovo giro di tile può assegnare un f.id
-      // diverso allo stesso edificio, bypassando la voce di cache
-      // corrotta.
-      // Ricalcoliamo quindi sempre al momento del click (streetLineCache
-      // a quel punto è quasi certamente completa, ed eventualmente la
-      // forziamo comunque con un refresh sincrono), e usiamo la cache
-      // solo come ultima spiaggia se anche il ricalcolo fresco fallisce.
+      // FIX: la cache è ora indicizzata per una chiave geometrica stabile
+      // (vedi buildingCacheKey), non più per f.id — che su mobile può
+      // cambiare da un tap all'altro sullo stesso edificio fisico se la
+      // tile viene ri-scaricata (memoria limitata, resize del canvas
+      // all'apertura/chiusura del pannello, zoom leggermente diverso
+      // dopo un flyTo). Prima, quando f.id cambiava, la cache buona
+      // "spariva" e si ricalcolava da capo, a volte trovando una via
+      // diversa quasi equidistante. Ricalcoliamo comunque sempre al
+      // momento del click (streetLineCache a quel punto è quasi
+      // certamente completa, e la forziamo con un refresh sincrono se
+      // serve), e usiamo la cache solo come rete di sicurezza.
+      const key = buildingCacheKey(f);
       let addr = buildingAddressForFeature(f);
       if (!addr) {
         refreshAddressRegistry();
         addr = buildingAddressForFeature(f);
       }
-      const cachedAddr = (f.id !== undefined && f.id !== null) ? buildingAddressRegistry.get(f.id) : null;
+      const cachedAddr = key ? buildingAddressRegistry.get(key) : null;
       if (!addr) addr = cachedAddr;
       if (!addr) return;
 
       let custom = findCustomBuildingDescription(addr);
 
-      // FIX: la via più vicina calcolata al volo può oscillare leggermente
-      // da un tap all'altro sullo STESSO edificio, perché streetLineCache
-      // cambia ad ogni 'idle' (a seconda di quali tratti stradali sono
-      // nella cache in quel momento, per edifici quasi equidistanti da
-      // due vie può "vincerne" una diversa). Se il ricalcolo fresco non
-      // trova un match personalizzato ma una identificazione precedente
-      // (in cache per questo stesso f.id) invece sì, ci fidiamo di quella
-      // — un match già trovato in passato è un'informazione più solida
-      // di un ricalcolo che stavolta non trova nulla, e questo evita che
-      // un edificio corretto al primo tap torni "default" al secondo.
+      // La via più vicina calcolata al volo può comunque oscillare
+      // leggermente da un tap all'altro (streetLineCache cambia ad ogni
+      // 'idle'; per edifici quasi equidistanti da due vie può "vincerne"
+      // una diversa). Se il ricalcolo fresco non trova un match
+      // personalizzato ma una identificazione precedente (in cache per
+      // questo edificio) invece sì, ci fidiamo di quella — un match già
+      // trovato in passato è un'informazione più solida di un ricalcolo
+      // che stavolta non trova nulla.
       if (!custom && cachedAddr) {
         const cachedCustom = findCustomBuildingDescription(cachedAddr);
         if (cachedCustom) {
@@ -1530,10 +1579,10 @@ function addBuildingClickHandlers() {
       // Scriviamo il nuovo indirizzo in cache, a meno che non stiamo per
       // sostituire un match personalizzato già buono con uno peggiore
       // (vedi commento sopra): in quel caso lasciamo la cache com'era.
-      if (f.id !== undefined && f.id !== null) {
+      if (key) {
         const previousCustom = cachedAddr ? findCustomBuildingDescription(cachedAddr) : null;
         if (custom || !previousCustom) {
-          buildingAddressRegistry.set(f.id, addr);
+          buildingAddressRegistry.set(key, addr);
           rebuildBuildingAddressSource();
         }
       }
