@@ -770,7 +770,7 @@ function addCustomBuildingCube(entry, lng, lat) {
       color: entry.color || '#00fff2',
       blurb: entry.blurb || ''
     },
-    geometry: { type: 'Polygon', coordinates: [makeCubePolygonRing(lng, lat, 0.000005, entry.rotation)] }
+    geometry: { type: 'Polygon', coordinates: [makeCubePolygonRing(lng, lat, 0.000007, entry.rotation)] }
   });
 
   const source = map.getSource('cy-custom-building-cubes');
