@@ -650,6 +650,7 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     lat: 59.34843,
     radius: 0.0006,
     name: "Edificio #31 — Reboot Passage",
+    rotation: 30, // opzionale, in gradi (0 = nord)
     color: "#00fff2",
     blurb: "Scrivi qui la descrizione speciale di questo edificio."
   }
@@ -714,17 +715,27 @@ function findCustomBuildingDescription(addr) {
 const customBuildingCubeFeatures = [];
 const customBuildingCubeDrawn = new Set();
 
-function makeCubePolygonRing(lng, lat, halfSizeDeg) {
+function makeCubePolygonRing(lng, lat, halfSizeDeg, rotationDeg) {
   const latCorrection = Math.cos((lat * Math.PI) / 180) || 1;
-  const dx = halfSizeDeg / latCorrection;
-  const dy = halfSizeDeg;
-  return [
-    [lng - dx, lat - dy],
-    [lng + dx, lat - dy],
-    [lng + dx, lat + dy],
-    [lng - dx, lat + dy],
-    [lng - dx, lat - dy]
+  const theta = ((rotationDeg || 0) * Math.PI) / 180; // clockwise da nord, come il bearing della mappa
+
+  // Angoli del quadrato in un sistema locale "metrico" (est=x, nord=y),
+  // non ancora ruotato né riportato in lng/lat.
+  const corners = [
+    [-halfSizeDeg, -halfSizeDeg],
+    [ halfSizeDeg, -halfSizeDeg],
+    [ halfSizeDeg,  halfSizeDeg],
+    [-halfSizeDeg,  halfSizeDeg]
   ];
+
+  const ring = corners.map(([x, y]) => {
+    const rx = x * Math.cos(theta) + y * Math.sin(theta);
+    const ry = -x * Math.sin(theta) + y * Math.cos(theta);
+    return [lng + rx / latCorrection, lat + ry];
+  });
+
+  ring.push(ring[0]);
+  return ring;
 }
 
 // Aggiunge all'archivio indirizzi (quello della barra di ricerca) la via
@@ -759,7 +770,7 @@ function addCustomBuildingCube(entry, lng, lat) {
       color: entry.color || '#00fff2',
       blurb: entry.blurb || ''
     },
-    geometry: { type: 'Polygon', coordinates: [makeCubePolygonRing(lng, lat, 0.00004)] }
+    geometry: { type: 'Polygon', coordinates: [makeCubePolygonRing(lng, lat, 0.00003, entry.rotation)] }
   });
 
   const source = map.getSource('cy-custom-building-cubes');
@@ -782,7 +793,7 @@ function addCustomBuildingLayer() {
     source: 'cy-custom-building-cubes',
     paint: {
       'fill-extrusion-color': ['get', 'color'],
-      'fill-extrusion-height': 1,
+      'fill-extrusion-height': 14,
       'fill-extrusion-base': 0,
       'fill-extrusion-opacity': 0.95
     }
