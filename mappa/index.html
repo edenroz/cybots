@@ -1336,54 +1336,32 @@ function civicNumberFor(t, side) {
 // Calcola (senza toccare i registri) l'indirizzo di un singolo edificio,
 // usando la cache di vie attualmente caricate. Ritorna null se non c'è
 // abbastanza contesto (nessuna via in cache, geometria non valida, ecc.).
-// FIX: distanza massima (in gradi, circa 200m) oltre la quale una via
-// "più vicina" trovata in streetLineCache non viene più considerata
-// affidabile. Senza questo controllo, subito dopo un flyTo verso un
-// nuovo punto (pitch 50, zoom 16.5) streetLineCache può contenere già
-// QUALCHE via ma non ancora quella davvero più vicina all'edificio di
-// destinazione: nearestStreetForPoint restituisce comunque "la più
-// vicina tra quelle che ha", anche se è lontanissima — un risultato
-// NON nullo ma sbagliato, che quindi non faceva scattare il retry
-// sincrono in buildingAddressForFeature/click handler (quel retry parte
-// solo quando il risultato è null). Questo è esattamente il caso che
-// l'utente descrive: "il volo corrompe la descrizione fino al refresh".
-// Con questo limite, un match troppo lontano viene trattato come
-// "nessun match" invece che come "match valido ma sbagliato", quindi
-// rientra nel percorso di retry già esistente.
+// Distanza massima (~200m) oltre la quale una via "più vicina" trovata in
+// streetLineCache non è considerata affidabile: subito dopo un flyTo la
+// cache può avere già qualche via ma non quella davvero più vicina, e
+// senza questo limite verrebbe comunque restituita "la più vicina tra
+// quelle che ci sono", anche se lontanissima e quindi sbagliata.
 const MAX_STREET_MATCH_DIST_SQ_DEG = 0.002 * 0.002; // ~200m in gradi, al quadrato
 
 function buildingAddressForFeature(feature) {
-  // BUG PRECEDENTE: il chiamante passava un "type" dedotto dal layer
-  // dell'EDIFICIO (che non contiene mai "major"/"minor" e risultava
-  // quindi sempre 'minor'), non dalla via più vicina trovata qui sotto.
-  // Il civico di un edificio poteva perciò riportare un nome di via con
-  // il suffisso sbagliato rispetto a quello realmente disegnato sulla
-  // via più vicina. Ora il tipo si deduce dalla via trovata, non
-  // dall'edificio.
+  // Il tipo di via (major/minor) si deduce dalla via più vicina trovata
+  // qui sotto, non dal layer dell'edificio (che non lo contiene mai).
   const centroid = computeBuildingCentroid(feature.geometry);
   if (!centroid || !streetLineCache.length) return null;
   const nearest = nearestStreetForPoint(centroid, streetLineCache);
-  if (!nearest) return null;
-  if (nearest.distSq > MAX_STREET_MATCH_DIST_SQ_DEG) return null;
+  if (!nearest || nearest.distSq > MAX_STREET_MATCH_DIST_SQ_DEG) return null;
   const streetType = classToStreetType(nearest.feature.properties && nearest.feature.properties.class);
   const streetName = cyberHash(nearest.feature.id, streetType);
   const number = civicNumberFor(nearest.t, nearest.side);
   return { streetName, number, lng: centroid[0], lat: centroid[1] };
 }
 
-// FIX: chiave di cache stabile per un edificio, basata sul suo centroide
-// geometrico invece che su feature.id. L'id che MapLibre assegna a una
-// feature dentro una tile vettoriale NON è garantito stabile per lo
-// stesso edificio fisico tra un caricamento di tile e l'altro — su
-// mobile è comune che una tile venga ri-scaricata (memoria limitata,
-// resize del canvas all'apertura/chiusura del pannello, zoom leggermente
-// diverso dopo un flyTo) e lo stesso edificio si ripresenti con un f.id
-// diverso. Quando succede, indicizzando per f.id la cache buona
-// "spariva" (chiave non più trovata) e veniva ricalcolata da capo,
-// qualche volta male (via diversa quasi equidistante). Il centroide di
-// un dato edificio invece è sempre lo stesso a meno di differenze in
-// virgola mobile trascurabili, quindi arrotondandolo otteniamo una
-// chiave stabile indipendente da quale istanza di tile lo ha prodotto.
+
+// Chiave di cache stabile per un edificio, basata sul suo centroide
+// geometrico invece che su feature.id: l'id che MapLibre assegna a una
+// feature dentro una tile vettoriale non è garantito stabile tra un
+// caricamento di tile e l'altro, mentre il centroide di un dato edificio
+// è sempre lo stesso (a meno di differenze in virgola mobile trascurabili).
 function buildingCacheKey(feature) {
   const centroid = computeBuildingCentroid(feature.geometry);
   if (!centroid) return null;
@@ -1480,41 +1458,19 @@ function addBuildingClickHandlers() {
     if (layer.type !== 'fill-extrusion') return;
     if (!layer.id.toLowerCase().includes('building')) return;
 
-    // FIX: 'cy-custom-building-cube' (il layer dei cubi degli edifici
-    // personalizzati) contiene "building" nell'id, quindi rientrava anche
-    // in questo loop generico oltre ad avere già il suo handler dedicato
-    // (vedi addCustomBuildingLayer, sopra). Risultato: un tap su un
-    // edificio custom con lng/lat noti faceva scattare DUE handler sullo
-    // stesso click — prima quello corretto (legge nome/colore/blurb dalle
-    // properties del feature, istantaneo), poi questo qui sotto, che
-    // ricalcola tutto da capo passando per buildingAddressForFeature() e
-    // sovrascriveva il pannello appena aperto. Da desktop il ricalcolo
-    // arrivava quasi sempre allo stesso risultato per puro caso (match
-    // per coordinate una volta che streetLineCache era popolata), quindi
-    // il problema non si notava; da mobile, subito dopo un flyTo dalla
-    // barra di ricerca, streetLineCache non è ancora pronta e il
-    // ricalcolo produceva il default, sovrascrivendo quello giusto.
+    // Il layer dei cubi personalizzati ha già il suo handler dedicato
+    // (vedi addCustomBuildingLayer): escluderlo qui evita che lo stesso
+    // click venga gestito due volte.
     if (layer.id === 'cy-custom-building-cube') return;
 
     map.on('click', layer.id, (e) => {
       if (selectingPoint) return;
 
-      // FIX: i landmark (layer 'cy-landmark-extrusion', vedi
-      // addLandmarkLayer) sono disegnati esattamente sopra l'edificio OSM
-      // reale alle stesse coordinate (es. BLADE AVENUE #101 = @dr_neo101).
-      // Quel layer ha già il suo handler dedicato, registrato PRIMA di
-      // questo (riga ~1012 vs ~1018), che apre il pannello giusto
-      // leggendo nome/colore/blurb direttamente dalle properties — non
-      // gli serve nessun calcolo di indirizzo. Ma un tap su quel punto fa
-      // scattare ANCHE questo handler generico (perché lo stesso click
-      // cade pure sul poligono dell'edificio OSM reale sottostante), che
-      // ricalcola tutto da zero e sovrascriveva il pannello del landmark
-      // con uno sbagliato/di default — stesso identico pattern già visto
-      // con cy-custom-building-cube, ma qui non possiamo escludere
-      // l'intero layer 'building' dal loop generico perché serve per
-      // tutti gli edifici non-landmark. Controlliamo quindi punto per
-      // punto: se il click cade anche su un landmark, quello ha già
-      // mostrato il pannello corretto, quindi non facciamo nulla qui.
+      // I landmark (layer 'cy-landmark-extrusion', vedi addLandmarkLayer)
+      // sono disegnati esattamente sopra l'edificio OSM reale alle stesse
+      // coordinate, e hanno già il loro handler dedicato (registrato
+      // prima di questo). Se il click cade anche su un landmark, quello
+      // ha già mostrato il pannello giusto: non facciamo nulla qui.
       if (map.getLayer('cy-landmark-extrusion')) {
         const landmarkHere = map.queryRenderedFeatures(e.point, { layers: ['cy-landmark-extrusion'] });
         if (landmarkHere && landmarkHere.length) return;
@@ -1522,44 +1478,26 @@ function addBuildingClickHandlers() {
 
       const f = e.features[0];
 
-      // FIX: la cache è ora indicizzata per una chiave geometrica stabile
-      // (vedi buildingCacheKey), non più per f.id — che su mobile può
-      // cambiare da un tap all'altro sullo stesso edificio fisico se la
-      // tile viene ri-scaricata (memoria limitata, resize del canvas
-      // all'apertura/chiusura del pannello, zoom leggermente diverso
-      // dopo un flyTo). Prima, quando f.id cambiava, la cache buona
-      // "spariva" e si ricalcolava da capo, a volte trovando una via
-      // diversa quasi equidistante. Ricalcoliamo comunque sempre al
-      // momento del click (streetLineCache a quel punto è quasi
-      // certamente completa, e la forziamo con un refresh sincrono se
-      // serve), e usiamo la cache solo come rete di sicurezza.
+      // L'indirizzo si ricalcola sempre al momento del click (invece di
+      // fidarsi subito della cache) e, se il primo tentativo fallisce, si
+      // forza un refresh sincrono di streetLineCache prima di ritentare
+      // — utile subito dopo un flyTo, quando le tile delle strade vicine
+      // potrebbero non essere ancora arrivate. La cache (indicizzata per
+      // centroide, vedi buildingCacheKey) resta solo come rete di
+      // sicurezza se anche il ricalcolo fresco fallisce del tutto.
       const key = buildingCacheKey(f);
       let addr = buildingAddressForFeature(f);
       if (!addr) {
         refreshAddressRegistry();
         addr = buildingAddressForFeature(f);
       }
-      const cachedAddr = key ? buildingAddressRegistry.get(key) : null;
-      if (!addr) addr = cachedAddr;
+      if (!addr && key) addr = buildingAddressRegistry.get(key);
       if (!addr) return;
 
-      let custom = findCustomBuildingDescription(addr);
-
-      // La via più vicina calcolata al volo può comunque oscillare
-      // leggermente da un tap all'altro (streetLineCache cambia ad ogni
-      // 'idle'; per edifici quasi equidistanti da due vie può "vincerne"
-      // una diversa). Se il ricalcolo fresco non trova un match
-      // personalizzato ma una identificazione precedente (in cache per
-      // questo edificio) invece sì, ci fidiamo di quella — un match già
-      // trovato in passato è un'informazione più solida di un ricalcolo
-      // che stavolta non trova nulla.
-      if (!custom && cachedAddr) {
-        const cachedCustom = findCustomBuildingDescription(cachedAddr);
-        if (cachedCustom) {
-          addr = cachedAddr;
-          custom = cachedCustom;
-        }
-      }
+      // Se questo edificio compare in CUSTOM_BUILDING_DESCRIPTIONS (per
+      // indirizzo o per coordinate), mostriamo la descrizione tua invece
+      // del testo generico "[DLC LOCKED]".
+      const custom = findCustomBuildingDescription(addr);
       if (custom) {
         addCustomBuildingCube(custom, addr.lng, addr.lat);
         openPanel({
@@ -1576,15 +1514,9 @@ function addBuildingClickHandlers() {
           blurb: 'Edificio anonimo di Cy. Nessun dato ulteriore in archivio.<br>[DLC LOCKED]<br>Questo contenuto non è stato acquistato. La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>[ACQUISTA DLC]<br>499.99¤'
         });
       }
-      // Scriviamo il nuovo indirizzo in cache, a meno che non stiamo per
-      // sostituire un match personalizzato già buono con uno peggiore
-      // (vedi commento sopra): in quel caso lasciamo la cache com'era.
       if (key) {
-        const previousCustom = cachedAddr ? findCustomBuildingDescription(cachedAddr) : null;
-        if (custom || !previousCustom) {
-          buildingAddressRegistry.set(key, addr);
-          rebuildBuildingAddressSource();
-        }
+        buildingAddressRegistry.set(key, addr);
+        rebuildBuildingAddressSource();
       }
     });
     map.on('mouseenter', layer.id, () => { if (!selectingPoint) map.getCanvas().style.cursor = 'pointer'; });
