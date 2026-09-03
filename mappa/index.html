@@ -646,8 +646,8 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     // al civico.
     street: "REBOOT PASSAGE",
     number: 31,
-    lng: 17.88230,
-    lat: 59.34841,
+    lng: 17.88231,
+    lat: 59.34840,
     radius: 0.0006,
     name: "Edificio #31 — Reboot Passage",
     rotation: 50, // opzionale, in gradi (0 = nord)
@@ -770,7 +770,7 @@ function addCustomBuildingCube(entry, lng, lat) {
       color: entry.color || '#00fff2',
       blurb: entry.blurb || ''
     },
-    geometry: { type: 'Polygon', coordinates: [makeCubePolygonRing(lng, lat, 0.00001, entry.rotation)] }
+    geometry: { type: 'Polygon', coordinates: [makeCubePolygonRing(lng, lat, 0.000005, entry.rotation)] }
   });
 
   const source = map.getSource('cy-custom-building-cubes');
