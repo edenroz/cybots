@@ -709,13 +709,24 @@ function findCustomDescriptionForStreet(streetName) {
   const number = Number(match[2]);
   const subAddress = match[3].trim().toLowerCase();
 
-  return CUSTOM_BUILDING_DESCRIPTIONS.find(entry =>
+  let ret = CUSTOM_BUILDING_DESCRIPTIONS.find(entry =>
     entry.street &&
     entry.street.trim().toUpperCase() === street &&
     Number(entry.number) === number &&
     entry.subAddress &&
     entry.subAddress.trim().toLowerCase() === subAddress
   ) || null;
+
+  if (!ret) {
+    ret = landmarkFeatures.find(entry =>
+    entry.street &&
+    entry.street.trim().toUpperCase() === street &&
+    Number(entry.number) === number &&
+    entry.subAddress &&
+    entry.subAddress.trim().toLowerCase() === subAddress
+  ) || null;
+  }
+  return ret;
 }
 
 // Costruisce il blurb da mostrare nel pannello di una via: se esiste una
@@ -1520,6 +1531,9 @@ function addLandmarkLayer() {
         "name": "@dr_neo101",
         "height": 20,
         "base": 0,
+        "street": "BLADE AVENUE",
+        "number": 31,
+        "subAddress": "a3_832",
         "color": "#e8c93a",
         "address": "BLADE AVENUE, #101",
         "blurb": "Il covo/laboratorio del ripperdoc Dr Neo. Un edificio basso ma pesantemente sorvegliato, meglio citofonare. Piccolo accesso posteriore sul retro."
@@ -1604,6 +1618,9 @@ function addLandmarkLayer() {
         "name": "@dr_neo101",
         "height": 100,
         "base": 0,
+        "street": "BLADE AVENUE",
+        "number": 31,
+        "subAddress": "a3_832",
         "color": "#e8c93a",
         "blurb": "Il covo/laboratorio del ripperdoc Dr Neo. Un edificio alto e pesantemente sorvegliato, meglio citofonare. Piccolo accesso posteriore sul retro."
       },
