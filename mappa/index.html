@@ -639,8 +639,9 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     // subito un fallback stabile — modifica pure name/blurb come vuoi,
     // oppure elimina la riga lng/lat/radius se preferisci affidarti solo
     // al civico.
-    street: "REBOOT PASSAGE, §a3_832",
+    street: "REBOOT PASSAGE",
     number: 31,
+    subAddress: "a3_832",
     lng: 17.882245,
     lat: 59.34839,
     radius: 0.0006,
@@ -737,7 +738,7 @@ function makeCubePolygonRing(lng, lat, halfSizeDeg, rotationDeg) {
 // e il civico di un edificio personalizzato, se la voce li specifica.
 function registerCustomBuildingAddress(entry, lng, lat) {
   if (entry.street === undefined || entry.number === undefined) return;
-  const label = `${entry.street.trim().toUpperCase()}, #${entry.number}`;
+  const label = `${entry.street.trim().toUpperCase()}, #${entry.number} §${entry.subAddress || ''}`.trim();
   const key = `custom:${entry.street.trim().toUpperCase()}#${entry.number}`;
   if (addressRegistry.has(key)) return;
   addressRegistry.set(key, {
