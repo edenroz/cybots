@@ -600,9 +600,9 @@ const PRELOADED_STREETS = [
     lat: 59.250015
   },
   {
-    name: "REBOOT PASSAGE, #31a",
-    lng: 17.88201,
-    lat: 59.34821
+    name: "BLADE AVENUE, #101",
+    lng: 17.88993,
+    lat: 59.34351
   }
 ];
 
@@ -4026,7 +4026,7 @@ function renderAddrResults(query) {
   }
   entries.slice(0, 60).forEach(entry => {
     const li = document.createElement('li');
-    li.innerHTML = `<span>${entry.name}</span><span class="fly-hint">${entry.preloaded ? '👤 VOLA' : '↗ VOLA'}</span>`;
+    li.innerHTML = `<span>${entry.name}</span><span class="fly-hint">${entry.preloaded ? '👤 VOLA' : '✈ VOLA'}</span>`;
 
     // BUG PRECEDENTE: qui si ricalcolava un nome con cyberHash(entry.id, ...),
     // ma entry.id ed entry.layer non esistono MAI sugli oggetti salvati in
