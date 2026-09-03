@@ -661,7 +661,8 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
 // vanno invece confrontate per distanza).
 const customBuildingByAddress = new Map();
 const customBuildingByCoords = [];
-CUSTOM_BUILDING_DESCRIPTIONS.forEach(entry => {
+CUSTOM_BUILDING_DESCRIPTIONS.forEach((entry, index) => {
+  entry.__index = index; // usato per non disegnare due volte lo stesso cubo
   if (entry.street !== undefined && entry.number !== undefined) {
     const key = `${entry.street.trim().toUpperCase()}#${entry.number}`;
     if (!customBuildingByAddress.has(key)) customBuildingByAddress.set(key, entry);
@@ -693,8 +694,119 @@ function findCustomBuildingDescription(addr) {
 }
 
 /* =========================================================================
-   MAP INITIALIZATION
+   CUBI DEGLI EDIFICI PERSONALIZZATI + REGISTRAZIONE NELL'ARCHIVIO INDIRIZZI
+   Per ogni edificio con una descrizione in CUSTOM_BUILDING_DESCRIPTIONS:
+     1. disegniamo un piccolo cubo colorato (fill-extrusion) esattamente
+        sulle sue coordinate, così è visibile e cliccabile sulla mappa
+        senza dover prima individuare l'edificio 3D originale;
+     2. se la voce specifica anche street+number, aggiungiamo il suo
+        indirizzo ("VIA, #CIVICO") allo stesso addressRegistry usato dalla
+        barra di ricerca (#addr-bar), così l'edificio si trova anche
+        digitando il nome della via.
+   Le voci con lng/lat note (metodo "per coordinate") vengono disegnate e
+   registrate subito al caricamento della mappa. Le voci con solo
+   street+number (senza lng/lat) vengono disegnate/registrate più tardi,
+   non appena il sistema scopre l'edificio corrispondente esplorando la
+   mappa (vedi refreshBuildingAddresses e addBuildingClickHandlers).
+   customBuildingCubeDrawn evita di disegnare due volte lo stesso cubo se
+   una voce viene "trovata" sia per coordinate sia per indirizzo.
    ========================================================================= */
+const customBuildingCubeFeatures = [];
+const customBuildingCubeDrawn = new Set();
+
+function makeCubePolygonRing(lng, lat, halfSizeDeg) {
+  const latCorrection = Math.cos((lat * Math.PI) / 180) || 1;
+  const dx = halfSizeDeg / latCorrection;
+  const dy = halfSizeDeg;
+  return [
+    [lng - dx, lat - dy],
+    [lng + dx, lat - dy],
+    [lng + dx, lat + dy],
+    [lng - dx, lat + dy],
+    [lng - dx, lat - dy]
+  ];
+}
+
+// Aggiunge all'archivio indirizzi (quello della barra di ricerca) la via
+// e il civico di un edificio personalizzato, se la voce li specifica.
+function registerCustomBuildingAddress(entry, lng, lat) {
+  if (entry.street === undefined || entry.number === undefined) return;
+  const label = `${entry.street.trim().toUpperCase()}, #${entry.number}`;
+  const key = `custom:${entry.street.trim().toUpperCase()}#${entry.number}`;
+  if (addressRegistry.has(key)) return;
+  addressRegistry.set(key, {
+    name: label,
+    lng,
+    lat,
+    preloaded: true,
+    type: 'minor',
+    custom: true
+  });
+  refreshAddrResultsIfOpen();
+  updateAddrCount();
+}
+
+// Disegna (una sola volta per voce) il cubo dell'edificio personalizzato
+// alle coordinate indicate, e ne registra l'indirizzo.
+function addCustomBuildingCube(entry, lng, lat) {
+  if (customBuildingCubeDrawn.has(entry.__index)) return;
+  customBuildingCubeDrawn.add(entry.__index);
+
+  customBuildingCubeFeatures.push({
+    type: 'Feature',
+    properties: {
+      name: entry.name || 'Edificio personalizzato',
+      color: entry.color || '#00fff2',
+      blurb: entry.blurb || ''
+    },
+    geometry: { type: 'Polygon', coordinates: [makeCubePolygonRing(lng, lat, 0.0001)] }
+  });
+
+  const source = map.getSource('cy-custom-building-cubes');
+  if (source) {
+    source.setData({ type: 'FeatureCollection', features: customBuildingCubeFeatures });
+  }
+
+  registerCustomBuildingAddress(entry, lng, lat);
+}
+
+function addCustomBuildingLayer() {
+  map.addSource('cy-custom-building-cubes', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+
+  map.addLayer({
+    id: 'cy-custom-building-cube',
+    type: 'fill-extrusion',
+    source: 'cy-custom-building-cubes',
+    paint: {
+      'fill-extrusion-color': ['get', 'color'],
+      'fill-extrusion-height': 14,
+      'fill-extrusion-base': 0,
+      'fill-extrusion-opacity': 0.95
+    }
+  });
+
+  map.on('click', 'cy-custom-building-cube', (e) => {
+    if (selectingPoint) return;
+    const p = e.features[0].properties;
+    openPanel({ name: p.name, type: 'edificio', color: p.color, blurb: p.blurb });
+  });
+  map.on('mouseenter', 'cy-custom-building-cube', () => { if (!selectingPoint) map.getCanvas().style.cursor = 'pointer'; });
+  map.on('mouseleave', 'cy-custom-building-cube', () => map.getCanvas().style.cursor = '');
+
+  // Le voci con coordinate note (metodo "per coordinate") non devono
+  // aspettare che tu esplori quella zona: disegniamo il cubo e
+  // registriamo l'indirizzo subito.
+  CUSTOM_BUILDING_DESCRIPTIONS.forEach(entry => {
+    if (entry.lng !== undefined && entry.lat !== undefined) {
+      addCustomBuildingCube(entry, entry.lng, entry.lat);
+    }
+  });
+}
+
+
 const map = new maplibregl.Map({
   container: 'map',
   style: 'https://tiles.openfreemap.org/styles/liberty',
@@ -827,6 +939,7 @@ map.on('load', () => {
   addMeteorCraterLayer();
   addPoiLayer();
   addStreetNameLayer();
+  addCustomBuildingLayer();
   addBuildingClickHandlers();
   buildPoiList();
 
@@ -1239,6 +1352,13 @@ function refreshBuildingAddresses() {
     if (!addr) return;
     buildingAddressRegistry.set(f.id, addr);
     added++;
+
+    // Se questo edificio corrisponde a una voce di
+    // CUSTOM_BUILDING_DESCRIPTIONS agganciata solo per via+civico (senza
+    // lng/lat noti in anticipo), è proprio questo il momento in cui la
+    // scopriamo: disegniamo il cubo e registriamo l'indirizzo adesso.
+    const custom = findCustomBuildingDescription(addr);
+    if (custom) addCustomBuildingCube(custom, addr.lng, addr.lat);
   });
   if (added > 0) rebuildBuildingAddressSource();
 }
@@ -1263,6 +1383,7 @@ function addBuildingClickHandlers() {
       // del testo generico "[DLC LOCKED]".
       const custom = findCustomBuildingDescription(addr);
       if (custom) {
+        addCustomBuildingCube(custom, addr.lng, addr.lat);
         openPanel({
           name: custom.name || ('Edificio #' + addr.number),
           type: 'edificio',
