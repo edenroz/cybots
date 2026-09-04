@@ -2134,8 +2134,8 @@ const OSRM_PROFILES = {
   foot: { service: 'routed-foot', mode: 'foot' },
   car:  { service: 'routed-car',  mode: 'driving' }
 };
-const HELICOPTER_SPEED_KMH = 200;
-const TRANSIT_AVG_SPEED_KMH = 22; // velocità media stimata mezzi pubblici urbani (soste incluse)
+const HELICOPTER_SPEED_KMH = 250;
+const TRANSIT_AVG_SPEED_KMH = 42; // velocità media stimata mezzi pubblici urbani (soste incluse)
 const TRANSIT_OVERHEAD_MIN = 9;   // stima fissa: cammino verso la fermata + attesa media + eventuale cambio
 
 function haversineKm(a, b) {
@@ -2438,18 +2438,18 @@ async function calcRoute() {
   const resultsEl = document.getElementById('route-results');
   resultsEl.innerHTML = '<div class="route-loading">CALCOLO IN CORSO…</div>';
 
-  const distKm = haversineKm(routePoints.A, routePoints.B) * 2;
+  const distKm = haversineKm(routePoints.A, routePoints.B) * 4;
   const heliMin = (distKm / HELICOPTER_SPEED_KMH) * 60;
   const transitMin = (distKm / TRANSIT_AVG_SPEED_KMH) * 60 + TRANSIT_OVERHEAD_MIN;
 
   let footMin = null, carMin = null, footErr = false, carErr = false;
   try {
     footMin = await fetchOsrmMinutes('foot', routePoints.A, routePoints.B);
-    footMin = footMin * 2; // stima cammino verso la fermata + attesa media
+    footMin = footMin * 4; // stima cammino verso la fermata + attesa media
   } catch (e) { footErr = true; }
   try {
     carMin = await fetchOsrmMinutes('car', routePoints.A, routePoints.B);
-    carMin = carMin * 2; // stima cammino verso la fermata + attesa media
+    carMin = carMin * 4; // stima cammino verso la fermata + attesa media
   } catch (e) { carErr = true; }
 
   resultsEl.innerHTML = `
@@ -2457,7 +2457,7 @@ async function calcRoute() {
     <div class="route-row"><span>🚶 A piedi</span><span>${footErr ? 'n/d' : formatDuration(footMin)}</span></div>
     <div class="route-row"><span>🚌 Mezzi pubblici</span><span>${formatDuration(transitMin)}</span></div>
     <div class="route-row"><span>🚗 Auto</span><span>${carErr ? 'n/d' : formatDuration(carMin)}</span></div>
-    <div class="route-row"><span>🚁 Octoptero</span><span>${formatDuration(heliMin)}</span></div>
+    <div class="route-row"><span>🚁 Octocoptero</span><span>${formatDuration(heliMin)}</span></div>
     ${(footErr || carErr) ? '<div class="route-note">Il routing gratuito a volte è lento o non disponibile: se manca un valore, riprova tra poco premendo di nuovo CALCOLA.</div>' : ''}
     <div class="route-note"></div>
   `;
