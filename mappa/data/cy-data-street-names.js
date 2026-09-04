@@ -1,0 +1,48 @@
+/* =========================================================================
+   CY — DATI: NOMI VIE CYBERPUNK
+   Incolla qui, byte-per-byte, il blocco originale:
+     const CYBER_PREFIXES = [ ... ];
+     const CYBER_SUFFIXES_MAJOR = [ ... ];
+     const CYBER_SUFFIXES_MINOR = [ ... ];
+     const CYBER_HASH_MOD   = ...;
+     const CYBER_HASH_MULT_A = ...;
+     const CYBER_HASH_MULT_B = ...;
+     const CYBER_HASH_RANGE  = ...;
+   Usate da cyberHash()/cyberNameExpression() nella logica principale.
+   ========================================================================= */
+
+const CYBER_PREFIXES = [
+  "NEON","CHROME","RUST","VOID","GHOST","STATIC","PULSE","CIRCUIT","WIRE",
+  "BLADE","VIPER","CRASH","SPARK","FLUX","TOXIC","RAZOR","VECTOR","KAYTELL MAKERS™",
+  "TG LABS","ALLIANSEN™","FUSE","PLASMA","PHANTOM","MOLTEN","SPECTRAL FT BANKS™","HOLLOW",
+  "CINDER","OXIDE","CYENERGY™","GRID","OMEGA","GLITCH","IRON","ACGS™",
+  "UNITED CITADEL SECURITY™","TULLES&DEVERTE™","EMBER","EPSILON","NOVA","ROYALWEST™","TRANS","TITAN",
+  "COBALT","QUARTZ","ACID","BINARY","GRAVF MELLBERG TOSK™","STORM","VENOM","CIPHER",
+  "MATRIX", "PROTOCOL", "QUANTUM", "SYNTH", "OVERCLOCK", "ROOT", "KERNEL", 
+  "NULL", "ZERO", "ABYSS", "REBOOT", "ZENITH", "SYNAPSE", "DRIFT", "GEAR", 
+  "STRIKE", "CORE", "NEURO", "CHIP", "FRACTURE", "NANO", "OMNICORP™", 
+  "NECROTRONIC™", "HYPERION™", "FOSSE LABS™", "SYNDICATE™", "NEURALNET™", 
+  "FUTURA MALUM™", "HEAVYMETAL™", "HAX INSTITUTE™", "SUB-0", "OVERRIDE", "BLACKOUT",
+  "SCRAP", "SLAG", "ASH", "TAR", "FRACTAL", "SPRAWL", "SYNTHETIC"
+];
+
+const CYBER_SUFFIXES_MAJOR = [
+  "STREET", "AVENUE", "ROAD", "DRIVE", "BOULEVARD", "HIGHWAY", 
+  "CIRCUIT", "CORRIDOR", "PLAZA", "SQUARE", "JUNCTION", "LOOP", 
+  "BLOCK", "CROSSING", "EXPRESSWAY", "PARKWAY", "SPINE", "ARTERY", 
+  "NEXUS", "OVERPASS", "GRID",
+  "CONDUIT", "PROMENADE", "SKYWAY", "SUPERHIGHWAY", "INTERCHANGE", "RINGROAD", "TUNNEL", "VIADUCT",
+  "EXPANSE", "HIGH-GRID", "MAG-RAIL", "BOREALIS", "SPRAWL"
+];
+
+const CYBER_SUFFIXES_MINOR = [
+  "ALLEY", "LANE", "WAY", "ROW", "LINE", "WALK", "TERRACE", 
+  "ARCADE", "STRIP", "PASSAGE", "GATE", "SIDE", "PATH", 
+  "COURT", "CATWALK", "VENT", "TRENCH", "SLIP", "ALCOVE", "STEP", "SHAFT", "HOLE", "CHUTE", 
+  "YARD", "HIDEOUT"
+];
+
+const CYBER_HASH_MOD   = 1000003;
+const CYBER_HASH_MULT_A = 48271;
+const CYBER_HASH_MULT_B = 16807;
+const CYBER_HASH_RANGE  = 2147483647;
