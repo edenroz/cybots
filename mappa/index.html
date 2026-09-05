@@ -12,6 +12,8 @@
      DATI (separati dalla logica): caricare SEMPRE prima di cy-map.js,
      perché quel file usa direttamente le variabili globali che questi
      script definiscono (districts, pois, CYBER_PREFIXES, ecc.).
+
+     file:///C:/Users/edenr/Documents/cybots/mappa/index.html?lat=59.34154&lng=18.05463&name=TitoloG0&type=core&color=%23c8102e&blurb=%C3%88%20qffffui%20che%20%C3%A8%20caduta%20la%20roccia
      ========================================================================= -->
 <script src="data/cy-data-districts.js"></script>
 <script src="data/cy-data-pois.js"></script>
@@ -871,6 +873,10 @@ map.on('load', () => {
   addBuildingClickHandlers();
   buildPoiList();
 
+  // Se il link con cui è stata aperta la pagina porta coordinate in
+  // query string (?lat=...&lng=...), voliamoci sopra subito.
+  flyToFromUrlParams();
+
   // Riordino sicuro: qui tutti i layer esistono già.
   if (map.getLayer('cy-landmark-extrusion')) {
     map.moveLayer('cy-district-territory-fill', 'cy-landmark-extrusion');
@@ -901,6 +907,81 @@ map.on('load', () => {
   // entrati in vista.
   map.on('idle', refreshBuildingAddresses);
 });
+
+/* =========================================================================
+   VOLO DA PARAMETRI URL
+   Permette di condividere un link che, all'apertura, fa "volare" subito
+   la telecamera su un punto preciso — utile per il master che vuole
+   mandare ai giocatori (o tenersi tra i preferiti) un link diretto a un
+   luogo della mappa senza doverlo ricercare a mano ogni volta.
+   Esempio: https://tuo-dominio/?lat=59.34154&lng=18.05463
+   Parametri opzionali (con i default usati altrove per i flyTo):
+     zoom     (default 16)
+     pitch    (default 50)
+     bearing  (default 0)
+   Parametri opzionali per aprire subito anche il pannello descrittivo
+   (sul modello di quello che appare cliccando un POI/edificio/via):
+     name     (titolo mostrato nel pannello)
+     blurb    (testo/HTML del pannello — stessa convenzione di districts/
+               pois/landmarks: può contenere tag come <br> o <img>)
+     color    (colore dell'etichetta di tipo, es. #e8c93a)
+     type     (etichetta di tipo mostrata sopra il titolo, es. "missione")
+   Il pannello si apre solo se è presente name o blurb, e solo su
+   desktop (su mobile il pannello a schermo intero coprirebbe l'atterraggio
+   della camera, stessa scelta già fatta per il click sui POI dalla lista).
+   Se lat/lng mancano o non sono numeri validi, non succede nulla: la
+   mappa si comporta come sempre (centro/zoom di default).
+   ========================================================================= */
+function getUrlFlyTarget() {
+  const params = new URLSearchParams(window.location.search);
+  const lat = parseFloat(params.get('lat'));
+  const lng = parseFloat(params.get('lng'));
+  if (!isFinite(lat) || !isFinite(lng)) return null;
+
+  const zoom = parseFloat(params.get('zoom'));
+  const pitch = parseFloat(params.get('pitch'));
+  const bearing = parseFloat(params.get('bearing'));
+
+  return {
+    lat, lng,
+    zoom: isFinite(zoom) ? zoom : 16,
+    pitch: isFinite(pitch) ? pitch : 50,
+    bearing: isFinite(bearing) ? bearing : 0,
+    // URLSearchParams.get() ritorna già la stringa decodificata (%20,
+    // %C3%A8 ecc. sono gestiti automaticamente); null se il parametro
+    // non è presente nell'URL.
+    name: params.get('name'),
+    blurb: params.get('blurb'),
+    color: params.get('color'),
+    type: params.get('type')
+  };
+}
+
+function flyToFromUrlParams() {
+  const target = getUrlFlyTarget();
+  if (!target) return;
+  map.flyTo({
+    center: [target.lng, target.lat],
+    zoom: target.zoom,
+    pitch: target.pitch,
+    bearing: target.bearing,
+    duration: 3200,
+    curve: 1.4,
+    speed: 0.6
+  });
+
+  // Stessa convenzione già in uso per il click sui POI dalla lista: su
+  // mobile il pannello (a schermo intero) non si apre in automatico per
+  // non coprire l'animazione di atterraggio della camera.
+  if (!isMobile && (target.name || target.blurb)) {
+    openPanel({
+      name: target.name || '',
+      type: target.type || '',
+      color: target.color || '#f2ede4',
+      blurb: target.blurb || ''
+    });
+  }
+}
 
 /* =========================================================================
    STREET NAME LAYER
