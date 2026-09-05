@@ -336,7 +336,7 @@
   <h3>ARCHIVIO INDIRIZZI // CY</h3>
   <div id="addr-input-row">
     <input id="addr-input" type="text" placeholder="cerca una via... es. CHROME"
-      oninput="onAddrInput()" autocomplete="off">
+      oninput="onAddrInput()" onkeydown="onAddrInputKeydown(event)" autocomplete="off">
   </div>
   <ul id="addr-results"></ul>
   <div id="addr-empty">Naviga ed esplora la mappa: ogni via che entra in vista viene battezzata e aggiunta qui. Più zoni visiti, più indirizzi trovi.</div>
@@ -1892,6 +1892,17 @@ function onAddrInput() {
   renderAddrResults(document.getElementById('addr-input').value);
 }
 
+// Invio nella barra indirizzi = seleziona direttamente il primo risultato
+// della lista attualmente filtrata (stesso effetto di un click su di
+// esso: volo sulla mappa + apertura pannello), senza dover staccare le
+// mani dalla tastiera per prendere il mouse.
+function onAddrInputKeydown(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const firstResult = document.querySelector('#addr-results li');
+  if (firstResult) firstResult.click();
+}
+
 function refreshAddrResultsIfOpen() {
   const bar = document.getElementById('addr-bar');
   if (bar.classList.contains('open')) {
@@ -1999,14 +2010,16 @@ function resetNorth() {
 const PAN_SPEED = 300;     // pixel al secondo, sullo schermo (frecce)
 const ROTATE_SPEED = 20;   // gradi di bearing al secondo (A/D)
 const PITCH_SPEED = 45;    // gradi di pitch al secondo (W/S)
-const ZOOM_SPEED = 1.6;    // livelli di zoom al secondo (PageUp/PageDown, +/-)
+const ZOOM_SPEED = 1.6;    // livelli di zoom al secondo (Q/E, +/-)
 
 const keyState = {
   ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false,
   KeyW:false, KeyA:false, KeyS:false, KeyD:false,
-  // Zoom: PageUp/PageDown funzionano su qualsiasi tastiera; Equal/Minus e i
-  // relativi tasti del tastierino numerico coprono anche chi preferisce +/-.
-  PageUp:false, PageDown:false, Equal:false, Minus:false,
+  // Zoom: Q/E come tasti principali (PageUp/PageDown sono stati scartati:
+  // su molti browser/OS scrollano la pagina o cambiano tab invece di
+  // arrivare al listener). Equal/Minus e i tasti del tastierino numerico
+  // restano come alternativa per chi preferisce +/-.
+  KeyQ:false, KeyE:false, Equal:false, Minus:false,
   NumpadAdd:false, NumpadSubtract:false
 };
 let camRAF = null;
@@ -2046,6 +2059,22 @@ window.addEventListener('blur', () => {
    non serve alcun ciclo requestAnimationFrame.
    ========================================================================= */
 window.addEventListener('keydown', (e) => {
+  // BUG PRECEDENTE: Esc veniva ignorato ogni volta che il focus era dentro
+  // un campo di testo (es. la barra indirizzi mentre stai scrivendo), dato
+  // che isTypingTarget(e.target) faceva uscire subito dalla funzione prima
+  // di controllare il tasto premuto — da qui la sensazione che "l'uscita
+  // dai pannelli non funziona sempre". Esc deve poter chiudere tutto
+  // SEMPRE, quindi lo gestiamo per primo, prima del controllo sul target,
+  // e togliamo anche il focus dall'eventuale input attivo.
+  if (e.code === 'Escape') {
+    e.preventDefault();
+    closeAllPanels();
+    if (isTypingTarget(document.activeElement)) {
+      document.activeElement.blur();
+    }
+    return;
+  }
+
   if (isTypingTarget(e.target)) return;
 
   if (e.code === 'KeyI') {
@@ -2054,9 +2083,6 @@ window.addEventListener('keydown', (e) => {
   } else if (e.code === 'KeyR') {
     e.preventDefault();
     toggleRouteBar();
-  } else if (e.code === 'Escape') {
-    e.preventDefault();
-    closeAllPanels();
   }
 });
 
@@ -2082,14 +2108,14 @@ function camLoop(now) {
     map.panBy([dx, dy], { duration: 0, animate: false });
   }
 
-  // Rotazione (A/D), pitch (W/S) e zoom (PageUp/PageDown, +/-)
+  // Rotazione (A/D), pitch (W/S) e zoom (Q/E, +/-)
   let bearingDelta = 0, pitchDelta = 0, zoomDelta = 0;
   if (keyState.KeyA) bearingDelta -= ROTATE_SPEED * dt;
   if (keyState.KeyD) bearingDelta += ROTATE_SPEED * dt;
   if (keyState.KeyW) pitchDelta += PITCH_SPEED * dt;
   if (keyState.KeyS) pitchDelta -= PITCH_SPEED * dt;
-  if (keyState.PageUp || keyState.Equal || keyState.NumpadAdd) zoomDelta += ZOOM_SPEED * dt;
-  if (keyState.PageDown || keyState.Minus || keyState.NumpadSubtract) zoomDelta -= ZOOM_SPEED * dt;
+  if (keyState.KeyE || keyState.Equal || keyState.NumpadAdd) zoomDelta += ZOOM_SPEED * dt;
+  if (keyState.KeyQ || keyState.Minus || keyState.NumpadSubtract) zoomDelta -= ZOOM_SPEED * dt;
   if (bearingDelta !== 0 || pitchDelta !== 0 || zoomDelta !== 0) {
     const newPitch = Math.max(0, Math.min(80, map.getPitch() + pitchDelta));
     const newZoom = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), map.getZoom() + zoomDelta));
