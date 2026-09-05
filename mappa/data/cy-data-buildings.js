@@ -69,5 +69,19 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     blurb: "Negozio",
     height: 18,   // opzionale — se omesso: 1.5
     base: 16
+  },
+  {
+    street: "OVERCLOCK YARD",
+    number: 10,
+    subAddress: "a5_654",
+    lng: 18.02790,
+    lat: 59.25721,
+    radius: 0.00006,
+    name: "NEW LIFE HEX CHURCH",
+    rotation: 30, // opzionale, in gradi (0 = nord)
+    color: "#cd00d4",
+    blurb: "Negozio.<img src=\"img/hex-church.jpg\" alt=\"Mia Immagine\">",
+    height: 80,   // opzionale — se omesso: 1.5
+    base: 0
   }
 ];
