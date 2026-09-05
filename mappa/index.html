@@ -1999,10 +1999,15 @@ function resetNorth() {
 const PAN_SPEED = 300;     // pixel al secondo, sullo schermo (frecce)
 const ROTATE_SPEED = 20;   // gradi di bearing al secondo (A/D)
 const PITCH_SPEED = 45;    // gradi di pitch al secondo (W/S)
+const ZOOM_SPEED = 1.6;    // livelli di zoom al secondo (PageUp/PageDown, +/-)
 
 const keyState = {
   ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false,
-  KeyW:false, KeyA:false, KeyS:false, KeyD:false
+  KeyW:false, KeyA:false, KeyS:false, KeyD:false,
+  // Zoom: PageUp/PageDown funzionano su qualsiasi tastiera; Equal/Minus e i
+  // relativi tasti del tastierino numerico coprono anche chi preferisce +/-.
+  PageUp:false, PageDown:false, Equal:false, Minus:false,
+  NumpadAdd:false, NumpadSubtract:false
 };
 let camRAF = null;
 let lastFrameTime = null;
@@ -2032,6 +2037,37 @@ window.addEventListener('blur', () => {
   Object.keys(keyState).forEach(k => keyState[k] = false);
 });
 
+/* =========================================================================
+   SCORCIATOIE PANNELLI: I = pannello indirizzi, R = pannello misura rotta,
+   Esc = chiude tutti i pannelli aperti (popup di dettaglio, lista POI,
+   barra indirizzi, misura rotta) in un colpo solo. Listener separato da
+   quello sopra (che gestisce solo i tasti "continui" dentro keyState):
+   questi sono azioni singole da eseguire una volta per pressione, quindi
+   non serve alcun ciclo requestAnimationFrame.
+   ========================================================================= */
+window.addEventListener('keydown', (e) => {
+  if (isTypingTarget(e.target)) return;
+
+  if (e.code === 'KeyI') {
+    e.preventDefault();
+    toggleAddrBar();
+  } else if (e.code === 'KeyR') {
+    e.preventDefault();
+    toggleRouteBar();
+  } else if (e.code === 'Escape') {
+    e.preventDefault();
+    closeAllPanels();
+  }
+});
+
+// Chiude in un colpo solo tutti i pannelli/barre attualmente aperti.
+function closeAllPanels() {
+  closePanel();
+  togglePoiPanel(false);
+  toggleAddrBar(false);
+  toggleRouteBar(false);
+}
+
 function camLoop(now) {
   const dt = (now - lastFrameTime) / 1000;
   lastFrameTime = now;
@@ -2046,15 +2082,18 @@ function camLoop(now) {
     map.panBy([dx, dy], { duration: 0, animate: false });
   }
 
-  // Rotazione (A/D) e pitch (W/S)
-  let bearingDelta = 0, pitchDelta = 0;
+  // Rotazione (A/D), pitch (W/S) e zoom (PageUp/PageDown, +/-)
+  let bearingDelta = 0, pitchDelta = 0, zoomDelta = 0;
   if (keyState.KeyA) bearingDelta -= ROTATE_SPEED * dt;
   if (keyState.KeyD) bearingDelta += ROTATE_SPEED * dt;
   if (keyState.KeyW) pitchDelta += PITCH_SPEED * dt;
   if (keyState.KeyS) pitchDelta -= PITCH_SPEED * dt;
-  if (bearingDelta !== 0 || pitchDelta !== 0) {
+  if (keyState.PageUp || keyState.Equal || keyState.NumpadAdd) zoomDelta += ZOOM_SPEED * dt;
+  if (keyState.PageDown || keyState.Minus || keyState.NumpadSubtract) zoomDelta -= ZOOM_SPEED * dt;
+  if (bearingDelta !== 0 || pitchDelta !== 0 || zoomDelta !== 0) {
     const newPitch = Math.max(0, Math.min(80, map.getPitch() + pitchDelta));
-    map.jumpTo({ bearing: map.getBearing() + bearingDelta, pitch: newPitch });
+    const newZoom = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), map.getZoom() + zoomDelta));
+    map.jumpTo({ bearing: map.getBearing() + bearingDelta, pitch: newPitch, zoom: newZoom });
   }
 
   const stillActive = Object.values(keyState).some(v => v);
