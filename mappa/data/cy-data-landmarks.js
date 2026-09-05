@@ -337,6 +337,58 @@ const LANDMARK_FEATURES  = [
     },
     {
       type: "Feature",
+      properties: { name: "La Gloriosa Chiesa della Divina Misericordia™", height: 15, base: 0, color: "#859c03",
+        "street": "NEURALNET™ TRENCH",
+        "number": 1441,
+        "subAddress": "a3_832",
+        "color": "#e8c93a",
+        "address": "NEURALNET™ TRENCH, #1441",
+        blurb: "<img src=\"img/chiesa_svarta.jpg\" alt=\"Mia Immagine\">" },
+      geometry: {
+        type: "Polygon",
+        "coordinates": [
+          [
+            [
+              17.8755119,
+              59.358642
+            ],
+            [
+              17.8754029,
+              59.358702
+            ],
+            [
+              17.8750896,
+              59.3585498
+            ],
+            [
+              17.8750337,
+              59.3584877
+            ],
+            [
+              17.8748599,
+              59.3584021
+            ],
+            [
+              17.875017,
+              59.3583171
+            ],
+            [
+              17.8753124,
+              59.3584589
+            ],
+            [
+              17.8753455,
+              59.3585645
+            ],
+            [
+              17.8755119,
+              59.358642
+            ]
+        ]]
+      }
+    },
+    {
+      type: "Feature",
       properties: { name: "Arca", height: 700, base: 0, color: "#038207",
         blurb: "Arcologia." },
       geometry: {
