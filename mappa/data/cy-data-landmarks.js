@@ -343,8 +343,9 @@ const LANDMARK_FEATURES  = [
         "base": 0,
         "color": "#8cd406",
         "address": "PHANTOM YARD, #326",
-        "blurb": "<img src=\"img/night-owl.jpg\" alt=\"Mia Immagine\">"
-      },
+        "street": "PHANTOM YARD",
+        "number": 326,
+        "blurb": "<img src=\"img/night-owl.jpg\" alt=\"Mia Immagine\">Il Night Owl Bar è uno squallido buco aperto fino a quando resta qualcuno in piedi. Luci al neon mezze fulminate, tavoli appiccicosi e odore di fumo, sudore e distillato. Ma il vero motivo per cui la gente torna è il suo **moonshine**: roba illegale, micidiale e, a sentire il proprietario, *«distillato con vero rame»*. Nessuno sa cosa significhi esattamente. Tutti concordano però che sia molto meglio della merda sintetica venduta altrove."  },
       "geometry": {
         "type": "Polygon",
         "coordinates": [
