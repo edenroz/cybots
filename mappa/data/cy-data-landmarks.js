@@ -336,6 +336,42 @@ const LANDMARK_FEATURES  = [
       }
     },
     {
+      "type": "Feature",
+      "properties": {
+        "name": "The Night Owl Bar",
+        "height": 5,
+        "base": 0,
+        "color": "#8cd406",
+        "address": "PHANTOM YARD, #326",
+        "blurb": "<img src=\"img/night-owl.jpg\" alt=\"Mia Immagine\">"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              17.8776087,
+              59.347994
+            ],
+            [
+              17.8776998,
+              59.3479591
+            ],
+            [
+              17.8774747,
+              59.347808
+            ],
+            [
+              17.8773841,
+              59.3478442
+            ],
+            [
+              17.8776087,
+              59.347994
+            ]]]
+      }
+    },
+    {
       type: "Feature",
       properties: { name: "La Gloriosa Chiesa della Divina Misericordia™", height: 15, base: 0, color: "#859c03",
         "street": "NEURALNET™ TRENCH",
