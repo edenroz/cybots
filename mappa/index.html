@@ -506,10 +506,46 @@ const buildingAddressRegistry = new Map();
 // Costruito automaticamente dall'array sopra: indice per indirizzo
 // (lookup immediato) e lista separata per le voci a coordinate (che
 // vanno invece confrontate per distanza).
+// Centroide (media semplice dei vertici) di un anello [[lng,lat], ...].
+// Usato per derivare lng/lat quando una voce di CUSTOM_BUILDING_DESCRIPTIONS
+// specifica solo "polygon" e non lng/lat espliciti.
+function polygonCentroid(ring) {
+  if (!ring || !ring.length) return null;
+  let sx = 0, sy = 0;
+  ring.forEach(([lng, lat]) => { sx += lng; sy += lat; });
+  return [sx / ring.length, sy / ring.length];
+}
+
 const customBuildingByAddress = new Map();
 const customBuildingByCoords = [];
 CUSTOM_BUILDING_DESCRIPTIONS.forEach((entry, index) => {
   entry.__index = index; // usato per non disegnare due volte lo stesso cubo
+
+  // Se la voce definisce un poligono esplicito ("polygon": [[lng,lat],...])
+  // ma non lng/lat/radius, li deriviamo dal poligono stesso: da qui in poi
+  // il resto della logica (registrazione indirizzo, match per coordinate in
+  // findCustomBuildingDescription, disegno immediato in addCustomBuildingLayer,
+  // ecc.) funziona esattamente come per le voci "a cerchio" di sempre, senza
+  // bisogno di altre modifiche.
+  if (entry.polygon && entry.polygon.length >= 3) {
+    if (entry.lng === undefined || entry.lat === undefined) {
+      const c = polygonCentroid(entry.polygon);
+      if (c) { entry.lng = c[0]; entry.lat = c[1]; }
+    }
+    if (entry.radius === undefined && entry.lng !== undefined && entry.lat !== undefined) {
+      // Raggio derivato dall'estensione reale del poligono (distanza
+      // massima dal centroide a un vertice, con un margine di sicurezza),
+      // invece del default fisso pensato per il cubetto piccolo.
+      let maxDist = 0;
+      entry.polygon.forEach(([plng, plat]) => {
+        const dx = plng - entry.lng, dy = plat - entry.lat;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d > maxDist) maxDist = d;
+      });
+      entry.radius = maxDist * 1.15;
+    }
+  }
+
   if (entry.street !== undefined && entry.number !== undefined) {
     const key = `${entry.street.trim().toUpperCase()}#${entry.number}`;
     if (!customBuildingByAddress.has(key)) customBuildingByAddress.set(key, entry);
@@ -673,6 +709,21 @@ function registerCustomBuildingAddress(entry, lng, lat) {
 
 // Disegna (una sola volta per voce) il cubo dell'edificio personalizzato
 // alle coordinate indicate, e ne registra l'indirizzo.
+// Ritorna l'anello (ring GeoJSON, chiuso) da usare come footprint
+// dell'edificio: il poligono esplicito di entry.polygon se presente
+// (richiuso automaticamente se chi ha scritto i dati non l'ha già fatto),
+// altrimenti il cubetto quadrato auto-generato attorno a lng/lat di sempre
+// (con eventuale entry.halfSize a sostituire il lato di default 0.00001°).
+function customBuildingRing(entry, lng, lat) {
+  if (entry.polygon && entry.polygon.length >= 3) {
+    const ring = entry.polygon.map(([plng, plat]) => [plng, plat]);
+    const first = ring[0], last = ring[ring.length - 1];
+    if (first[0] !== last[0] || first[1] !== last[1]) ring.push(first);
+    return ring;
+  }
+  return makeCubePolygonRing(lng, lat, entry.halfSize || 0.00001, entry.rotation);
+}
+
 function addCustomBuildingCube(entry, lng, lat) {
   if (customBuildingCubeDrawn.has(entry.__index)) return;
   customBuildingCubeDrawn.add(entry.__index);
@@ -689,7 +740,7 @@ function addCustomBuildingCube(entry, lng, lat) {
       height: entry.height !== undefined ? entry.height : 1.5,
       base: entry.base !== undefined ? entry.base : 0
     },
-    geometry: { type: 'Polygon', coordinates: [makeCubePolygonRing(lng, lat, 0.00001, entry.rotation)] }
+    geometry: { type: 'Polygon', coordinates: [customBuildingRing(entry, lng, lat)] }
   });
 
   const source = map.getSource('cy-custom-building-cubes');

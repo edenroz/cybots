@@ -83,5 +83,37 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     blurb: "Negozio.<img src=\"img/hex-church.jpg\" alt=\"Mia Immagine\">",
     height: 80,   // opzionale — se omesso: 1.5
     base: 0
+  },
+  {
+    street: "OVERCLOCK YARD",
+    number: 11,
+    polygon: [
+[
+              18.0279235,
+              59.2569935
+            ],
+            [
+              18.0279827,
+              59.2570048
+            ],
+            [
+              18.0277737,
+              59.2572587
+            ],
+            [
+              18.0277182,
+              59.257245
+            ],
+            [
+              18.0279235,
+              59.2569935
+            ]
+      // non serve richiudere l'anello, ci pensa il codice
+    ],
+    height: 71,
+    base: 67,
+    color: "#cd00d4",
+    name: "//Conglomerato #31...",
+    blurb: "..."
   }
 ];
