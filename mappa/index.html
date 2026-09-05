@@ -677,7 +677,12 @@ function addCustomBuildingCube(entry, lng, lat) {
     properties: {
       name: entry.name || 'Edificio personalizzato',
       color: entry.color || '#1FD400',
-      blurb: entry.blurb || ''
+      blurb: entry.blurb || '',
+      // Altezza/base opzionali: se la voce in CUSTOM_BUILDING_DESCRIPTIONS
+      // specifica entry.height/entry.base li usiamo, altrimenti ricadiamo
+      // sui valori di default usati finora (cubetto piatto 1.5/0).
+      height: entry.height !== undefined ? entry.height : 1.5,
+      base: entry.base !== undefined ? entry.base : 0
     },
     geometry: { type: 'Polygon', coordinates: [makeCubePolygonRing(lng, lat, 0.00001, entry.rotation)] }
   });
@@ -702,8 +707,11 @@ function addCustomBuildingLayer() {
     source: 'cy-custom-building-cubes',
     paint: {
       'fill-extrusion-color': ['get', 'color'],
-      'fill-extrusion-height': 1.5,
-      'fill-extrusion-base': 0,
+      'fill-extrusion-height': ['get', 'height'],
+      // Stesso clamp usato per i landmark: la base non può mai superare
+      // l'altezza, altrimenti il fill-extrusion produce geometria
+      // degenere (pareti che si intersecano, edificio che sparisce).
+      'fill-extrusion-base': ['min', ['get', 'base'], ['get', 'height']],
       'fill-extrusion-opacity': 0.95
     }
   });

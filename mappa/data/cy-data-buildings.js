@@ -33,14 +33,16 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     // al civico.
     street: "REBOOT PASSAGE",
     number: 31,
-    subAddress: "a3_832",
+    subAddress: "a7_832",
     lng: 17.882245,
     lat: 59.34839,
     radius: 0.0006,
     name: "//Conglomerato #31 edificio A<br>//Livelllo 3 Unitá AB §3_832",
     rotation: 50, // opzionale, in gradi (0 = nord)
     color: "#1FD400",
-    blurb: "Unitá abitativa di Lear, con accesso sul vicolo posteriore."
+    blurb: "Unitá abitativa di Lear, con accesso sul vicolo posteriore.",
+    height: 4.5,   // opzionale — se omesso: 1.5
+    base: 3
   },
   {
     street: "PHANTOM YARD",
@@ -55,15 +57,17 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     blurb: "Laboratorio di distillazione clandestina di @fl4s#_11037.<img src=\"img/moonshine.jpg\" alt=\"Mia Immagine\">"
   },
   {
-    street: "ZERO WALK",
+    street: "NULL CHUTE",
     number: 417,
-    subAddress: "a0_24",
-    lng: 17.88285,
-    lat: 59.34308,
+    subAddress: "d16_654",
+    lng: 17.88497,
+    lat: 59.34311,
     radius: 0.00006,
     name: "//Conglomerato #417 edificio AB<br>//Livelllo 0 Unitá IN §0_24",
-    rotation: 45, // opzionale, in gradi (0 = nord)
+    rotation: 30, // opzionale, in gradi (0 = nord)
     color: "#d41900",
-    blurb: "Negozio"
+    blurb: "Negozio",
+    height: 18,   // opzionale — se omesso: 1.5
+    base: 16
   }
 ];
