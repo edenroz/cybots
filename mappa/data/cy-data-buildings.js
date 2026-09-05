@@ -52,6 +52,6 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     name: "//Conglomerato #327 edificio A<br>//Livelllo 0 Unitá IN §0_24",
     rotation: 50, // opzionale, in gradi (0 = nord)
     color: "#07d400",
-    blurb: "Laboratorio di distillazione clandestina di @fl4s#_11037."
+    blurb: "Laboratorio di distillazione clandestina di @fl4s#_11037.<img src=\"img/moonshine.jpg\" alt=\"Mia Immagine\">"
   }
 ];

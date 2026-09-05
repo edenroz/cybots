@@ -345,7 +345,7 @@ const LANDMARK_FEATURES  = [
         "address": "PHANTOM YARD, #326",
         "street": "PHANTOM YARD",
         "number": 326,
-        "blurb": "<img src=\"img/night-owl.jpg\" alt=\"Mia Immagine\">Il Night Owl Bar è uno squallido buco aperto fino a quando resta qualcuno in piedi. Luci al neon mezze fulminate, tavoli appiccicosi e odore di fumo, sudore e distillato. Ma il vero motivo per cui la gente torna è il suo **moonshine**: roba illegale, micidiale e, a sentire il proprietario, *«distillato con vero rame»*. Nessuno sa cosa significhi esattamente. Tutti concordano però che sia molto meglio della merda sintetica venduta altrove."  },
+        "blurb": "FRESH MOONSHINE - 42°<br>Come in and taste the freshness of the real copper!<br><img src=\"img/night-owl.jpg\" alt=\"Mia Immagine\">Il Night Owl Bar è uno squallido buco aperto fino a quando resta qualcuno in piedi. Luci al neon mezze fulminate, tavoli appiccicosi e odore di fumo, sudore e distillato. Ma il vero motivo per cui la gente torna è il suo moonshine: roba illegale, micidiale e, a sentire il proprietario, «distillato con vero rame». Nessuno sa cosa significhi esattamente. Tutti concordano però che sia molto meglio della merda sintetica venduta altrove."  },
       "geometry": {
         "type": "Polygon",
         "coordinates": [
