@@ -74,28 +74,8 @@
   }
   #titleblock h1 .cy{color:var(--cy-red);}
 
-  /* Contenitore comune per la mini-legenda dei tasti e la legenda colori:
-     ancorato in basso a sinistra, i due blocchi si impilano in ordine
-     (prima i tasti, poi i colori) crescendo verso l'alto dal punto di
-     ancoraggio, senza dover calcolare a mano l'altezza dell'uno per
-     posizionare l'altro. */
-  #legend-wrap{
-    position:absolute;bottom:18px;left:18px;z-index:10;
-    display:flex;flex-direction:column;gap:8px;
-  }
-  #keys-legend{
-    background:rgba(10,9,8,0.85);border:1px solid rgba(242,237,228,0.25);
-    padding:8px 14px;color:var(--cy-white);font-size:10.5px;letter-spacing:0.4px;
-    backdrop-filter:blur(2px);
-  }
-  #keys-legend .row{display:flex;align-items:center;gap:6px;margin:3px 0;flex-wrap:wrap;}
-  #keys-legend kbd{
-    display:inline-block;min-width:14px;text-align:center;
-    background:rgba(242,237,228,0.1);border:1px solid rgba(242,237,228,0.35);
-    border-radius:3px;padding:1px 5px;font-family:'Courier New',monospace;
-    font-size:10px;color:var(--cy-yellow);line-height:1.4;
-  }
   #legend{
+    position:absolute;bottom:18px;left:18px;z-index:10;
     background:rgba(10,9,8,0.85);border:1px solid rgba(242,237,228,0.25);
     padding:10px 14px;color:var(--cy-white);font-size:11px;letter-spacing:1px;
     backdrop-filter:blur(2px);
@@ -330,20 +310,12 @@
   <h1><span class="cy">C</span>Y</h1>
 </div>
 
-<div id="legend-wrap">
-  <div id="keys-legend">
-    <div class="row"><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&larr;</kbd><kbd>&rarr;</kbd> muovi</div>
-    <div class="row"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ruota / inclina</div>
-    <div class="row"><kbd>Q</kbd><kbd>E</kbd> zoom</div>
-    <div class="row"><kbd>I</kbd> indirizzi&nbsp;&nbsp;<kbd>R</kbd> rotta&nbsp;&nbsp;<kbd>Esc</kbd> chiudi tutto</div>
-  </div>
-  <div id="legend">
-    <div class="row"><div class="sw" style="background:var(--cy-purple)"></div>SLUMS</div>
-    <div class="row"><div class="sw" style="background:var(--cy-yellow);opacity:0.85"></div>INDUSTRIES</div>
-    <div class="row"><div class="sw" style="background:var(--cy-grey)"></div>HILLS</div>
-    <div class="row"><div class="sw" style="background:var(--cy-dark-gray)"></div>INBETWEEN</div>
-    <div class="row"><div class="sw" style="background:var(--cy-red)"></div>CORE</div>
-  </div>
+<div id="legend">
+  <div class="row"><div class="sw" style="background:var(--cy-purple)"></div>SLUMS</div>
+  <div class="row"><div class="sw" style="background:var(--cy-yellow);opacity:0.85"></div>INDUSTRIES</div>
+  <div class="row"><div class="sw" style="background:var(--cy-grey)"></div>HILLS</div>
+  <div class="row"><div class="sw" style="background:var(--cy-dark-gray)"></div>INBETWEEN</div>
+  <div class="row"><div class="sw" style="background:var(--cy-red)"></div>CORE</div>
 </div>
 
 <div id="popup-panel">
