@@ -74,8 +74,28 @@
   }
   #titleblock h1 .cy{color:var(--cy-red);}
 
-  #legend{
+  /* Contenitore comune per la mini-legenda dei tasti e la legenda colori:
+     ancorato in basso a sinistra, i due blocchi si impilano in ordine
+     (prima i tasti, poi i colori) crescendo verso l'alto dal punto di
+     ancoraggio, senza dover calcolare a mano l'altezza dell'uno per
+     posizionare l'altro. */
+  #legend-wrap{
     position:absolute;bottom:18px;left:18px;z-index:10;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  #keys-legend{
+    background:rgba(10,9,8,0.85);border:1px solid rgba(242,237,228,0.25);
+    padding:8px 14px;color:var(--cy-white);font-size:10.5px;letter-spacing:0.4px;
+    backdrop-filter:blur(2px);
+  }
+  #keys-legend .row{display:flex;align-items:center;gap:6px;margin:3px 0;flex-wrap:wrap;}
+  #keys-legend kbd{
+    display:inline-block;min-width:14px;text-align:center;
+    background:rgba(242,237,228,0.1);border:1px solid rgba(242,237,228,0.35);
+    border-radius:3px;padding:1px 5px;font-family:'Courier New',monospace;
+    font-size:10px;color:var(--cy-yellow);line-height:1.4;
+  }
+  #legend{
     background:rgba(10,9,8,0.85);border:1px solid rgba(242,237,228,0.25);
     padding:10px 14px;color:var(--cy-white);font-size:11px;letter-spacing:1px;
     backdrop-filter:blur(2px);
@@ -102,6 +122,16 @@
     font-family:Impact,'Arial Narrow',sans-serif;font-size:28px;margin:0 0 6px 0;
   }
   #popup-panel p{font-size:13px;line-height:1.6;color:var(--cy-grey);}
+  /* Autoresize: qualunque <img> messa dentro un blurb (via, edificio,
+     landmark, POI...) viene ridimensionata per stare sempre dentro la
+     larghezza del pannello, senza sforare né deformarsi. */
+  #popup-panel img{
+    display:block;
+    max-width:100%;
+    height:auto;
+    margin:10px 0;
+    border:1px solid rgba(242,237,228,0.25);
+  }
   #popup-panel .gm-note{
     margin-top:14px;padding-top:10px;border-top:1px dashed rgba(242,237,228,0.25);
     font-size:11px;letter-spacing:0.5px;color:var(--cy-neon-cyan);opacity:0.75;
@@ -212,6 +242,13 @@
     transition:background 0.15s,padding-left 0.15s;
   }
   #addr-results li:hover{background:rgba(0,255,242,0.1);padding-left:12px;}
+  /* Evidenzia il risultato attualmente selezionato con Tab, prima di
+     confermarlo con Invio. Stile coerente con l'hover ma persistente e
+     con un bordo per essere visibile anche senza mouse sopra. */
+  #addr-results li.active{
+    background:rgba(0,255,242,0.18);padding-left:12px;
+    border-color:rgba(0,255,242,0.5);
+  }
   #addr-results li .fly-hint{font-size:10px;color:var(--cy-neon-cyan);opacity:0.7;letter-spacing:1px;}
   #addr-empty{font-size:11px;color:var(--cy-grey);letter-spacing:0.5px;margin-top:8px;line-height:1.5;}
   #addr-count{font-size:10px;color:var(--cy-grey);letter-spacing:1px;margin-top:6px;text-align:right;}
@@ -296,14 +333,6 @@
       transform:translate(-50%,20%);
     }
   }
-
-#popup-panel img{
-  display:block;
-  max-width:100%;
-  height:auto;
-  margin:10px 0;
-  border:1px solid rgba(242,237,228,0.25);
-}
 </style>
 </head>
 <body>
@@ -1886,6 +1915,13 @@ function togglePoiPanel(force) {
    Cliccando su un risultato la mappa "ci vola sopra" con un flyTo, e si
    apre il pannello con il nome della via come indirizzo di riferimento.
    ========================================================================= */
+// Indice (0-based) del risultato attualmente evidenziato via tastiera con
+// Tab nella lista #addr-results; -1 = nessuna evidenziazione. Viene
+// azzerato ogni volta che la lista viene ricostruita da capo (nuova
+// ricerca), così non resta "appiccicato" a un indice di una lista
+// precedente e diversa.
+let addrSelectedIndex = -1;
+
 function toggleAddrBar(force) {
   const bar = document.getElementById('addr-bar');
   const open = force !== undefined ? force : !bar.classList.contains('open');
@@ -1900,15 +1936,41 @@ function onAddrInput() {
   renderAddrResults(document.getElementById('addr-input').value);
 }
 
-// Invio nella barra indirizzi = seleziona direttamente il primo risultato
-// della lista attualmente filtrata (stesso effetto di un click su di
-// esso: volo sulla mappa + apertura pannello), senza dover staccare le
-// mani dalla tastiera per prendere il mouse.
+// Applica/aggiorna la classe .active sul risultato indicato da
+// addrSelectedIndex e lo scrolla in vista (la lista è scrollabile e
+// l'elemento evidenziato può trovarsi fuori dall'area visibile).
+function updateAddrHighlight() {
+  const items = document.querySelectorAll('#addr-results li');
+  items.forEach((li, i) => {
+    const isActive = i === addrSelectedIndex;
+    li.classList.toggle('active', isActive);
+    if (isActive) li.scrollIntoView({ block: 'nearest' });
+  });
+}
+
+// Tab/Shift+Tab nella barra indirizzi = scorre i risultati attualmente
+// filtrati invece di spostare il focus fuori dal campo (comportamento di
+// default del tab, che qui non serve a nulla dato che non c'è altro da
+// raggiungere subito dopo). Invio conferma il risultato evidenziato
+// (o il primo della lista, se non se n'è ancora scelto uno con Tab) —
+// stesso effetto di un click su di esso.
 function onAddrInputKeydown(e) {
-  if (e.key !== 'Enter') return;
-  e.preventDefault();
-  const firstResult = document.querySelector('#addr-results li');
-  if (firstResult) firstResult.click();
+  const items = document.querySelectorAll('#addr-results li');
+  if (!items.length) return;
+
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const dir = e.shiftKey ? -1 : 1;
+    addrSelectedIndex = (addrSelectedIndex + dir + items.length) % items.length;
+    updateAddrHighlight();
+    return;
+  }
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const target = items[addrSelectedIndex] || items[0];
+    if (target) target.click();
+  }
 }
 
 function refreshAddrResultsIfOpen() {
@@ -1921,6 +1983,9 @@ function refreshAddrResultsIfOpen() {
 function renderAddrResults(query) {
   const list = document.getElementById('addr-results');
   list.innerHTML = '';
+  // Nuova lista di risultati: nessuna evidenziazione ereditata da una
+  // ricerca precedente.
+  addrSelectedIndex = -1;
   const q = (query || '').trim().toUpperCase();
   let entries = Array.from(addressRegistry.values());
 
