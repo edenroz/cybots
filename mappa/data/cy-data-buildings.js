@@ -53,5 +53,17 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     rotation: 38, // opzionale, in gradi (0 = nord)
     color: "#07d400",
     blurb: "Laboratorio di distillazione clandestina di @fl4s#_11037.<img src=\"img/moonshine.jpg\" alt=\"Mia Immagine\">"
+  },
+  {
+    street: "ZERO WALK",
+    number: 417,
+    subAddress: "a0_24",
+    lng: 17.88285,
+    lat: 59.34308,
+    radius: 0.00006,
+    name: "//Conglomerato #417 edificio AB<br>//Livelllo 0 Unitá IN §0_24",
+    rotation: 45, // opzionale, in gradi (0 = nord)
+    color: "#d41900",
+    blurb: "Negozio"
   }
 ];
