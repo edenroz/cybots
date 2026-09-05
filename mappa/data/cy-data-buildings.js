@@ -46,11 +46,11 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     street: "PHANTOM YARD",
     number: 327,
     subAddress: "a0_24",
-    lng: 17.87760,
-    lat: 59.34800,
-    radius: 0.0006,
+    lng: 17.87761,
+    lat: 59.34801,
+    radius: 0.00006,
     name: "//Conglomerato #327 edificio A<br>//Livelllo 0 Unitá IN §0_24",
-    rotation: 50, // opzionale, in gradi (0 = nord)
+    rotation: 38, // opzionale, in gradi (0 = nord)
     color: "#07d400",
     blurb: "Laboratorio di distillazione clandestina di @fl4s#_11037.<img src=\"img/moonshine.jpg\" alt=\"Mia Immagine\">"
   }
