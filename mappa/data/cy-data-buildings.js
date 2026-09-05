@@ -41,5 +41,17 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     rotation: 50, // opzionale, in gradi (0 = nord)
     color: "#1FD400",
     blurb: "Unitá abitativa di Lear, con accesso sul vicolo posteriore."
+  },
+  {
+    street: "PHANTOM YARD",
+    number: 327,
+    subAddress: "a0_24",
+    lng: 17.87760,
+    lat: 59.34800,
+    radius: 0.0006,
+    name: "//Conglomerato #327 edificio A<br>//Livelllo 0 Unitá IN §0_24",
+    rotation: 50, // opzionale, in gradi (0 = nord)
+    color: "#07d400",
+    blurb: "Laboratorio di distillazione clandestina di @fl4s#_11037."
   }
 ];
