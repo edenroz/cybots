@@ -27,6 +27,6 @@ const pois = [
     name: "The Heaps",
     category: "Missione",
     lng: 18.04120, lat: 59.250015,
-    blurb: "Discarica industriale dove vivono i Crash Kids"
+    blurb: "<img src=\"img/crash-kids.png\" alt=\"Mia Immagine\">Discarica industriale dove vivono i Crash Kids"
   }
 ];
