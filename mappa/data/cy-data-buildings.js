@@ -33,21 +33,21 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     // al civico.
     street: "REBOOT PASSAGE",
     number: 31,
-    subAddress: "a7_832",
+    subAddress: "a7_832<br><small>Svarta</small>",
     lng: 17.882245,
     lat: 59.34839,
     radius: 0.0006,
     name: "//Conglomerato #31 edificio A<br>//Livelllo 3 Unitá AB §3_832",
     rotation: 50, // opzionale, in gradi (0 = nord)
     color: "#1FD400",
-    blurb: "Unitá abitativa di Lear, con accesso sul vicolo posteriore.",
+    blurb: "Unitá abitativa di Viff, con accesso sul vicolo posteriore.",
     height: 4.5,   // opzionale — se omesso: 1.5
     base: 3
   },
   {
     street: "PHANTOM YARD",
     number: 327,
-    subAddress: "a0_24",
+    subAddress: "a0_24<br><small>Svarta</small>",
     lng: 17.87761,
     lat: 59.34801,
     radius: 0.00006,
@@ -59,7 +59,7 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
   {
     street: "NULL CHUTE",
     number: 417,
-    subAddress: "d16_654",
+    subAddress: "d16_654<br><small>Svarta</small>",
     lng: 17.88497,
     lat: 59.34311,
     radius: 0.00006,
@@ -73,7 +73,7 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
   {
     street: "OVERCLOCK YARD",
     number: 10,
-    subAddress: "a5_654",
+    subAddress: "a5_654<br><small>Burnchurch Hex</small>",
     lng: 18.02786,
     lat: 59.25712,
     radius: 0.00006,
@@ -87,7 +87,7 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
   {
     street: "NEON HIDEOUT",
     number: 16,
-    subAddress: "a265_3",
+    subAddress: "a265_3<br><small>South Central</small>",
     lng: 17.98803,
     lat: 59.29732,
     radius: 0.00006,
