@@ -85,6 +85,20 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     base: 0
   },
   {
+    street: "NEON HIDEOUT",
+    number: 16,
+    subAddress: "a265_3",
+    lng: 17.98803,
+    lat: 59.29730,
+    radius: 0.00006,
+    name: "CASA CTO",
+    rotation: 75, // opzionale, in gradi (0 = nord)
+    color: "#cd00d4",
+    blurb: "Casa.<img src=\"img/casa-cto.jpg\" alt=\"Mia Immagine\">",
+    height: 265,   // opzionale — se omesso: 1.5
+    base: 264
+  },
+  {
     street: "OVERCLOCK YARD",
     number: 11,
     polygon: [
