@@ -136,7 +136,37 @@
     height:auto;
     margin:10px 0;
     border:1px solid rgba(242,237,228,0.25);
+    cursor:zoom-in;
   }
+
+  /* LIGHTBOX A TUTTO SCHERMO per le immagini dei blurb (pannello destro,
+     ma funziona per qualunque immagine dentro #popup-panel). Cliccando
+     sull'immagine nel pannello si apre qui; l'immagine viene mostrata il
+     più grande possibile e, se ruotarla di 90° la fa occupare più
+     schermo (es. foto verticale su schermo orizzontale o viceversa),
+     viene ruotata automaticamente — vedi openImageLightbox() in fondo
+     allo script. Un click ovunque sull'overlay (immagine inclusa) o il
+     tasto ✕ la richiude; anche Esc la richiude (agganciata a
+     closeAllPanels()). */
+  #img-lightbox{
+    position:fixed;inset:0;z-index:100;
+    background:rgba(5,4,3,0.94);
+    display:none;align-items:center;justify-content:center;
+    cursor:zoom-out;padding:20px;
+  }
+  #img-lightbox.open{display:flex;}
+  #img-lightbox img{
+    display:block;
+    transition:transform 0.25s ease;
+    box-shadow:0 0 40px rgba(0,0,0,0.85);
+    border:1px solid rgba(242,237,228,0.25);
+  }
+  #img-lightbox .lightbox-close{
+    position:absolute;top:16px;right:20px;z-index:101;
+    font-size:28px;line-height:1;color:var(--cy-white);
+    background:none;border:none;cursor:pointer;
+  }
+  #img-lightbox .lightbox-close:hover{color:var(--cy-red);}
   #popup-panel .gm-note{
     margin-top:14px;padding-top:10px;border-top:1px dashed rgba(242,237,228,0.25);
     font-size:11px;letter-spacing:0.5px;color:var(--cy-neon-cyan);opacity:0.75;
@@ -366,6 +396,11 @@
 <div id="popup-panel">
   <button class="close" onclick="closePanel()">✕</button>
   <div id="panel-body"></div>
+</div>
+
+<div id="img-lightbox" onclick="closeImageLightbox()">
+  <button class="lightbox-close" onclick="event.stopPropagation();closeImageLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
 </div>
 
 <div id="poi-toggle" onclick="togglePoiPanel()">POI</div>
@@ -2215,6 +2250,88 @@ function closePanel() {
   document.getElementById('popup-panel').classList.remove('open');
 }
 
+/* =========================================================================
+   LIGHTBOX IMMAGINI DEL PANNELLO
+   Qualunque <img> messa dentro un blurb (via CUSTOM_BUILDING_DESCRIPTIONS,
+   POI, landmark, ecc. — vedi openPanel sopra) diventa cliccabile: un click
+   la apre a schermo intero. La dimensione mostrata è la più grande
+   possibile che ci sta nel viewport MANTENENDO le proporzioni originali;
+   in più, se ruotare l'immagine di 90° permette di occupare più schermo
+   (tipico caso: foto verticale scattata col telefono, mostrata su un
+   monitor orizzontale, o viceversa), la ruotiamo automaticamente.
+   ========================================================================= */
+
+// Un solo listener delegato sul pannello: funziona anche per immagini
+// inserite dinamicamente in panel-body ad ogni openPanel(), senza dover
+// riagganciare un listener ogni volta.
+document.getElementById('popup-panel').addEventListener('click', (e) => {
+  if (e.target && e.target.tagName === 'IMG') {
+    openImageLightbox(e.target.src);
+  }
+});
+
+function openImageLightbox(src) {
+  const overlay = document.getElementById('img-lightbox');
+  const img = document.getElementById('lightbox-img');
+
+  img.style.transform = 'rotate(0deg)';
+  img.style.maxWidth = '';
+  img.style.maxHeight = '';
+  img.src = src;
+  overlay.classList.add('open');
+
+  const applyBestFit = () => {
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    if (!iw || !ih) return;
+
+    // Spazio disponibile (il padding:20px dell'overlay è già tolto qui,
+    // con un margine extra per il pulsante di chiusura in alto a destra).
+    const vw = Math.max(100, window.innerWidth - 48);
+    const vh = Math.max(100, window.innerHeight - 48);
+
+    // Fattore di scala massimo raggiungibile SENZA ruotare, e con una
+    // rotazione di 90° (dove larghezza/altezza dell'immagine si scambiano
+    // rispetto allo spazio disponibile). Chi dei due è più grande vince:
+    // è la configurazione che copre più superficie di schermo.
+    const scaleNormal = Math.min(vw / iw, vh / ih);
+    const scaleRotated = Math.min(vw / ih, vh / iw);
+
+    if (scaleRotated > scaleNormal * 1.01) {
+      // Ruotata: il box (prima della rotazione CSS) deve avere le
+      // dimensioni "scambiate" — è quello che poi risulta verticale/
+      // orizzontale correttamente una volta applicato rotate(90deg).
+      img.style.transform = 'rotate(90deg)';
+      img.style.maxWidth = vh + 'px';
+      img.style.maxHeight = vw + 'px';
+    } else {
+      img.style.transform = 'rotate(0deg)';
+      img.style.maxWidth = vw + 'px';
+      img.style.maxHeight = vh + 'px';
+    }
+  };
+
+  if (img.complete && img.naturalWidth) {
+    applyBestFit();
+  } else {
+    img.onload = applyBestFit;
+  }
+}
+
+function closeImageLightbox() {
+  document.getElementById('img-lightbox').classList.remove('open');
+  document.getElementById('lightbox-img').src = '';
+}
+
+// Se la finestra viene ridimensionata mentre il lightbox è aperto,
+// ricalcoliamo il best-fit (altrimenti l'immagine resterebbe dimensionata
+// per il viewport precedente).
+window.addEventListener('resize', () => {
+  const overlay = document.getElementById('img-lightbox');
+  if (!overlay.classList.contains('open')) return;
+  const img = document.getElementById('lightbox-img');
+  if (img.src) openImageLightbox(img.src);
+});
+
 function resetNorth() {
   map.easeTo({ bearing: 0, pitch: 0, duration: 400 });
 }
@@ -2307,6 +2424,7 @@ window.addEventListener('keydown', (e) => {
 
 // Chiude in un colpo solo tutti i pannelli/barre attualmente aperti.
 function closeAllPanels() {
+  closeImageLightbox();
   closePanel();
   togglePoiPanel(false);
   toggleAddrBar(false);
