@@ -2816,6 +2816,7 @@ function setRoutePoint(which, lngLat) {
   selectingPoint = null;
   updateRouteButtons();
   drawRouteLine();
+  clearRoadRoute();
   document.getElementById('route-results').innerHTML = '';
 }
 
@@ -2847,34 +2848,123 @@ function drawRouteLine() {
   }
 }
 
-async function fetchOsrmMinutes(profileKey, a, b) {
+function clearRoadRoute() {
+  if (map.getLayer('cy-road-route-outline')) map.removeLayer('cy-road-route-outline');
+  if (map.getLayer('cy-road-route-layer')) map.removeLayer('cy-road-route-layer');
+  if (map.getSource('cy-road-route')) map.removeSource('cy-road-route');
+}
+
+function drawRoadRoute(routeGeometry, fallbackToStraight = false) {
+  if (!routeGeometry || !routeGeometry.coordinates || routeGeometry.coordinates.length < 2) {
+    if (fallbackToStraight) clearRoadRoute();
+    return;
+  }
+
+  const data = {
+    type: 'Feature',
+    properties: {},
+    geometry: routeGeometry
+  };
+
+  if (map.getSource('cy-road-route')) {
+    map.getSource('cy-road-route').setData(data);
+    return;
+  }
+
+  map.addSource('cy-road-route', { type: 'geojson', data });
+
+  // Un bordo scuro separa il percorso dalle strade della mappa e lo rende
+  // leggibile anche sopra linee molto chiare o sopra la linea tratteggiata.
+  map.addLayer({
+    id: 'cy-road-route-outline',
+    type: 'line',
+    source: 'cy-road-route',
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    paint: {
+      'line-color': '#0a0908',
+      'line-width': 8,
+      'line-opacity': 0.9,
+      'line-blur': 0.3
+    }
+  });
+
+  // Percorso reale sulle strade, ricevuto da OSRM. La linea dritta
+  // tratteggiata 'cy-route-line-layer' resta separata e continua a mostrare
+  // la distanza in linea d'aria tra A e B.
+  map.addLayer({
+    id: 'cy-road-route-layer',
+    type: 'line',
+    source: 'cy-road-route',
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    paint: {
+      'line-color': '#00fff2',
+      'line-width': 4,
+      'line-opacity': 0.95
+    }
+  });
+}
+
+async function fetchOsrmRoute(profileKey, a, b) {
   const profile = OSRM_PROFILES[profileKey];
-  const url = `${OSRM_BASE}/${profile.service}/route/v1/${profile.mode}/${a.lng},${a.lat};${b.lng},${b.lat}?overview=false`;
+  const url = `${OSRM_BASE}/${profile.service}/route/v1/${profile.mode}/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('OSRM error ' + res.status);
   const json = await res.json();
   if (!json.routes || !json.routes.length) throw new Error('Nessuna rotta trovata');
-  return json.routes[0].duration / 60; // secondi -> minuti
+  return {
+    minutes: json.routes[0].duration / 60,
+    distanceKm: json.routes[0].distance / 1000,
+    geometry: json.routes[0].geometry
+  };
 }
 
 async function calcRoute() {
   if (!routePoints.A || !routePoints.B) return;
   const resultsEl = document.getElementById('route-results');
   resultsEl.innerHTML = '<div class="route-loading">CALCOLO IN CORSO…</div>';
+  clearRoadRoute();
 
   const distKm = haversineKm(routePoints.A, routePoints.B) * 4;
   const heliMin = (distKm / HELICOPTER_SPEED_KMH) * 60;
   const transitMin = (distKm / TRANSIT_AVG_SPEED_KMH) * 60 + TRANSIT_OVERHEAD_MIN;
 
-  let footMin = null, carMin = null, footErr = false, carErr = false;
-  try {
-    footMin = await fetchOsrmMinutes('foot', routePoints.A, routePoints.B);
-    footMin = footMin * 4; // stima cammino verso la fermata + attesa media
-  } catch (e) { footErr = true; }
-  try {
-    carMin = await fetchOsrmMinutes('car', routePoints.A, routePoints.B);
-    carMin = carMin * 4; // stima cammino verso la fermata + attesa media
-  } catch (e) { carErr = true; }
+  let footMin = null, carMin = null;
+  let footRoute = null, carRoute = null;
+  let footErr = false, carErr = false;
+
+  // Recuperiamo contemporaneamente tempo e geometria. Così il percorso
+  // evidenziato è esattamente quello usato dal routing reale, non una linea
+  // ricostruita a posteriori tra i due punti.
+  const [footResult, carResult] = await Promise.allSettled([
+    fetchOsrmRoute('foot', routePoints.A, routePoints.B),
+    fetchOsrmRoute('car', routePoints.A, routePoints.B)
+  ]);
+
+  if (footResult.status === 'fulfilled') {
+    footRoute = footResult.value;
+    footMin = footRoute.minutes * 4; // stima cammino verso la fermata + attesa media
+  } else {
+    footErr = true;
+  }
+
+  if (carResult.status === 'fulfilled') {
+    carRoute = carResult.value;
+    carMin = carRoute.minutes * 4; // stima cammino verso la fermata + attesa media
+  } else {
+    carErr = true;
+  }
+
+  // Evidenziamo il percorso stradale in auto perché rappresenta il tracciato
+  // della rete viaria; se il routing auto non è disponibile usiamo quello a
+  // piedi come fallback. La linea dritta tratteggiata rimane sempre visibile.
+  const highlightedRoute = carRoute || footRoute;
+  drawRoadRoute(highlightedRoute?.geometry || null);
+
+  const routeLabel = carRoute
+    ? `Percorso stradale evidenziato: ${carRoute.distanceKm.toFixed(2)} km (auto)`
+    : footRoute
+      ? `Percorso evidenziato: ${footRoute.distanceKm.toFixed(2)} km (a piedi)`
+      : 'Percorso stradale non disponibile';
 
   resultsEl.innerHTML = `
     <div class="route-dist">Distanza in linea retta: ${distKm.toFixed(2)} km</div>
@@ -2883,7 +2973,7 @@ async function calcRoute() {
     <div class="route-row"><span>🚗 Auto</span><span>${carErr ? 'n/d' : formatDuration(carMin)}</span></div>
     <div class="route-row"><span>🚁 Octocoptero</span><span>${formatDuration(heliMin)}</span></div>
     ${(footErr || carErr) ? '<div class="route-note">Il routing gratuito a volte è lento o non disponibile: se manca un valore, riprova tra poco premendo di nuovo CALCOLA.</div>' : ''}
-    <div class="route-note"></div>
+    <div class="route-note">${routeLabel}<br><span style="color:var(--cy-yellow)">— —</span> linea dritta A→B &nbsp; <span style="color:var(--cy-neon-cyan)">━━</span> strada percorsa</div>
   `;
 }
 
@@ -2896,6 +2986,7 @@ function resetRoute() {
   });
   if (map.getLayer('cy-route-line-layer')) map.removeLayer('cy-route-line-layer');
   if (map.getSource('cy-route-line')) map.removeSource('cy-route-line');
+  clearRoadRoute();
   document.getElementById('route-results').innerHTML = '';
   updateRouteButtons();
 }
