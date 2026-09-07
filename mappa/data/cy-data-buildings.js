@@ -74,13 +74,13 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     street: "OVERCLOCK YARD",
     number: 10,
     subAddress: "a5_654",
-    lng: 18.02790,
-    lat: 59.25721,
+    lng: 18.02786,
+    lat: 59.25712,
     radius: 0.00006,
     name: "NEW LIFE HEX CHURCH",
     rotation: 30, // opzionale, in gradi (0 = nord)
     color: "#cd00d4",
-    blurb: "Negozio.<img src=\"img/hex-church.jpg\" alt=\"Mia Immagine\">",
+    blurb: "Chiesa.<img src=\"img/hex-church.jpg\" alt=\"Mia Immagine\">",
     height: 80,   // opzionale — se omesso: 1.5
     base: 0
   },
@@ -89,7 +89,7 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     number: 16,
     subAddress: "a265_3",
     lng: 17.98803,
-    lat: 59.29730,
+    lat: 59.29732,
     radius: 0.00006,
     name: "CASA CTO",
     rotation: 75, // opzionale, in gradi (0 = nord)
@@ -125,9 +125,9 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
       // non serve richiudere l'anello, ci pensa il codice
     ],
     height: 71,
-    base: 67,
+    base: 69,
     color: "#cd00d4",
-    name: "//Conglomerato #31...",
+    blurb: "Chiesa.<img src=\"img/hex-church.jpg\" alt=\"Mia Immagine\">",
     blurb: "..."
   }
 ];
