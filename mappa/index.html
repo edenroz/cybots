@@ -1499,6 +1499,24 @@ function addBuildingClickHandlers() {
         if (landmarkHere && landmarkHere.length) return;
       }
 
+      // FIX "non riesco a selezionare i CUSTOM_BUILDING_DESCRIPTIONS vicino
+      // a edifici di default": il cubo personalizzato ha già il suo
+      // handler dedicato (addCustomBuildingLayer, registrato PRIMA di
+      // questo) che apre il pannello giusto. Ma l'edificio 3D di default
+      // sottostante ha quasi sempre un'impronta più grande del cubo, e lo
+      // stesso identico click colpisce ANCHE lui: il suo handler (questo
+      // qui) scattava comunque subito dopo, ricalcolava un indirizzo dal
+      // centroide del building grande (quasi sempre troppo lontano dal
+      // cubo per essere riconosciuto da findCustomBuildingDescription) e
+      // sovrascriveva il pannello corretto con quello generico
+      // "[DLC LOCKED]". Stessa identica logica del controllo sui landmark
+      // qui sopra: se il punto di click ricade anche sul layer del cubo,
+      // il pannello giusto è già stato aperto — non facciamo nulla.
+      if (map.getLayer('cy-custom-building-cube')) {
+        const customCubeHere = map.queryRenderedFeatures(e.point, { layers: ['cy-custom-building-cube'] });
+        if (customCubeHere && customCubeHere.length) return;
+      }
+
       const f = e.features[0];
 
       // L'indirizzo si ricalcola sempre al momento del click (invece di
