@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>THE MAP OF CY</title>
 <!-- https://geojson.io/?map=12.89/59.31889/18.10386/21.1 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.12.0/maplibre-gl.js"></script>
@@ -45,12 +45,12 @@
     font-family:'CyStencil';
     src:local('Impact');
   }
-  #map{position:absolute;top:0;left:0;right:0;bottom:0;filter:contrast(1.05) saturate(1.05);}
+  #map{position:fixed;top:0;left:0;right:0;bottom:0;filter:contrast(1.05) saturate(1.05);}
 
   /* Flat red water-tint overlay, matching the reference art's palette.
      (Miasma/turbulence experiment dropped — flat gradient reads better.) */
   #bloodwater{
-    position:absolute;inset:0;pointer-events:none;z-index:2;
+    position:fixed;inset:0;pointer-events:none;z-index:2;
     background:
       radial-gradient(ellipse 60% 45% at 15% 20%, #c8102e8c, transparent 60%),
       radial-gradient(ellipse 55% 50% at 85% 15%, #c8102e80, transparent 65%),
@@ -59,16 +59,16 @@
     mix-blend-mode:multiply;
   }
   #vignette{
-    position:absolute;inset:0;pointer-events:none;z-index:3;
+    position:fixed;inset:0;pointer-events:none;z-index:3;
     background:radial-gradient(ellipse 70% 70% at 50% 50%, transparent 55%, rgba(0,0,0,0.75) 100%);
   }
   #grain{
-    position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0.05;
+    position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0.05;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
   #titleblock{
-    position:absolute;top:18px;left:18px;z-index:10;color:var(--cy-white);
+    position:fixed;top:18px;left:18px;z-index:10;color:var(--cy-white);
     pointer-events:none;
   }
   #titleblock .kicker{font-size:11px;letter-spacing:3px;opacity:0.6;}
@@ -85,7 +85,7 @@
      ancoraggio, senza dover calcolare a mano l'altezza dell'uno per
      posizionare l'altro. */
   #legend-wrap{
-    position:absolute;bottom:18px;left:18px;z-index:10;
+    position:fixed;bottom:18px;left:18px;z-index:10;
     display:flex;flex-direction:column;gap:8px;
   }
   #keys-legend{
@@ -109,14 +109,14 @@
   #legend .sw{width:12px;height:12px;flex:none;}
 
   #popup-panel{
-    position:absolute;top:0;right:0;bottom:0;width:320px;max-width:80vw;
+    position:fixed;top:0;right:0;bottom:0;width:320px;max-width:80vw;
     background:rgba(10,9,8,0.94);border-left:1px solid rgba(200,16,46,0.5);
     color:var(--cy-white);z-index:20;transform:translateX(100%);
     transition:transform 0.25s ease;padding:24px 20px;overflow-y:auto;
   }
   #popup-panel.open{transform:translateX(0);}
   #popup-panel .close{
-    position:absolute;top:12px;right:14px;cursor:pointer;font-size:20px;
+    position:fixed;top:12px;right:14px;cursor:pointer;font-size:20px;
     color:var(--cy-grey);background:none;border:none;
   }
   #popup-panel .district-tag{
@@ -162,7 +162,7 @@
     border:1px solid rgba(242,237,228,0.25);
   }
   #img-lightbox .lightbox-close{
-    position:absolute;top:16px;right:20px;z-index:101;
+    position:fixed;top:16px;right:20px;z-index:101;
     font-size:28px;line-height:1;color:var(--cy-white);
     background:none;border:none;cursor:pointer;
   }
@@ -176,7 +176,7 @@
   .maplibregl-ctrl-attrib a{color:var(--cy-grey)!important;}
 
   #north-reset{
-    position:absolute;bottom:90px;right:10px;z-index:10;
+    position:fixed;bottom:90px;right:10px;right:calc(10px + env(safe-area-inset-right));z-index:10;
     width:38px;height:38px;
     background:rgba(10,9,8,0.85);
     border:1px solid var(--cy-white);
@@ -189,12 +189,12 @@
   #north-reset svg{width:20px;height:20px;transition:transform 0.4s ease;}
 
   #map-cover{
-    position:absolute;inset:0;z-index:6;background:var(--cy-black);
+    position:fixed;inset:0;z-index:6;background:var(--cy-black);
     pointer-events:none;transition:opacity 0.4s ease;
   }
 
   #coord-readout{
-    position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:10;
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:10;
     background:rgba(10,9,8,0.85);border:1px solid rgba(242,237,228,0.25);
     color:var(--cy-white);font-size:11px;letter-spacing:1px;
     padding:6px 12px;pointer-events:none;white-space:nowrap;
@@ -203,22 +203,24 @@
 
   /* POI panel: slide-out from the left, toggled by a tab button */
   #poi-toggle{
-    position:absolute;top:50%;left:0;transform:translateY(-50%);z-index:15;
+    position:fixed;top:50%;left:0;left:max(0px, env(safe-area-inset-left));
+    transform:translateY(-50%);z-index:15;
     background:rgba(10,9,8,0.9);border:1px solid var(--cy-white);border-left:none;
     color:var(--cy-white);padding:14px 6px;cursor:pointer;
-    font-size:11px;letter-spacing:2px;writing-mode:vertical-rl;
+    font-size:11px;letter-spacing:2px;writing-mode:vertical-rl;-webkit-writing-mode:vertical-rl;
+    min-width:32px;min-height:100px;box-sizing:border-box;
     transition:border-color 0.15s, color 0.15s;
   }
   #poi-toggle:hover{border-color:var(--cy-red);color:var(--cy-red);}
   #poi-panel{
-    position:absolute;top:0;left:0;bottom:0;width:280px;max-width:78vw;
+    position:fixed;top:0;left:0;bottom:0;width:280px;max-width:78vw;
     background:rgba(10,9,8,0.94);border-right:1px solid rgba(200,16,46,0.5);
     color:var(--cy-white);z-index:16;transform:translateX(-100%);
     transition:transform 0.25s ease;padding:24px 18px;overflow-y:auto;
   }
   #poi-panel.open{transform:translateX(0);}
   #poi-panel .close{
-    position:absolute;top:12px;right:14px;cursor:pointer;font-size:20px;
+    position:fixed;top:12px;right:14px;cursor:pointer;font-size:20px;
     color:var(--cy-grey);background:none;border:none;
   }
   #poi-panel h3{
@@ -237,15 +239,17 @@
   /* ADDRESS SEARCH BAR: slide-down bar from the top-center, toggled by a tab
      button on the right edge (mirrors the POI tab on the left edge). */
   #addr-toggle{
-    position:absolute;top:50%;right:0;transform:translateY(-50%);z-index:15;
+    position:fixed;top:50%;right:0;right:max(0px, env(safe-area-inset-right));
+    transform:translateY(-50%);z-index:15;
     background:rgba(10,9,8,0.9);border:1px solid var(--cy-white);border-right:none;
     color:var(--cy-white);padding:14px 6px;cursor:pointer;
-    font-size:11px;letter-spacing:2px;writing-mode:vertical-rl;
+    font-size:11px;letter-spacing:2px;writing-mode:vertical-rl;-webkit-writing-mode:vertical-rl;
+    min-width:32px;min-height:120px;box-sizing:border-box;
     transition:border-color 0.15s, color 0.15s;
   }
   #addr-toggle:hover{border-color:var(--cy-neon-cyan);color:var(--cy-neon-cyan);}
   #addr-bar{
-    position:absolute;top:0;left:50%;transform:translate(-50%,-100%);
+    position:fixed;top:0;left:50%;transform:translate(-50%,-100%);
     width:420px;max-width:92vw;z-index:17;
     background:rgba(10,9,8,0.95);border:1px solid rgba(0,255,242,0.4);
     border-top:none;color:var(--cy-white);
@@ -292,7 +296,7 @@
      north-reset compass) that opens a compact card panel to the left of
      it, for picking two points and computing travel time in 4 modes. */
   #route-toggle{
-    position:absolute;top:130px;right:10px;z-index:15;
+    position:fixed;top:130px;right:10px;right:calc(10px + env(safe-area-inset-right));z-index:15;
     width:38px;height:38px;
     background:rgba(10,9,8,0.9);border:1px solid var(--cy-white);
     color:var(--cy-white);display:flex;align-items:center;justify-content:center;
@@ -301,7 +305,7 @@
   }
   #route-toggle:hover{border-color:var(--cy-yellow);color:var(--cy-yellow);}
   #route-panel{
-    position:absolute;top:130px;right:56px;z-index:16;
+    position:fixed;top:130px;right:56px;z-index:16;
     width:280px;max-width:85vw;
     background:rgba(10,9,8,0.95);border:1px solid rgba(232,201,58,0.5);
     color:var(--cy-white);padding:16px 16px 14px 16px;
@@ -358,7 +362,7 @@
     }
 
     #route-toggle{
-      top:70px;right:10px;
+      top:70px;right:10px;right:calc(10px + env(safe-area-inset-right));
     }
     #route-panel{
       top:70px;right:auto;left:50%;width:92vw;max-width:92vw;
