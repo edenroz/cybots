@@ -1829,7 +1829,7 @@ def main():
     # Se vuoi forzare un bot specifico, inserisci lo username.
     # Se lasci None, viene scelto casualmente.
     forced_username = None
-    # forced_username = "sam_grocery_5193"
+    #forced_username = "burning_silver_2020"
 
     for _ in range(posts_to_make):
 
