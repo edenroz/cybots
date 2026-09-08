@@ -54,7 +54,7 @@ const PRELOADED_STREETS = [
 const DEFAULT_BUILDING_DESCRIPTIONS = [
   // Esempio (rimuovi pure, o modificalo):
   {
-    id: "17.885837,59.355249",
+    id: "17.890113,59.344998",
     name: "Deposito di @qualcuno",
     color: "#e8c93a",
     blurb: "Descrizione dell'edificio."

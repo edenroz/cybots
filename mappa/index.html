@@ -716,6 +716,109 @@ function streetPanelBlurb(streetName, dlcPrice) {
 const customBuildingCubeFeatures = [];
 const customBuildingCubeDrawn = new Set();
 
+// Evidenziazione leggera degli edifici "di default" (quelli generati dallo
+// stile OpenStreetMap) che hanno una voce in DEFAULT_BUILDING_DESCRIPTIONS.
+// Qui NON possiamo cambiare il colore dell'edificio originale per-feature
+// (i layer 'building' dello stile sono condivisi da tutti i palazzi e non
+// hanno alcuna proprietà nostra su cui basare un'espressione di stile): lo
+// evidenziamo invece disegnando, sopra la sua sagoma ESATTA, un contorno
+// netto più un leggero "alone" semitrasparente alla base — senza coprire
+// l'altezza reale dell'edificio. La sagoma viene catturata dalla geometria
+// reale nel momento stesso in cui l'edificio viene scoperto (vedi
+// refreshBuildingAddresses / addBuildingClickHandlers più sotto).
+const defaultBuildingHighlightFeatures = [];
+const defaultBuildingHighlightDrawn = new Set();
+
+function addDefaultBuildingHighlightLayer() {
+  map.addSource('cy-default-building-highlight', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+
+  map.addLayer({
+    id: 'cy-default-building-highlight-glow',
+    type: 'fill-extrusion',
+    source: 'cy-default-building-highlight',
+    paint: {
+      'fill-extrusion-color': ['get', 'color'],
+      'fill-extrusion-height': 4,
+      'fill-extrusion-base': 0,
+      'fill-extrusion-opacity': 0.4
+    }
+  });
+
+  map.addLayer({
+    id: 'cy-default-building-highlight-outline',
+    type: 'line',
+    source: 'cy-default-building-highlight',
+    layout: { 'line-join': 'round' },
+    paint: {
+      'line-color': ['get', 'color'],
+      'line-width': 2.5,
+      'line-opacity': 0.9
+    }
+  });
+}
+
+// Isola UN SOLO poligono dalla geometria di un edificio: lo stesso
+// esattamente usato da computeBuildingCentroid() per calcolare l'ID
+// (coordinates[0] per un Polygon, "solo il primo" coordinates[0] per un
+// MultiPolygon). FIX per il bug "sembra evidenziata mezza mappa": le
+// vector tile del layer 'building' possono restituire un MultiPolygon che
+// raggruppa PIÙ sagome distinte in un'unica feature (capita a certi
+// livelli di semplificazione). Se si usa feature.geometry così com'è per
+// disegnare l'alone/contorno, si finisce per evidenziare anche tutti gli
+// altri edifici "impacchettati" nella stessa feature, non solo quello
+// scoperto/cliccato. Usando solo il poligono coerente con l'ID calcolato,
+// l'evidenziazione resta sempre limitata al singolo edificio inteso.
+function singleBuildingPolygon(geom) {
+  if (geom && geom.type === 'Polygon') return geom;
+  if (geom && geom.type === 'MultiPolygon' && geom.coordinates.length) {
+    return { type: 'Polygon', coordinates: geom.coordinates[0] };
+  }
+  return geom;
+}
+
+// Disegna (una sola volta per building id) il contorno/alone di un edificio
+// di default con descrizione assegnata, usando la sua geometria reale così
+// com'è arrivata dalla vector tile (Polygon o MultiPolygon, entrambi validi
+// sia per il layer 'line' — che ne disegna solo il perimetro — sia per
+// 'fill-extrusion'), ma ridotta al singolo poligono corretto (vedi
+// singleBuildingPolygon sopra).
+function highlightDefaultBuilding(key, feature, entry) {
+  if (!key || defaultBuildingHighlightDrawn.has(key)) return;
+  defaultBuildingHighlightDrawn.add(key);
+
+  const poly = singleBuildingPolygon(feature.geometry);
+
+  // LOG DIAGNOSTICO TEMPORANEO — rimuovilo pure una volta capito il
+  // problema. Stampa: l'ID che ha fatto match, il tipo di geometria
+  // originale restituita dalla vector tile, quante coordinate ha il
+  // poligono che stiamo per disegnare, e il suo centroide (per
+  // confrontarlo a occhio con addr.lng/addr.lat mostrati nel pannello).
+  console.log('[CY highlight]', {
+    key,
+    matchedEntryId: entry.id,
+    originalGeomType: feature.geometry && feature.geometry.type,
+    originalRingCount: feature.geometry && feature.geometry.type === 'MultiPolygon'
+      ? feature.geometry.coordinates.length
+      : 1,
+    drawnPolygonVertexCount: poly && poly.coordinates && poly.coordinates[0] ? poly.coordinates[0].length : 0,
+    drawnPolygonCentroid: computeBuildingCentroid(poly)
+  });
+
+  defaultBuildingHighlightFeatures.push({
+    type: 'Feature',
+    properties: { color: entry.color || '#00fff2' },
+    geometry: poly
+  });
+
+  const source = map.getSource('cy-default-building-highlight');
+  if (source) {
+    source.setData({ type: 'FeatureCollection', features: defaultBuildingHighlightFeatures });
+  }
+}
+
 function makeCubePolygonRing(lng, lat, halfSizeDeg, rotationDeg) {
   const latCorrection = Math.cos((lat * Math.PI) / 180) || 1;
   const theta = ((rotationDeg || 0) * Math.PI) / 180; // clockwise da nord, come il bearing della mappa
@@ -975,6 +1078,7 @@ map.on('load', () => {
   addPoiLayer();
   addStreetNameLayer();
   addCustomBuildingLayer();
+  addDefaultBuildingHighlightLayer();
   addBuildingClickHandlers();
   buildPoiList();
 
@@ -1316,6 +1420,74 @@ function computeBuildingCentroid(geom) {
   return [sx / ring.length, sy / ring.length];
 }
 
+// Esplode una feature 'building' nei suoi sotto-poligoni reali. NECESSARIO
+// perché il layer 'building' di OpenMapTiles, per ridurre le dimensioni
+// delle tile, spesso FONDE decine o centinaia di edifici adiacenti (con le
+// stesse proprietà) in UNA SOLA feature MultiPolygon — confermato via
+// debug: una feature scoperta esplorando la mappa conteneva 1177
+// sotto-poligoni. Trattare l'intera MultiPolygon come "un edificio" dà un
+// centroide/ID legato arbitrariamente al PRIMO sotto-poligono, scollegato
+// dall'edificio che l'utente sta realmente osservando o cliccando — la
+// causa esatta sia del bug "sembra selezionata tutta la tile" sia del suo
+// successivo "non si vede più nulla" (il primo sotto-poligono esiste
+// sempre, semplicemente quasi mai è quello giusto). Da qui in poi, OGNI
+// funzione che processa edifici lavora su questi pseudo-edifici singoli
+// (sempre geometria 'Polygon'), non più sulla feature grezza della tile.
+function explodeBuildingFeature(feature) {
+  const geom = feature && feature.geometry;
+  if (!geom) return [];
+  if (geom.type === 'Polygon') {
+    return [{ geometry: geom }];
+  }
+  if (geom.type === 'MultiPolygon') {
+    return geom.coordinates.map(coords => ({ geometry: { type: 'Polygon', coordinates: coords } }));
+  }
+  return [];
+}
+
+// Ray casting standard: pt = [lng,lat] è dentro l'anello (solo il perimetro
+// esterno, coordinates[0]; eventuali buchi vengono ignorati — caso raro e
+// non critico qui)?
+function pointInRing(pt, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    const intersect = ((yi > pt[1]) !== (yj > pt[1])) &&
+      (pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// Tra i sotto-edifici "esplosi" di una feature 'building', sceglie quello
+// che l'utente ha effettivamente cliccato: prima prova il test
+// punto-in-poligono (preciso), poi ripiega sul centroide più vicino al
+// click se per qualche motivo (bordi, precisione) nessun poligono
+// contiene esattamente il punto.
+function pickClickedSubBuilding(rawFeature, lngLat) {
+  const subFeatures = explodeBuildingFeature(rawFeature);
+  if (!subFeatures.length) return rawFeature;
+  if (subFeatures.length === 1) return subFeatures[0];
+
+  const pt = [lngLat.lng, lngLat.lat];
+  const containing = subFeatures.find(sf => {
+    const ring = sf.geometry.coordinates && sf.geometry.coordinates[0];
+    return ring && pointInRing(pt, ring);
+  });
+  if (containing) return containing;
+
+  let best = null, bestDistSq = Infinity;
+  subFeatures.forEach(sf => {
+    const c = computeBuildingCentroid(sf.geometry);
+    if (!c) return;
+    const dx = c[0] - pt[0], dy = c[1] - pt[1];
+    const d = dx * dx + dy * dy;
+    if (d < bestDistSq) { bestDistSq = d; best = sf; }
+  });
+  return best || subFeatures[0];
+}
+
 // Distanza (al quadrato, in gradi) tra il punto p e il segmento a-b, più
 // il parametro t (0..1) del punto proiettato lungo il segmento e il lato
 // (>=0 / <0) su cui giace p rispetto alla direzione a->b.
@@ -1483,23 +1655,34 @@ function refreshBuildingAddresses() {
     return;
   }
   let added = 0;
-  features.forEach(f => {
+  // Ogni feature grezza può fondere più edifici in una MultiPolygon (vedi
+  // explodeBuildingFeature): la processiamo sempre come lista di
+  // sotto-edifici, anche quando ne contiene uno solo.
+  features.forEach(rawFeature => {
+    explodeBuildingFeature(rawFeature).forEach(f => {
+      const key = buildingCacheKey(f);
+      if (!key) return;
+      if (buildingAddressRegistry.has(key)) return;
 
-    const key = buildingCacheKey(f);
-    if (!key) return;
-    if (buildingAddressRegistry.has(key)) return;
+      const addr = buildingAddressForFeature(f);
+      if (!addr) return;
+      buildingAddressRegistry.set(key, addr);
+      added++;
 
-    const addr = buildingAddressForFeature(f);
-    if (!addr) return;
-    buildingAddressRegistry.set(key, addr);
-    added++;
+      // Se questo edificio corrisponde a una voce di
+      // CUSTOM_BUILDING_DESCRIPTIONS agganciata solo per via+civico (senza
+      // lng/lat noti in anticipo), è proprio questo il momento in cui la
+      // scopriamo: disegniamo il cubo e registriamo l'indirizzo adesso.
+      const custom = findCustomBuildingDescription(addr);
+      if (custom) addCustomBuildingCube(custom, addr.lng, addr.lat);
 
-    // Se questo edificio corrisponde a una voce di
-    // CUSTOM_BUILDING_DESCRIPTIONS agganciata solo per via+civico (senza
-    // lng/lat noti in anticipo), è proprio questo il momento in cui la
-    // scopriamo: disegniamo il cubo e registriamo l'indirizzo adesso.
-    const custom = findCustomBuildingDescription(addr);
-    if (custom) addCustomBuildingCube(custom, addr.lng, addr.lat);
+      // Stesso discorso per DEFAULT_BUILDING_DESCRIPTIONS: appena scopriamo
+      // l'edificio (e quindi la sua geometria reale, ORA quella corretta
+      // del singolo sotto-edificio), se ha una voce assegnata lo
+      // evidenziamo subito con contorno + alone.
+      const defaultDesc = !custom ? defaultBuildingDescById.get(key) : null;
+      if (defaultDesc) highlightDefaultBuilding(key, f, defaultDesc);
+    });
   });
   if (added > 0) rebuildBuildingAddressSource();
 }
@@ -1549,7 +1732,7 @@ function addBuildingClickHandlers() {
         if (customCubeHere && customCubeHere.length) return;
       }
 
-      const f = e.features[0];
+      const f = pickClickedSubBuilding(e.features[0], e.lngLat);
 
       // L'indirizzo si ricalcola sempre al momento del click (invece di
       // fidarsi subito della cache) e, se il primo tentativo fallisce, si
@@ -1576,6 +1759,7 @@ function addBuildingClickHandlers() {
       // descrizione si applica all'edificio 3D di default già esistente.
       const custom = findCustomBuildingDescription(addr);
       const defaultDesc = !custom ? defaultBuildingDescById.get(key) : null;
+      if (defaultDesc) highlightDefaultBuilding(key, f, defaultDesc);
       // In fondo al pannello, SEMPRE (anche per gli edifici ancora anonimi):
       // l'ID univoco dell'edificio e la via più vicina, così il master può
       // copiarlo per assegnargli in seguito nome/blurb in DEFAULT_BUILDING_
