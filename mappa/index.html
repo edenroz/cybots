@@ -606,6 +606,23 @@ const defaultBuildingDescById = new Map();
   if (entry.id) defaultBuildingDescById.set(entry.id, entry);
 });
 
+// Esecuzione del controllo e registrazione
+DEFAULT_BUILDING_DESCRIPTIONS.forEach(entry => {
+  // Verifica la presenza di street e di almeno uno tra number o subAddress
+  const hasStreet = Boolean(entry.street);
+  const hasNumberOrSub = entry.number !== undefined || Boolean(entry.subAddress);
+
+  if (hasStreet && hasNumberOrSub && entry.id) {
+    // Estrazione di lng e lat dalla stringa ID "lng,lat"
+    const [lng, lat] = entry.id.split(',').map(coord => parseFloat(coord.trim()));
+
+    // Controllo di sicurezza sulle coordinate
+    if (!isNaN(lng) && !isNaN(lat)) {
+      registerCustomBuildingAddress(entry, lng, lat);
+    }
+  }
+});
+
 // Ritorna la voce di CUSTOM_BUILDING_DESCRIPTIONS che corrisponde
 // all'indirizzo dell'edificio (addr = {streetName, number, lng, lat}
 // come restituito da buildingAddressForFeature), oppure null se non c'è

@@ -58,30 +58,19 @@ const DEFAULT_BUILDING_DESCRIPTIONS = [
     name: "Deposito di @qualcuno",
     color: "#e8c93a",
     blurb: "Descrizione dell'edificio."
-  }
+  },
+  {
+  id: "17.882255,59.348307",
+  name: "Casa di @viff_12344",
+  color: "#4ee83a",
+  blurb: "Unitá abitativa di @viff_12344, con accesso sul vicolo posteriore.",
+  street: "REBOOT PASSAGE",
+  number: 135,
+  subAddress: "a7_832<br><small>Svarta</small>",
+}
 ];
 
 const CUSTOM_BUILDING_DESCRIPTIONS = [
-  {
-    // Esempio già pronto: l'edificio #31 di REBOOT PASSAGE che hai
-    // citato. Ho anche aggiunto l'aggancio per coordinate, usando lo
-    // stesso punto già presente in PRELOADED_STREETS qui sopra, così hai
-    // subito un fallback stabile — modifica pure name/blurb come vuoi,
-    // oppure elimina la riga lng/lat/radius se preferisci affidarti solo
-    // al civico.
-    street: "REBOOT PASSAGE",
-    number: 31,
-    subAddress: "a7_832<br><small>Svarta</small>",
-    lng: 17.882245,
-    lat: 59.34839,
-    radius: 0.0006,
-    name: "//Conglomerato #31 edificio A<br>//Livelllo 3 Unitá AB §3_832",
-    rotation: 50, // opzionale, in gradi (0 = nord)
-    color: "#1FD400",
-    blurb: "Unitá abitativa di Viff, con accesso sul vicolo posteriore.",
-    height: 4.5,   // opzionale — se omesso: 1.5
-    base: 3
-  },
   {
     street: "PHANTOM YARD",
     number: 327,
