@@ -23,6 +23,44 @@ const PRELOADED_STREETS = [
   }
 ];
 
+/* =========================================================================
+   DESCRIZIONI PER EDIFICI "DI DEFAULT" (i palazzi 3D generati dallo stile
+   OpenStreetMap, NON i cubi disegnati a mano di CUSTOM_BUILDING_DESCRIPTIONS
+   qui sotto). Un edificio di default non ha di suo nessun ID stabile: quello
+   della vector tile (feature.id) NON è garantito restare lo stesso da un
+   caricamento all'altro delle tile, quindi non si può usare come chiave
+   persistente in un file di dati. Usiamo invece il centroide della sua
+   geometria (arrotondato a 6 decimali, ~11cm di precisione), che è sempre
+   lo stesso finché l'edificio stesso non cambia forma — la stessa identica
+   chiave già usata internamente da buildingCacheKey()/getBuildingId() in
+   index.html per la cache degli indirizzi.
+
+   COME TROVARE L'ID DI UN EDIFICIO: clicca sul palazzo sulla mappa. Il
+   pannello mostra sempre, in fondo (nota ciano), il suo ID e la via più
+   vicina — anche se l'edificio è ancora "anonimo". Copia quell'ID qui
+   sotto per assegnargli nome/blurb.
+
+   Formato voce:
+     {
+       id: "18.048432,59.331200",  // ID edificio, vedi sopra
+       name: "Nome mostrato nel pannello",
+       color: "#e8c93a",           // opzionale, default giallo
+       blurb: "Testo/HTML del pannello"
+     }
+   A differenza di CUSTOM_BUILDING_DESCRIPTIONS, qui NON viene disegnato
+   nessun cubo aggiuntivo: la descrizione si applica direttamente
+   all'edificio 3D già esistente.
+   ========================================================================= */
+const DEFAULT_BUILDING_DESCRIPTIONS = [
+  // Esempio (rimuovi pure, o modificalo):
+  {
+    id: "17.885837,59.355249",
+    name: "Deposito di @qualcuno",
+    color: "#e8c93a",
+    blurb: "Descrizione dell'edificio."
+  }
+];
+
 const CUSTOM_BUILDING_DESCRIPTIONS = [
   {
     // Esempio già pronto: l'edificio #31 di REBOOT PASSAGE che hai
@@ -33,21 +71,19 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     // al civico.
     street: "REBOOT PASSAGE",
     number: 31,
-    subAddress: "a7_832<br><small>Svarta</small>",
+    subAddress: "a3_832",
     lng: 17.882245,
     lat: 59.34839,
     radius: 0.0006,
     name: "//Conglomerato #31 edificio A<br>//Livelllo 3 Unitá AB §3_832",
     rotation: 50, // opzionale, in gradi (0 = nord)
     color: "#1FD400",
-    blurb: "Unitá abitativa di Viff, con accesso sul vicolo posteriore.",
-    height: 4.5,   // opzionale — se omesso: 1.5
-    base: 3
+    blurb: "Unitá abitativa di Lear, con accesso sul vicolo posteriore."
   },
   {
     street: "PHANTOM YARD",
     number: 327,
-    subAddress: "a0_24<br><small>Svarta</small>",
+    subAddress: "a0_24",
     lng: 17.87761,
     lat: 59.34801,
     radius: 0.00006,
@@ -57,77 +93,15 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     blurb: "Laboratorio di distillazione clandestina di @fl4s#_11037.<img src=\"img/moonshine.jpg\" alt=\"Mia Immagine\">"
   },
   {
-    street: "NULL CHUTE",
+    street: "ZERO WALK",
     number: 417,
-    subAddress: "d16_654<br><small>Svarta</small>",
-    lng: 17.88497,
-    lat: 59.34311,
+    subAddress: "a0_24",
+    lng: 17.88285,
+    lat: 59.34308,
     radius: 0.00006,
     name: "//Conglomerato #417 edificio AB<br>//Livelllo 0 Unitá IN §0_24",
-    rotation: 30, // opzionale, in gradi (0 = nord)
+    rotation: 45, // opzionale, in gradi (0 = nord)
     color: "#d41900",
-    blurb: "Negozio",
-    height: 18,   // opzionale — se omesso: 1.5
-    base: 16
-  },
-  {
-    street: "OVERCLOCK YARD",
-    number: 10,
-    subAddress: "a5_654<br><small>Burnchurch Hex</small>",
-    lng: 18.02786,
-    lat: 59.25712,
-    radius: 0.00006,
-    name: "NEW LIFE HEX CHURCH",
-    rotation: 30, // opzionale, in gradi (0 = nord)
-    color: "#cd00d4",
-    blurb: "Chiesa.<img src=\"img/hex-church.jpg\" alt=\"Mia Immagine\">",
-    height: 80,   // opzionale — se omesso: 1.5
-    base: 0
-  },
-  {
-    street: "NEON HIDEOUT",
-    number: 16,
-    subAddress: "a265_3<br><small>South Central</small>",
-    lng: 17.98803,
-    lat: 59.29732,
-    radius: 0.00006,
-    name: "CASA CTO",
-    rotation: 75, // opzionale, in gradi (0 = nord)
-    color: "#cd00d4",
-    blurb: "Casa.<img src=\"img/casa-cto.jpg\" alt=\"Mia Immagine\">",
-    height: 265,   // opzionale — se omesso: 1.5
-    base: 264
-  },
-  {
-    street: "OVERCLOCK YARD",
-    number: 11,
-    polygon: [
-[
-              18.0279235,
-              59.2569935
-            ],
-            [
-              18.0279827,
-              59.2570048
-            ],
-            [
-              18.0277737,
-              59.2572587
-            ],
-            [
-              18.0277182,
-              59.257245
-            ],
-            [
-              18.0279235,
-              59.2569935
-            ]
-      // non serve richiudere l'anello, ci pensa il codice
-    ],
-    height: 71,
-    base: 69,
-    color: "#cd00d4",
-    blurb: "Chiesa.<img src=\"img/hex-church.jpg\" alt=\"Mia Immagine\">",
-    blurb: "..."
+    blurb: "Negozio"
   }
 ];
