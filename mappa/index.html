@@ -889,8 +889,8 @@ function highlightDefaultBuilding(key, feature, entry) {
 
   const color = entry.color || '#00fff2';
 
-  const edgeFrame = buildHighlightFrame(ring, 0.000025);   // cornice netta, ~2.8m di margine
-  const glowFrame = buildHighlightFrame(ring, 0.00007);    // alone morbido, ~7.8m di margine
+  const edgeFrame = buildHighlightFrame(ring, 0.000005);   // cornice netta, ~2.8m di margine
+  const glowFrame = buildHighlightFrame(ring, 0.000007);    // alone morbido, ~7.8m di margine
   if (!edgeFrame && !glowFrame) return;
 
   if (edgeFrame) {
