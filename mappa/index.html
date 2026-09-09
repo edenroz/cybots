@@ -555,9 +555,82 @@ function polygonCentroid(ring) {
   return [sx / ring.length, sy / ring.length];
 }
 
+/* -------------------------------------------------------------------------
+   BLURB MULTIPLI SULLO STESSO EDIFICIO
+   Più voci (in CUSTOM_BUILDING_DESCRIPTIONS o in DEFAULT_BUILDING_
+   DESCRIPTIONS) possono condividere la stessa identità — stesso "id" per
+   gli edifici di default, stessa via+civico (o stesse coordinate) per
+   quelli custom — per descrivere più unità distinte nello stesso edificio
+   (es. due negozi diversi allo stesso indirizzo, con solo subAddress
+   diverso). Prima, qualunque Map le indicizzasse (defaultBuildingDescById,
+   customBuildingByAddress) ne conservava SOLO UNA (l'ultima scritta, o
+   quella trovata per prima da queryRenderedFeatures — quindi in pratica a
+   caso): l'altra spariva del tutto dal pannello.
+   mergeDescriptionGroup() unisce un gruppo di voci con la stessa identità
+   in UNA SOLA voce "combinata": il resto della logica (disegno del cubo,
+   evidenziazione, indirizzo, pannello) continua a lavorare con una singola
+   voce come prima, senza bisogno di essere riscritta — cambia solo il
+   contenuto del suo blurb, che ora elenca tutte le unità una via l'altra.
+   ------------------------------------------------------------------------- */
+function mergeDescriptionGroup(entries) {
+  if (entries.length === 1) return entries[0];
+  const first = entries[0];
+  const blurb = entries.map(e => {
+    const title = e.name ? `<div style="margin-top:10px;font-weight:bold;">${e.name}</div>` : '';
+    return `${title}${e.blurb || ''}`;
+  }).join('<hr style="border-color:rgba(242,237,228,0.2);margin:12px 0;">');
+  // Lo spread riprende da "first" tutti i campi non testuali che servono
+  // altrove (height/base/rotation/color/polygon/lng/lat/street/number/...):
+  // per costruzione tutte le voci di un gruppo condividono la stessa
+  // posizione/geometria, quindi va benissimo usare quella della prima.
+  return { ...first, blurb, __merged: entries };
+}
+
+// Raggruppa un array di voci per chiave (calcolata da keyFn) e le unisce
+// con mergeDescriptionGroup(); le voci senza una chiave utile (keyFn
+// ritorna null/undefined) restano singole, in coda, nell'ordine originale.
+function mergeDescriptionsByKey(list, keyFn) {
+  const groups = new Map();
+  const singles = [];
+  list.forEach(entry => {
+    const key = keyFn(entry);
+    if (key === null || key === undefined) { singles.push(entry); return; }
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(entry);
+  });
+  return [...Array.from(groups.values()).map(mergeDescriptionGroup), ...singles];
+}
+
+// DEFAULT_BUILDING_DESCRIPTIONS: la chiave di raggruppamento è l'id
+// (centroide) dell'edificio — vedi buildingCacheKey()/getBuildingId() più
+// sotto, è la stessa identica chiave.
+const DEFAULT_BUILDING_DESCRIPTIONS_MERGED = mergeDescriptionsByKey(
+  (typeof DEFAULT_BUILDING_DESCRIPTIONS !== 'undefined' ? DEFAULT_BUILDING_DESCRIPTIONS : []),
+  entry => entry.id || null
+);
+
+// CUSTOM_BUILDING_DESCRIPTIONS: preferiamo raggruppare per via+civico
+// (indirizzo affidabile, non ambiguo); se una voce non ha un indirizzo ma
+// ha coordinate, raggruppiamo per coordinate arrotondate a 6 decimali
+// (stessa precisione di buildingCacheKey) — così due cubi disegnati esatta-
+// mente nello stesso punto si uniscono comunque in un solo blurb.
+function customEntryGroupKey(entry) {
+  if (entry.street !== undefined && entry.number !== undefined) {
+    return `addr:${entry.street.trim().toUpperCase()}#${entry.number}`;
+  }
+  if (entry.lng !== undefined && entry.lat !== undefined) {
+    return `coord:${entry.lng.toFixed(6)},${entry.lat.toFixed(6)}`;
+  }
+  return null;
+}
+const CUSTOM_BUILDING_DESCRIPTIONS_MERGED = mergeDescriptionsByKey(
+  CUSTOM_BUILDING_DESCRIPTIONS,
+  customEntryGroupKey
+);
+
 const customBuildingByAddress = new Map();
 const customBuildingByCoords = [];
-CUSTOM_BUILDING_DESCRIPTIONS.forEach((entry, index) => {
+CUSTOM_BUILDING_DESCRIPTIONS_MERGED.forEach((entry, index) => {
   entry.__index = index; // usato per non disegnare due volte lo stesso cubo
 
   // Se la voce definisce un poligono esplicito ("polygon": [[lng,lat],...])
@@ -616,12 +689,12 @@ CUSTOM_BUILDING_DESCRIPTIONS.forEach((entry, index) => {
 // nessun cubo: la descrizione si applica direttamente all'edificio 3D già
 // esistente, quindi basta un semplice lookup per ID nel click handler.
 const defaultBuildingDescById = new Map();
-(typeof DEFAULT_BUILDING_DESCRIPTIONS !== 'undefined' ? DEFAULT_BUILDING_DESCRIPTIONS : []).forEach(entry => {
+DEFAULT_BUILDING_DESCRIPTIONS_MERGED.forEach(entry => {
   if (entry.id) defaultBuildingDescById.set(entry.id, entry);
 });
 
 // Esecuzione del controllo e registrazione
-DEFAULT_BUILDING_DESCRIPTIONS.forEach(entry => {
+DEFAULT_BUILDING_DESCRIPTIONS_MERGED.forEach(entry => {
   // Verifica la presenza di street e di almeno uno tra number o subAddress
   const hasStreet = Boolean(entry.street);
   const hasNumberOrSub = entry.number !== undefined || Boolean(entry.subAddress);
@@ -1060,7 +1133,7 @@ function addCustomBuildingLayer() {
   // Le voci con coordinate note (metodo "per coordinate") non devono
   // aspettare che tu esplori quella zona: disegniamo il cubo e
   // registriamo l'indirizzo subito.
-  CUSTOM_BUILDING_DESCRIPTIONS.forEach(entry => {
+  CUSTOM_BUILDING_DESCRIPTIONS_MERGED.forEach(entry => {
     if (entry.lng !== undefined && entry.lat !== undefined) {
       addCustomBuildingCube(entry, entry.lng, entry.lat);
     }

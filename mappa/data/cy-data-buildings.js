@@ -79,12 +79,21 @@ const DEFAULT_BUILDING_DESCRIPTIONS = [
   },
   {
     id: "17.882019,59.345687",
-    name: "Shop",
+    name: "Shop 2",
     color: "#3ab7e8",
     street: "FUTURA MALUM™ PATH",
     number: 220,
-    blurb: "Dr e ILG",
-    subAddress: "<br><small>Svarta</small>",
+    blurb: "Dr",
+    subAddress: "8_94<br><small>Svarta</small>",
+  },
+  {
+    id: "17.882019,59.345687",
+    name: "Shop 1",
+    color: "#3ab7e8",
+    street: "FUTURA MALUM™ PATH",
+    number: 220,
+    blurb: "ILG",
+    subAddress: "12_24<br><small>Svarta</small>",
   },
   {
     id: "18.041158,59.250170",
@@ -138,10 +147,10 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     lng: 17.88497,
     lat: 59.34311,
     radius: 0.00006,
-    name: "//Conglomerato #417 edificio AB<br>//Livelllo 0 Unitá IN §0_24",
+    name: "//Conglomerato #417 edificio AB<br>//Livelllo 16 Unitá IN §0_24",
     rotation: 30, // opzionale, in gradi (0 = nord)
     color: "#d41900",
-    blurb: "Negozio",
+    blurb: "Negozio Droghe",
     height: 18,   // opzionale — se omesso: 1.5
     base: 16
   },
