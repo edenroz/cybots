@@ -772,26 +772,10 @@ function addDefaultBuildingHighlightLayer() {
     data: { type: 'FeatureCollection', features: [] }
   });
 
-  // Alone largo e morbido attorno all'edificio.
   map.addLayer({
     id: 'cy-default-building-highlight-glow',
     type: 'fill-extrusion',
     source: 'cy-default-building-highlight',
-    filter: ['==', ['get', 'kind'], 'glow'],
-    paint: {
-      'fill-extrusion-color': ['get', 'color'],
-      'fill-extrusion-height': ['get', 'height'],
-      'fill-extrusion-base': 0,
-      'fill-extrusion-opacity': 0.3
-    }
-  });
-
-  // Cornice netta, più vicina alla sagoma reale.
-  map.addLayer({
-    id: 'cy-default-building-highlight-edge',
-    type: 'fill-extrusion',
-    source: 'cy-default-building-highlight',
-    filter: ['==', ['get', 'kind'], 'edge'],
     paint: {
       'fill-extrusion-color': ['get', 'color'],
       'fill-extrusion-height': ['get', 'height'],
@@ -821,31 +805,20 @@ function singleBuildingPolygon(geom) {
 }
 
 /* -------------------------------------------------------------------------
-   CORNICE 3D PER L'EVIDENZIAZIONE DEGLI EDIFICI DI DEFAULT
-   Il vecchio approccio disegnava l'evidenziazione (fill-extrusion "alone"
-   bassa + una linea di contorno) ESATTAMENTE sulla stessa sagoma
+   EVIDENZIAZIONE EDIFICI DI DEFAULT
+   Il vecchio approccio disegnava l'evidenziazione ESATTAMENTE sulla sagoma
    dell'edificio reale — stessa base, stesso footprint. Due geometrie 3D che
    occupano lo stesso identico spazio fanno z-fighting: a seconda
-   dell'angolo di vista lo z-buffer disegna ora l'una ora l'altra sopra, ed
-   è per questo che "il neon finiva dietro l'edificio" in modo incoerente.
+   dell'angolo di vista lo z-buffer disegnava ora l'una ora l'altra sopra,
+   "il neon finiva dietro l'edificio" in modo incoerente.
 
-   La cornice qui sotto è invece un poligono CAVO: un anello esterno
-   leggermente più largo della sagoma reale, con un buco interno che
-   coincide con la sagoma stessa. Estrusa in 3D avvolge l'edificio
-   dall'esterno senza mai condividere una faccia con l'edificio vero, quindi
-   non c'è più nulla con cui litigare nello z-buffer. Portata all'altezza
-   reale del tetto (+ un margine) invece che a un'estrusione bassa fissa,
-   resta visibile "a pelo di tetto" da qualunque angolazione.
+   Invece di un contorno cavo, qui si ridisegna l'intera sagoma
+   dell'edificio un po' più grande (spinta verso l'esterno dal centroide di
+   qualche metro) e leggermente più alta: una copia piena, colorata al neon,
+   che copre per intero l'edificio reale sottostante — visibile come un
+   bordo luminoso tutto intorno da qualunque angolazione, senza alcun buco
+   da triangolare.
    ------------------------------------------------------------------------- */
-function signedRingArea(ring) {
-  let area = 0;
-  for (let i = 0; i < ring.length - 1; i++) {
-    const [x1, y1] = ring[i], [x2, y2] = ring[i + 1];
-    area += x1 * y2 - x2 * y1;
-  }
-  return area / 2;
-}
-
 function offsetRingOutward(ring, marginDeg, cx, cy) {
   const latCorrection = Math.cos((cy * Math.PI) / 180) || 1;
   return ring.map(([x, y]) => {
@@ -857,76 +830,46 @@ function offsetRingOutward(ring, marginDeg, cx, cy) {
   });
 }
 
-function closeRing(ring) {
-  const first = ring[0], last = ring[ring.length - 1];
-  return (first[0] === last[0] && first[1] === last[1]) ? ring.slice() : [...ring, ring[0]];
-}
-
-// marginDeg è espresso in "gradi equivalenti di latitudine" (offsetRingOutward
-// applica già la correzione per la longitudine), quindi è direttamente
-// confrontabile con una distanza in metri: 0.00001° ≈ 1.11m a qualunque
-// longitudine.
-function buildHighlightFrame(ring, marginDeg) {
-  if (!ring || ring.length < 4) return null;
-  const centroid = polygonCentroid(ring);
-  if (!centroid) return null;
-  const [cx, cy] = centroid;
-
-  const outer = closeRing(offsetRingOutward(ring, marginDeg, cx, cy));
-  const hole = closeRing(ring);
-
-  // Il buco deve avere avvolgimento opposto rispetto all'anello esterno,
-  // altrimenti la triangolazione lo interpreta come un secondo "pieno"
-  // invece che come un vuoto.
-  if ((signedRingArea(outer) > 0) === (signedRingArea(hole) > 0)) hole.reverse();
-
-  return { type: 'Polygon', coordinates: [outer, hole] };
-}
-
-// Disegna (una sola volta per building id) il contorno/alone di un edificio
-// di default con descrizione assegnata, usando la sua geometria reale così
-// com'è arrivata dalla vector tile (Polygon o MultiPolygon, entrambi validi
-// sia per il layer 'line' — che ne disegna solo il perimetro — sia per
-// 'fill-extrusion'), ma ridotta al singolo poligono corretto (vedi
-// singleBuildingPolygon sopra).
+// Disegna (una sola volta per building id) la copia ingrandita di un
+// edificio di default con descrizione assegnata, usando la sua geometria
+// reale così com'è arrivata dalla vector tile, ma ridotta al singolo
+// poligono corretto (vedi singleBuildingPolygon sopra) e poi spinta verso
+// l'esterno di qualche metro perché copra per intero l'originale.
 function highlightDefaultBuilding(key, feature, entry) {
   if (!key || defaultBuildingHighlightDrawn.has(key)) return;
   defaultBuildingHighlightDrawn.add(key);
 
   const poly = singleBuildingPolygon(feature.geometry);
   const ring = poly && poly.coordinates && poly.coordinates[0];
-  if (!ring) return;
+  if (!ring || ring.length < 4) return;
+
+  const centroid = polygonCentroid(ring);
+  if (!centroid) return;
+  const [cx, cy] = centroid;
 
   // Altezza reale dell'edificio: stesso campo 'render_height' della vector
   // tile usato dallo stile per estrudere i palazzi, moltiplicato per lo
   // stesso BUILDING_HEIGHT_MULTIPLIER applicato a tutti i building 3D. Se
   // il dato manca (può succedere), ricadiamo su un'altezza di sicurezza
-  // abbastanza generosa da restare comunque a pelo di tetto o sopra.
+  // abbastanza generosa da coprire comunque tutto l'edificio.
   const rawHeight = feature.properties && Number(feature.properties.render_height);
   const buildingHeight = (isFinite(rawHeight) && rawHeight > 0)
     ? rawHeight * BUILDING_HEIGHT_MULTIPLIER
     : 80;
 
-  const color = entry.color || '#00fff2';
+  // Margine di ingrandimento: qualche metro verso l'esterno, sufficiente a
+  // coprire per intero l'edificio originale da qualunque lato senza farlo
+  // sembrare un edificio completamente diverso.
+  const marginDeg = 0.00004; // ~4.4m
+  const enlargedRing = offsetRingOutward(ring, marginDeg, cx, cy);
+  const first = enlargedRing[0], last = enlargedRing[enlargedRing.length - 1];
+  if (first[0] !== last[0] || first[1] !== last[1]) enlargedRing.push(first);
 
-  const edgeFrame = buildHighlightFrame(ring, 0.000005);   // cornice netta, ~2.8m di margine
-  const glowFrame = buildHighlightFrame(ring, 0.000007);    // alone morbido, ~7.8m di margine
-  if (!edgeFrame && !glowFrame) return;
-
-  if (edgeFrame) {
-    defaultBuildingHighlightFeatures.push({
-      type: 'Feature',
-      properties: { color, kind: 'edge', height: buildingHeight + 1.5 },
-      geometry: edgeFrame
-    });
-  }
-  if (glowFrame) {
-    defaultBuildingHighlightFeatures.push({
-      type: 'Feature',
-      properties: { color, kind: 'glow', height: buildingHeight + 7 },
-      geometry: glowFrame
-    });
-  }
+  defaultBuildingHighlightFeatures.push({
+    type: 'Feature',
+    properties: { color: entry.color || '#00fff2', height: buildingHeight + 2 },
+    geometry: { type: 'Polygon', coordinates: [enlargedRing] }
+  });
 
   const source = map.getSource('cy-default-building-highlight');
   if (source) {
