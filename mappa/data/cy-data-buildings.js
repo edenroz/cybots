@@ -70,9 +70,8 @@ const DEFAULT_BUILDING_DESCRIPTIONS = [
   },
   {
     id: "17.988209,59.297426",
-    name: "Casa di @viff_12344",
-    color: "#4ee83a",
-    blurb: "Unitá abitativa di @viff_12344, con accesso sul vicolo posteriore.",
+    name: "Casa del CTO",
+    color: "#e83adf",
     street: "NEON HIDEOUT",
     number: 239,
     blurb: "Casa.<img src=\"img/casa-cto.jpg\" alt=\"Mia Immagine\">",
