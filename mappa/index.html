@@ -585,11 +585,25 @@ CUSTOM_BUILDING_DESCRIPTIONS.forEach((entry, index) => {
     }
   }
 
-  if (entry.street !== undefined && entry.number !== undefined) {
+  const hasAddress = entry.street !== undefined && entry.number !== undefined;
+  if (hasAddress) {
     const key = `${entry.street.trim().toUpperCase()}#${entry.number}`;
     if (!customBuildingByAddress.has(key)) customBuildingByAddress.set(key, entry);
   }
-  if (entry.lng !== undefined && entry.lat !== undefined) {
+
+  // FIX "un CUSTOM_BUILDING_DESCRIPTIONS occupa troppa area / inghiotte gli
+  // edifici vicini": il match per coordinate+raggio (customBuildingByCoords,
+  // usato da findCustomBuildingDescription) serve SOLO come ripiego per le
+  // voci che NON hanno un indirizzo affidabile con cui essere trovate in
+  // modo esatto. Prima veniva usato ANCHE per le voci con street+number già
+  // definiti: il loro raggio (spesso decine di metri) finiva per catturare
+  // il centroide di QUALSIASI altro edificio reale nelle vicinanze — anche
+  // uno con un indirizzo (e magari una descrizione) tutto suo — che veniva
+  // così mostrato con il nome/blurb sbagliato, persino al tocco diretto.
+  // Con un indirizzo definito il match esatto qui sopra è già sufficiente e
+  // preciso: non serve (ed è anzi dannoso) includerla anche nel fallback
+  // per coordinate.
+  if (!hasAddress && entry.lng !== undefined && entry.lat !== undefined) {
     customBuildingByCoords.push(entry);
   }
 });
@@ -634,10 +648,16 @@ function findCustomBuildingDescription(addr) {
   const byAddress = customBuildingByAddress.get(addressKey);
   if (byAddress) return byAddress;
 
+  // Da qui in poi restano solo le voci SENZA indirizzo affidabile (vedi i
+  // due punti di registrazione di customBuildingByCoords più sopra): per
+  // queste il raggio è l'unico modo per ritrovarle, quindi il fallback qui
+  // sotto è intenzionale. 0.0006 (~66m) era comunque troppo generoso anche
+  // per questo caso residuale: ridotto a un valore più vicino alla scala di
+  // un singolo edificio.
   for (const entry of customBuildingByCoords) {
     const dx = addr.lng - entry.lng;
     const dy = addr.lat - entry.lat;
-    const radius = entry.radius || 0.0006;
+    const radius = entry.radius || 0.00008;
     if ((dx * dx + dy * dy) <= radius * radius) return entry;
   }
 
@@ -1931,24 +1951,38 @@ function registerLandmarkAddresses(features) {
     }
 
     // Registra per la logica delle descrizioni custom
+    const hasParsedAddress = Boolean(street) && number !== null;
     const customEntry = {
       street: street,
       number: number,
       lng: lng,
       lat: lat,
-      radius: 0.0008,
+      // Raggio di fallback ridotto: usato SOLO quando non siamo riusciti a
+      // interpretare un indirizzo affidabile dalla proprietà "address" del
+      // landmark (vedi sotto). 0.0008 (~88m) catturava qualsiasi edificio
+      // reale nei dintorni, anche con indirizzo proprio.
+      radius: 0.00015,
       name: props.name || (number ? `Edificio #${number}` : fullAddress),
       color: props.color || "#e8c93a",
       blurb: props.blurb
     };
 
-    if (street && number !== null) {
+    if (hasParsedAddress) {
       const key = `${street}#${number}`;
       if (!customBuildingByAddress.has(key)) {
         customBuildingByAddress.set(key, customEntry);
       }
     }
-    customBuildingByCoords.push(customEntry);
+
+    // FIX "molti edifici intorno diventano di quel tipo, anche al tocco":
+    // se l'indirizzo è stato interpretato correttamente, il match esatto
+    // qui sopra basta già ed è preciso. Il fallback per coordinate+raggio è
+    // pensato SOLO per i landmark il cui "address" non contiene un numero
+    // civico riconoscibile: in quel caso non esiste altro modo per
+    // ritrovarli, quindi restano nel fallback per coordinate.
+    if (!hasParsedAddress) {
+      customBuildingByCoords.push(customEntry);
+    }
   });
 
   refreshAddrResultsIfOpen();
