@@ -965,7 +965,20 @@ function registerCustomBuildingAddress(entry, lng, lat) {
     lat,
     preloaded: true,
     type: 'minor',
-    custom: true
+    custom: true,
+    // Riferimento diretto al blurb/nome/colore della voce di origine
+    // (CUSTOM_BUILDING_DESCRIPTIONS o DEFAULT_BUILDING_DESCRIPTIONS): la
+    // barra di ricerca può così mostrare SEMPRE il blurb vero
+    // dell'edificio, invece di ricalcolarlo tramite streetPanelBlurb() /
+    // findCustomDescriptionForStreet() — funzione pensata per le VIE, che
+    // tra l'altro non cerca affatto dentro DEFAULT_BUILDING_DESCRIPTIONS
+    // (solo CUSTOM_BUILDING_DESCRIPTIONS e landmarkFeatures): volare
+    // sull'indirizzo di un edificio DEFAULT_BUILDING_DESCRIPTIONS apriva
+    // quindi sempre il testo generico "[DLC LOCKED]" invece del blurb
+    // scritto per quell'edificio.
+    panelName: entry.name,
+    panelColor: entry.color,
+    panelBlurb: entry.blurb
   });
   refreshAddrResultsIfOpen();
   updateAddrCount();
@@ -1849,6 +1862,28 @@ function addBuildingClickHandlers() {
         if (customCubeHere && customCubeHere.length) return;
       }
 
+      // FIX "click dalla mappa mostra di nuovo il blurb generico invece di
+      // quello custom": la copia ingrandita disegnata da
+      // highlightDefaultBuilding copre per intero l'edificio reale, quindi
+      // un click dentro la sagoma colpisce ANCHE il layer 'building'
+      // originale (questo handler). Il layer di evidenziazione ha già i
+      // dati giusti pronti in properties (name/color/blurb, calcolati nel
+      // momento in cui l'edificio è stato scoperto — vedi
+      // highlightDefaultBuilding) e il suo gestore dedicato ha già aperto
+      // il pannello corretto. Questo handler, invece, ricalcola tutto da
+      // zero (buildingCacheKey dal centroide DI QUESTO click): siccome le
+      // vector tile possono restituire una geometria leggermente diversa a
+      // zoom diversi, la chiave ricalcolata può non coincidere più con
+      // quella originale e far fallire defaultBuildingDescById.get(key),
+      // sovrascrivendo il pannello corretto con quello generico
+      // "[DLC LOCKED]". Stessa identica logica dei due controlli sopra: se
+      // il punto di click ricade anche sul layer di evidenziazione, non
+      // facciamo nulla qui.
+      if (map.getLayer('cy-default-building-highlight-glow')) {
+        const highlightHere = map.queryRenderedFeatures(e.point, { layers: ['cy-default-building-highlight-glow'] });
+        if (highlightHere && highlightHere.length) return;
+      }
+
       const f = pickClickedSubBuilding(e.features[0], e.lngLat);
 
       // L'indirizzo si ricalcola sempre al momento del click (invece di
@@ -1932,19 +1967,6 @@ function registerLandmarkAddresses(features) {
     if (!centroid) return;
     const [lng, lat] = centroid;
 
-    // Registra nella barra di ricerca indirizzi
-    const addrKey = `landmark:${street}#${number || idx}`;
-    if (!addressRegistry.has(addrKey)) {
-      addressRegistry.set(addrKey, {
-        name: fullAddress,
-        lng: lng,
-        lat: lat,
-        preloaded: true,
-        type: 'major',
-        custom: true
-      });
-    }
-
     // Registra per la logica delle descrizioni custom
     const hasParsedAddress = Boolean(street) && number !== null;
     const customEntry = {
@@ -1961,6 +1983,26 @@ function registerLandmarkAddresses(features) {
       color: props.color || "#e8c93a",
       blurb: props.blurb
     };
+
+    // Registra nella barra di ricerca indirizzi. Portiamo dietro anche
+    // panelName/panelColor/panelBlurb (stessa convenzione di
+    // registerCustomBuildingAddress): senza, la barra di ricerca
+    // mostrerebbe il blurb generico di una via invece di quello vero del
+    // landmark.
+    const addrKey = `landmark:${street}#${number || idx}`;
+    if (!addressRegistry.has(addrKey)) {
+      addressRegistry.set(addrKey, {
+        name: fullAddress,
+        lng: lng,
+        lat: lat,
+        preloaded: true,
+        type: 'major',
+        custom: true,
+        panelName: customEntry.name,
+        panelColor: customEntry.color,
+        panelBlurb: customEntry.blurb
+      });
+    }
 
     if (hasParsedAddress) {
       const key = `${street}#${number}`;
@@ -2597,15 +2639,33 @@ function renderAddrResults(query) {
       if (entry.lng === null || entry.lat === null) return;
       map.flyTo({ center: [entry.lng, entry.lat], zoom: 16.5, pitch: 50, duration: 2600, curve: 1.4, speed: 0.7 });
       if (!isMobile) {
-      openPanel({
-        name: entry.name,
-        type: entry.type || 'minor',
-        color: '#00fff2',
-        // Come per il click diretto sull'etichetta stradale: se questa
-        // via ha una descrizione personalizzata, la mostriamo al posto
-        // del testo generico "[DLC LOCKED]".
-        blurb: streetPanelBlurb(entry.name, '799.99')
-      });
+        if (entry.panelBlurb !== undefined) {
+          // FIX "volo sull'indirizzo di un DEFAULT_BUILDING_DESCRIPTIONS e
+          // mi apre il blurb generico invece di quello custom": questo
+          // indirizzo è quello di un edificio specifico (CUSTOM_BUILDING_
+          // DESCRIPTIONS o DEFAULT_BUILDING_DESCRIPTIONS, vedi
+          // registerCustomBuildingAddress/registerLandmarkAddresses), non
+          // quello di una via — mostriamo direttamente il suo blurb vero,
+          // già pronto in archivio, invece di passare da streetPanelBlurb
+          // (pensata per le vie, e che infatti non cerca affatto dentro
+          // DEFAULT_BUILDING_DESCRIPTIONS).
+          openPanel({
+            name: entry.panelName || entry.name,
+            type: 'edificio',
+            color: entry.panelColor || '#00fff2',
+            blurb: entry.panelBlurb
+          });
+        } else {
+          openPanel({
+            name: entry.name,
+            type: entry.type || 'minor',
+            color: '#00fff2',
+            // Come per il click diretto sull'etichetta stradale: se questa
+            // via ha una descrizione personalizzata, la mostriamo al posto
+            // del testo generico "[DLC LOCKED]".
+            blurb: streetPanelBlurb(entry.name, '799.99')
+          });
+        }
       }
       if (isMobile) toggleAddrBar(false);
     });
