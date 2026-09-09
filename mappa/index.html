@@ -783,6 +783,36 @@ function addDefaultBuildingHighlightLayer() {
       'fill-extrusion-opacity': 0.85
     }
   });
+
+  // FIX "ho perso l'aggancio al blurb cliccando il nuovo edificio
+  // ingrandito": la copia disegnata qui sopra è volutamente un po' più
+  // grande della sagoma originale (vedi highlightDefaultBuilding), quindi
+  // una fascia del click cade FUORI dal poligono dell'edificio 'building'
+  // reale sottostante — lì il layer originale non ha nessuna geometria, e
+  // il suo gestore di click (addBuildingClickHandlers) non scatta mai.
+  // Diamo quindi a questo layer un gestore proprio: name/blurb/colore sono
+  // già stati precompilati in properties da highlightDefaultBuilding, non
+  // serve ricalcolare nulla.
+  map.on('click', 'cy-default-building-highlight-glow', (e) => {
+    if (selectingPoint) return;
+
+    // Stessa precedenza già in uso altrove: se il click colpisce anche un
+    // landmark o un cubo personalizzato, quel layer ha già aperto (o sta
+    // per aprire) il pannello giusto — non sovrascriverlo.
+    if (map.getLayer('cy-landmark-extrusion')) {
+      const landmarkHere = map.queryRenderedFeatures(e.point, { layers: ['cy-landmark-extrusion'] });
+      if (landmarkHere && landmarkHere.length) return;
+    }
+    if (map.getLayer('cy-custom-building-cube')) {
+      const customCubeHere = map.queryRenderedFeatures(e.point, { layers: ['cy-custom-building-cube'] });
+      if (customCubeHere && customCubeHere.length) return;
+    }
+
+    const p = e.features[0].properties;
+    openPanel({ name: p.name, type: 'edificio', color: p.color, blurb: p.blurb });
+  });
+  map.on('mouseenter', 'cy-default-building-highlight-glow', () => { if (!selectingPoint) map.getCanvas().style.cursor = 'pointer'; });
+  map.on('mouseleave', 'cy-default-building-highlight-glow', () => { map.getCanvas().style.cursor = ''; });
 }
 
 // Isola UN SOLO poligono dalla geometria di un edificio: lo stesso
@@ -835,7 +865,15 @@ function offsetRingOutward(ring, marginDeg, cx, cy) {
 // reale così com'è arrivata dalla vector tile, ma ridotta al singolo
 // poligono corretto (vedi singleBuildingPolygon sopra) e poi spinta verso
 // l'esterno di qualche metro perché copra per intero l'originale.
-function highlightDefaultBuilding(key, feature, entry) {
+// "addr" (streetName/number, vedi buildingAddressForFeature) viene passato
+// dal chiamante: qui serve solo per precompilare blurb/indirizzo/nota GM
+// della feature, in modo che il CLICK SUL LAYER DI EVIDENZIAZIONE STESSO
+// (vedi map.on('click', 'cy-default-building-highlight-glow', ...) in
+// addDefaultBuildingHighlightLayer) possa aprire il pannello giusto senza
+// dover ricalcolare nulla e senza dipendere dal layer 'building' originale,
+// che nella fascia di terreno "guadagnata" dall'ingrandimento non ha
+// nessuna geometria su cui il click possa agganciarsi.
+function highlightDefaultBuilding(key, feature, entry, addr) {
   if (!key || defaultBuildingHighlightDrawn.has(key)) return;
   defaultBuildingHighlightDrawn.add(key);
 
@@ -865,9 +903,23 @@ function highlightDefaultBuilding(key, feature, entry) {
   const first = enlargedRing[0], last = enlargedRing[enlargedRing.length - 1];
   if (first[0] !== last[0] || first[1] !== last[1]) enlargedRing.push(first);
 
+  // Stesso identico contenuto che addBuildingClickHandlers mostrerebbe
+  // cliccando l'edificio "vero": indirizzo in coda al blurb + nota GM con
+  // l'ID edificio, quando l'indirizzo è disponibile.
+  const addrTag = addr
+    ? `<br><span style="opacity:0.55;font-size:10px;letter-spacing:1px;">${addr.streetName}, #${addr.number}</span>`
+    : '';
+  const gmNote = addr ? gmNoteForBuilding(key, addr) : '';
+  const panelName = entry.name || (addr ? ('Edificio #' + addr.number) : 'Edificio');
+
   defaultBuildingHighlightFeatures.push({
     type: 'Feature',
-    properties: { color: entry.color || '#00fff2', height: buildingHeight + 2 },
+    properties: {
+      color: entry.color || '#00fff2',
+      height: buildingHeight + 2,
+      name: panelName,
+      blurb: `${entry.blurb || ''}${addrTag}${gmNote}`
+    },
     geometry: { type: 'Polygon', coordinates: [enlargedRing] }
   });
 
@@ -1746,7 +1798,7 @@ function refreshBuildingAddresses() {
       // del singolo sotto-edificio), se ha una voce assegnata lo
       // evidenziamo subito con contorno + alone.
       const defaultDesc = !custom ? defaultBuildingDescById.get(key) : null;
-      if (defaultDesc) highlightDefaultBuilding(key, f, defaultDesc);
+      if (defaultDesc) highlightDefaultBuilding(key, f, defaultDesc, addr);
     });
   });
   if (added > 0) rebuildBuildingAddressSource();
@@ -1824,7 +1876,7 @@ function addBuildingClickHandlers() {
       // descrizione si applica all'edificio 3D di default già esistente.
       const custom = findCustomBuildingDescription(addr);
       const defaultDesc = !custom ? defaultBuildingDescById.get(key) : null;
-      if (defaultDesc) highlightDefaultBuilding(key, f, defaultDesc);
+      if (defaultDesc) highlightDefaultBuilding(key, f, defaultDesc, addr);
       // In fondo al pannello, SEMPRE (anche per gli edifici ancora anonimi):
       // l'ID univoco dell'edificio e la via più vicina, così il master può
       // copiarlo per assegnargli in seguito nome/blurb in DEFAULT_BUILDING_
