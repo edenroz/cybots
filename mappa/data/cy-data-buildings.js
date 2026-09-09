@@ -75,7 +75,46 @@ const DEFAULT_BUILDING_DESCRIPTIONS = [
     street: "NEON HIDEOUT",
     number: 239,
     blurb: "Casa.<img src=\"img/casa-cto.jpg\" alt=\"Mia Immagine\">",
-    subAddress: "a7_832<br><small>Svarta</small>",
+    subAddress: "277_3<br><small>South Central</small>",
+  },
+  {
+    id: "17.882019,59.345687",
+    name: "Shop",
+    color: "#3ab7e8",
+    street: "FUTURA MALUM™ PATH",
+    number: 220,
+    blurb: "Dr e ILG",
+    subAddress: "<br><small>Svarta</small>",
+  },
+  {
+    id: "18.041158,59.250170",
+    name: "Crash Kids Hideout",
+    color: "#ec2828",
+    street: "TOXIC YARD",
+    number: 61,
+    blurb: "<img src=\"img/crash-kids.png\" alt=\"Mia Immagine\">Discarica industriale dove vivono i Crash Kids",
+    subAddress: "<br><small>Burnchurch Hex</small>",
+  },
+  {
+    id: "18.026666,59.259151",
+    name: "Shop",
+    color: "#3ab7e8",
+    street: "CORE CHUTE",
+    number: 64,
+    blurb: "Dr e ILG",
+    subAddress: "<br><small>Burnchurch Hex</small>",
+  },
+  {
+    id: "18.027384,59.257122",
+    name: "Chiesa",
+    color: "#cd00d4",
+    blurb: "Chiesa.<img src=\"img/hex-church.jpg\" alt=\"Mia Immagine\">"
+  },
+  {
+    id: "18.027725,59.256882",
+    name: "Chiesa",
+    color: "#cd00d4",
+    blurb: "Chiesa.<img src=\"img/hex-church.jpg\" alt=\"Mia Immagine\">"
   }
 ];
 
@@ -95,7 +134,7 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
   {
     street: "NULL CHUTE",
     number: 417,
-    subAddress: "d16_654<br><small>Svarta</small>",
+    subAddress: "16_654<br><small>Svarta</small>",
     lng: 17.88497,
     lat: 59.34311,
     radius: 0.00006,
@@ -119,20 +158,6 @@ const CUSTOM_BUILDING_DESCRIPTIONS = [
     blurb: "Chiesa.<img src=\"img/hex-church.jpg\" alt=\"Mia Immagine\">",
     height: 80,   // opzionale — se omesso: 1.5
     base: 0
-  },
-  {
-    street: "NEON HIDEOUT",
-    number: 16,
-    subAddress: "a265_3<br><small>South Central</small>",
-    lng: 17.98803,
-    lat: 59.29732,
-    radius: 0.00006,
-    name: "CASA CTO",
-    rotation: 75, // opzionale, in gradi (0 = nord)
-    color: "#cd00d4",
-    blurb: "Casa.<img src=\"img/casa-cto.jpg\" alt=\"Mia Immagine\">",
-    height: 265,   // opzionale — se omesso: 1.5
-    base: 264
   },
   {
     street: "OVERCLOCK YARD",
