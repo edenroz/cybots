@@ -60,14 +60,24 @@ const DEFAULT_BUILDING_DESCRIPTIONS = [
     blurb: "Descrizione dell'edificio."
   },
   {
-  id: "17.882255,59.348307",
-  name: "Casa di @viff_12344",
-  color: "#4ee83a",
-  blurb: "Unitá abitativa di @viff_12344, con accesso sul vicolo posteriore.",
-  street: "REBOOT PASSAGE",
-  number: 135,
-  subAddress: "a7_832<br><small>Svarta</small>",
-}
+    id: "17.882255,59.348307",
+    name: "Casa di @viff_12344",
+    color: "#4ee83a",
+    blurb: "Unitá abitativa di @viff_12344, con accesso sul vicolo posteriore.",
+    street: "REBOOT PASSAGE",
+    number: 135,
+    subAddress: "a7_832<br><small>Svarta</small>",
+  },
+  {
+    id: "17.988209,59.297426",
+    name: "Casa di @viff_12344",
+    color: "#4ee83a",
+    blurb: "Unitá abitativa di @viff_12344, con accesso sul vicolo posteriore.",
+    street: "NEON HIDEOUT",
+    number: 239,
+    blurb: "Casa.<img src=\"img/casa-cto.jpg\" alt=\"Mia Immagine\">",
+    subAddress: "a7_832<br><small>Svarta</small>",
+  }
 ];
 
 const CUSTOM_BUILDING_DESCRIPTIONS = [
