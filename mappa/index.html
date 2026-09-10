@@ -25,7 +25,6 @@
 <script src="data/cy-data-walls.js"></script>
 <script src="data/cy-data-mask.js"></script>
 <script src="data/cy-data-landmarks.js"></script>
-<script src="data/cy-data-transit.js"></script>
 <style>
   :root{
     --cy-black:#0a0908;
@@ -1271,7 +1270,6 @@ map.on('load', () => {
   addDistrictTerritoryLayer();
   addLandmarkLayer();
   addWallLayer();
-  addTransitLayer();
   addMeteorCraterLayer();
   addPoiLayer();
   addStreetNameLayer();
@@ -2407,59 +2405,22 @@ function addMeteorCraterLayer() {
 /* =========================================================================
    WALLS (3D)
    ========================================================================= */
-// GLITCH RISOLTO — "superficie colorata tra due muri quando zoommo":
-// la vecchia lineToWallPolygon() calcolava UN SOLO anello, offsettando
-// ogni vertice in base alla direzione MEDIA tra segmento entrante e
-// uscente (prev->next). Su una curva abbastanza stretta (concava), quella
-// direzione media fa sì che i due punti offset di uno stesso vertice
-// "superino" il vertice successivo/precedente: l'anello smette di essere
-// un poligono semplice e si ripiega su se stesso (poligono a farfalla).
-// fill-extrusion riempie comunque l'area ripiegata come se fosse dentro
-// il poligono — è esattamente il triangolo/losanga colorato che compare
-// tra due tratti di muro (o di tubo maglev) visibile da vicino, ad ogni
-// angolo abbastanza stretto.
-// Fix: invece di un anello unico, si genera UN RETTANGOLO CONVESSO per
-// ogni singolo segmento (offset sulla sua sola direzione, mai su una
-// media) più un piccolo quadrato "di giunto" ad ogni vertice interno per
-// chiudere l'eventuale fessura tra un rettangolo e il successivo. Ogni
-// pezzo è per costruzione convesso e non può mai auto-intersecarsi,
-// qualunque sia l'angolo della curva.
-function lineToWallSegments(points, thicknessDeg) {
-  const rings = [];
-  for (let i = 0; i < points.length - 1; i++) {
-    const [x1, y1] = points[i];
-    const [x2, y2] = points[i + 1];
-    const dx = x2 - x1, dy = y2 - y1;
+function lineToWallPolygon(points, thicknessDeg) {
+  const offsets = [];
+  for (let i = 0; i < points.length; i++) {
+    const [lng, lat] = points[i];
+    const prev = points[i - 1] || points[i];
+    const next = points[i + 1] || points[i];
+    const dx = next[0] - prev[0];
+    const dy = next[1] - prev[1];
     const len = Math.sqrt(dx * dx + dy * dy) || 1;
     const nx = -dy / len * thicknessDeg;
     const ny = dx / len * thicknessDeg;
-    rings.push([
-      [x1 + nx, y1 + ny], [x2 + nx, y2 + ny],
-      [x2 - nx, y2 - ny], [x1 - nx, y1 - ny],
-      [x1 + nx, y1 + ny]
-    ]);
+    offsets.push([[lng + nx, lat + ny], [lng - nx, lat - ny]]);
   }
-  // Giunto ad ogni vertice interno (non i due capolinea): un quadratino
-  // pieno centrato sul vertice, allineato agli assi invece che alla
-  // direzione locale — non serve essere preciso, basta che copra
-  // qualunque fessura lasciata dai due rettangoli adiacenti, restando
-  // comunque un poligono convesso indipendente dagli altri.
-  for (let i = 1; i < points.length - 1; i++) {
-    const [x, y] = points[i];
-    const t = thicknessDeg;
-    rings.push([
-      [x - t, y - t], [x + t, y - t],
-      [x + t, y + t], [x - t, y + t],
-      [x - t, y - t]
-    ]);
-  }
-  return rings;
-}
-
-// Ritorna le coordinate di una MultiPolygon (array di [ring]) pronta per
-// una geometry GeoJSON { type: "MultiPolygon", coordinates: ... }.
-function lineToWallMultiPolygon(points, thicknessDeg) {
-  return lineToWallSegments(points, thicknessDeg).map(ring => [ring]);
+  const left = offsets.map(o => o[0]);
+  const right = offsets.map(o => o[1]).reverse();
+  return [...left, ...right, left[0]];
 }
 
 function addWallLayer() {
@@ -2469,8 +2430,8 @@ function addWallLayer() {
     type: "Feature",
     properties: { name: w.name, height: w.height, color: w.color },
     geometry: {
-      type: "MultiPolygon",
-      coordinates: lineToWallMultiPolygon(w.points, w.thickness)
+      type: "Polygon",
+      coordinates: [lineToWallPolygon(w.points, w.thickness)]
     }
   }));
 
@@ -2490,254 +2451,6 @@ function addWallLayer() {
       'fill-extrusion-opacity': 0.95
     }
   });
-}
-
-/* =========================================================================
-   RETE DI TRASPORTO (MONOROTAIE MAGNETICHE + BUS)
-   Dati: vedi data/cy-data-transit.js (TRANSIT_STATIONS, TRANSIT_LINES).
-
-   Due tipi di linea:
-     - "monorail": tubo magnetico sopraelevato. Riusa lineToWallMultiPolygon
-       (già definita sopra per le mura, vedi il fix anti-glitch lì
-       descritto) per generare il nastro/ribbon della tubazione a segmenti
-       convessi, poi lo estrude con fill-extrusion tra una base e
-       un'altezza entrambe > 0 — non un muro che parte da terra, ma un
-       blocco "sospeso" a mezz'aria: esattamente l'effetto voluto per un
-       binario magnetico elevato, senza bisogno di nessuna feature nuova
-       del renderer. Ogni linea riceve una quota leggermente diversa
-       (TRANSIT_MONORAIL_BASE + indice*TRANSIT_LEVEL_STEP) così, nei punti
-       di interscambio dove più linee condividono la stessa stazione, i
-       tubi non fanno z-fighting tra loro.
-     - "bus": semplice linea 2D tratteggiata a terra, nessuna estrusione:
-       un autobus non ha bisogno di un binario sopraelevato.
-
-   Le stazioni sono un'unica sorgente puntuale condivisa da tutte le linee
-   (TRANSIT_STATIONS): un interscambio è semplicemente una stazione il cui
-   id compare nell'array "stations" di più voci di TRANSIT_LINES, quindi
-   viene toccata da più tubi/linee ma disegnata una sola volta.
-   ========================================================================= */
-const TRANSIT_MONORAIL_BASE = 26;   // quota (m) della prima linea maglev
-const TRANSIT_LEVEL_STEP = 5;       // scarto di quota (m) tra una linea maglev e la successiva
-const TRANSIT_TUBE_THICKNESS = 0.00003; // ~3.3m di raggio del tubo
-
-const transitStationsById = new Map(
-  (typeof TRANSIT_STATIONS !== 'undefined' ? TRANSIT_STATIONS : []).map(s => [s.id, s])
-);
-
-// Quante linee toccano ciascuna stazione: usato per dare alle stazioni di
-// interscambio un marker più grande/vistoso di una semplice fermata.
-function buildTransitStationLineCounts() {
-  const counts = new Map();
-  const namesByStation = new Map();
-  (typeof TRANSIT_LINES !== 'undefined' ? TRANSIT_LINES : []).forEach(line => {
-    line.stations.forEach(sid => {
-      counts.set(sid, (counts.get(sid) || 0) + 1);
-      if (!namesByStation.has(sid)) namesByStation.set(sid, []);
-      namesByStation.get(sid).push(line.name);
-    });
-  });
-  return { counts, namesByStation };
-}
-
-// Registra una stazione nell'archivio indirizzi (barra di ricerca #addr-bar),
-// stessa identica convenzione già usata per gli edifici custom/landmark
-// (vedi registerCustomBuildingAddress/registerLandmarkAddresses): il
-// pannello mostrato al volo usa direttamente panelName/panelColor/
-// panelBlurb, senza passare da streetPanelBlurb (pensata per le vie).
-function registerTransitStationAddress(station, lineNames) {
-  const key = `transit:${station.id}`;
-  if (addressRegistry.has(key)) return;
-  const linesTag = lineNames && lineNames.length
-    ? `<div class="gm-note">Linee: ${lineNames.join(' • ')}</div>`
-    : '';
-  addressRegistry.set(key, {
-    name: `${station.name} [STAZIONE]`,
-    lng: station.lng,
-    lat: station.lat,
-    preloaded: true,
-    type: 'major',
-    custom: true,
-    panelName: station.name,
-    panelColor: '#00fff2',
-    panelBlurb: `${station.blurb || ''}${linesTag}`
-  });
-}
-
-function addTransitLayer() {
-  if (typeof TRANSIT_LINES === 'undefined' || typeof TRANSIT_STATIONS === 'undefined') return;
-
-  const { counts: stationLineCounts, namesByStation } = buildTransitStationLineCounts();
-
-  // --- Tubi sopraelevati delle linee monorail -------------------------------
-  const monorailFeatures = [];
-  let monorailIndex = 0;
-  // --- Linee bus (2D, a terra) ----------------------------------------------
-  const busFeatures = [];
-
-  TRANSIT_LINES.forEach(line => {
-    const points = line.stations
-      .map(sid => transitStationsById.get(sid))
-      .filter(Boolean)
-      .map(s => [s.lng, s.lat]);
-    if (points.length < 2) return;
-
-    if (line.type === 'monorail') {
-      const base = TRANSIT_MONORAIL_BASE + monorailIndex * TRANSIT_LEVEL_STEP;
-      monorailIndex++;
-      monorailFeatures.push({
-        type: 'Feature',
-        properties: { name: line.name, color: line.color, base, height: base + 4 },
-        geometry: { type: 'MultiPolygon', coordinates: lineToWallMultiPolygon(points, TRANSIT_TUBE_THICKNESS) }
-      });
-    } else {
-      busFeatures.push({
-        type: 'Feature',
-        properties: { name: line.name, color: line.color },
-        geometry: { type: 'LineString', coordinates: points }
-      });
-    }
-  });
-
-  map.addSource('cy-transit-monorail', {
-    type: 'geojson',
-    data: { type: 'FeatureCollection', features: monorailFeatures }
-  });
-
-  // Alone/glow leggero proiettato a terra sotto il tubo: aiuta a leggere il
-  // tracciato della linea anche a pitch basso, quando il tubo sospeso è
-  // poco visibile sopra la geometria degli edifici.
-  map.addLayer({
-    id: 'cy-transit-monorail-glow',
-    type: 'fill-extrusion',
-    source: 'cy-transit-monorail',
-    paint: {
-      'fill-extrusion-color': ['get', 'color'],
-      'fill-extrusion-height': 1,
-      'fill-extrusion-base': 0,
-      'fill-extrusion-opacity': 0.12
-    }
-  });
-
-  map.addLayer({
-    id: 'cy-transit-monorail-tube',
-    type: 'fill-extrusion',
-    source: 'cy-transit-monorail',
-    paint: {
-      'fill-extrusion-color': ['get', 'color'],
-      'fill-extrusion-height': ['get', 'height'],
-      'fill-extrusion-base': ['get', 'base'],
-      'fill-extrusion-opacity': 0.92
-    }
-  });
-
-  map.addSource('cy-transit-bus', {
-    type: 'geojson',
-    data: { type: 'FeatureCollection', features: busFeatures }
-  });
-
-  map.addLayer({
-    id: 'cy-transit-bus-line',
-    type: 'line',
-    source: 'cy-transit-bus',
-    layout: { 'line-join': 'round', 'line-cap': 'round' },
-    paint: {
-      'line-color': ['get', 'color'],
-      'line-width': 2.5,
-      'line-dasharray': [2, 2],
-      'line-opacity': 0.75
-    }
-  });
-
-  // --- Stazioni/fermate --------------------------------------------------
-  const stationFeatures = TRANSIT_STATIONS.map(s => {
-    const lineCount = stationLineCounts.get(s.id) || 0;
-    return {
-      type: 'Feature',
-      properties: {
-        id: s.id,
-        name: s.name,
-        blurb: s.blurb || '',
-        district: s.district || '',
-        lineCount,
-        interchange: lineCount > 1
-      },
-      geometry: { type: 'Point', coordinates: [s.lng, s.lat] }
-    };
-  });
-
-  map.addSource('cy-transit-stations', {
-    type: 'geojson',
-    data: { type: 'FeatureCollection', features: stationFeatures }
-  });
-
-  map.addLayer({
-    id: 'cy-transit-station-halo',
-    type: 'circle',
-    source: 'cy-transit-stations',
-    minzoom: 11,
-    paint: {
-      'circle-radius': ['case', ['get', 'interchange'], 12, 7],
-      'circle-color': '#00fff2',
-      'circle-opacity': 0.15,
-      'circle-blur': 0.8
-    }
-  });
-
-  map.addLayer({
-    id: 'cy-transit-station-dot',
-    type: 'circle',
-    source: 'cy-transit-stations',
-    minzoom: 11,
-    paint: {
-      'circle-radius': ['case', ['get', 'interchange'], 6, 4],
-      'circle-stroke-width': 1.5,
-      'circle-stroke-color': '#0a0908',
-      'circle-color': ['case', ['get', 'interchange'], '#f2ede4', '#00fff2']
-    }
-  });
-
-  map.addLayer({
-    id: 'cy-transit-station-label',
-    type: 'symbol',
-    source: 'cy-transit-stations',
-    minzoom: 13,
-    layout: {
-      'text-field': ['get', 'name'],
-      'text-font': ['Noto Sans Regular'],
-      'text-size': 10.5,
-      'text-offset': [0, 1.1],
-      'text-anchor': 'top',
-      'text-allow-overlap': false
-    },
-    paint: {
-      'text-color': '#00fff2',
-      'text-halo-color': '#0a0908',
-      'text-halo-width': 1.2
-    }
-  });
-
-  map.on('click', 'cy-transit-station-dot', (e) => {
-    if (selectingPoint) return;
-    const p = e.features[0].properties;
-    const lineNames = namesByStation.get(p.id) || [];
-    const linesTag = lineNames.length
-      ? `<div class="gm-note">Linee: ${lineNames.join(' • ')}</div>`
-      : '';
-    openPanel({
-      name: p.name,
-      type: p.interchange ? 'interscambio' : 'stazione',
-      color: '#00fff2',
-      blurb: `${p.blurb}${linesTag}`
-    });
-  });
-  map.on('mouseenter', 'cy-transit-station-dot', () => { if (!selectingPoint) map.getCanvas().style.cursor = 'pointer'; });
-  map.on('mouseleave', 'cy-transit-station-dot', () => { map.getCanvas().style.cursor = ''; });
-
-  // Registrazione nell'archivio indirizzi, per trovare le stazioni anche
-  // dalla barra di ricerca (#addr-bar) digitando il loro nome.
-  TRANSIT_STATIONS.forEach(s => registerTransitStationAddress(s, namesByStation.get(s.id)));
-  refreshAddrResultsIfOpen();
-  updateAddrCount();
 }
 
 /* =========================================================================
