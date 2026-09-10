@@ -124,6 +124,16 @@ const DEFAULT_BUILDING_DESCRIPTIONS = [
     name: "Chiesa",
     color: "#cd00d4",
     blurb: "Chiesa.<img src=\"img/hex-church.jpg\" alt=\"Mia Immagine\">"
+  },
+  {
+    id: "18.025231,59.271758",
+    name: "Casa Pluck",
+    color: "#5fd400",
+    street: "SPRAWL SHAFT",
+    number: 57,
+    subAddress: "18_142<br><small>Burnchurch Hex</small>",
+    blurb: "Casa"
+
   }
 ];
 
