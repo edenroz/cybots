@@ -1809,7 +1809,13 @@ function rebuildBuildingAddressSource() {
       properties: {
         number: String(addr.number),
         street: addr.streetName,
-        custom: !!custom
+        custom: !!custom,
+        // lng/lat duplicati anche come properties (oltre che nella
+        // geometry): servono a updateBuildingAddressCenterFilter() per
+        // filtrare via espressione di stile, che non può leggere le
+        // coordinate della geometria direttamente.
+        lng: addr.lng,
+        lat: addr.lat
       },
       geometry: { type: 'Point', coordinates: [addr.lng, addr.lat] }
     });
@@ -1842,8 +1848,45 @@ function rebuildBuildingAddressSource() {
         'text-halo-width': 1.2
       }
     });
+    updateBuildingAddressCenterFilter();
   }
 }
+
+/* =========================================================================
+   LIMITE VISUALIZZAZIONE NUMERI CIVICI AL CENTRO SCHERMO
+   Con la mappa esplorata a lungo, buildingAddressRegistry finisce per
+   contenere migliaia di edifici: mostrarli tutti (anche solo entro lo
+   zoom minimo del layer) riempiva lo schermo di numeri ovunque, illeggibili.
+   Li limitiamo a un raggio FISSO IN PIXEL attorno al centro dello schermo
+   (quindi indipendente da zoom e latitudine, sempre la stessa porzione di
+   schermo "leggibile" attorno al mirino), ricalcolato a ogni pan/zoom.
+   Il raggio in pixel viene convertito in un riquadro in gradi lng/lat
+   attorno al centro corrente (approssimazione a quadrato invece che a
+   cerchio: sufficiente per l'effetto voluto e più semplice/compatibile di
+   un'espressione di stile basata sulla distanza geografica reale).
+   ========================================================================= */
+const BUILDING_ADDRESS_LABEL_RADIUS_PX = 220; // raggio, in pixel schermo, attorno al centro
+
+function updateBuildingAddressCenterFilter() {
+  if (!map.getLayer('cy-building-address-label')) return;
+  const center = map.getCenter();
+  const zoom = map.getZoom();
+  // Metri per pixel alla latitudine/zoom correnti (formula standard Web
+  // Mercator), da cui deriviamo il raggio in gradi lng/lat.
+  const metersPerPixel = (156543.03392 * Math.cos(center.lat * Math.PI / 180)) / Math.pow(2, zoom);
+  const radiusMeters = BUILDING_ADDRESS_LABEL_RADIUS_PX * metersPerPixel;
+  const dLat = radiusMeters / 111320;
+  const dLng = radiusMeters / (111320 * Math.cos(center.lat * Math.PI / 180) || 1);
+
+  map.setFilter('cy-building-address-label', [
+    'all',
+    ['<', ['abs', ['-', ['get', 'lng'], center.lng]], dLng],
+    ['<', ['abs', ['-', ['get', 'lat'], center.lat]], dLat]
+  ]);
+}
+
+map.on('move', updateBuildingAddressCenterFilter);
+map.on('zoom', updateBuildingAddressCenterFilter);
 
 // Ad ogni 'idle' (dopo refreshAddressRegistry, che aggiorna streetLineCache),
 // calcola il civico dei nuovi edifici 3D entrati in vista. Limitato a zoom
