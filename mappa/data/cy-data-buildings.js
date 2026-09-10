@@ -139,7 +139,7 @@ const DEFAULT_BUILDING_DESCRIPTIONS = [
 
 const CUSTOM_BUILDING_DESCRIPTIONS = [
   {
-    street: "PHANTOM YARD",
+    street: "INTEGRATED PASS",
     number: 327,
     subAddress: "a0_24<br><small>Svarta</small>",
     lng: 17.87761,

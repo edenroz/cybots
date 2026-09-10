@@ -15,11 +15,11 @@ const LANDMARK_FEATURES  = [
         "name": "@dr_neo101",
         "height": 20,
         "base": 0,
-        "street": "BLADE AVENUE",
+        "street": "EMBER DATAROUTE",
         "number": 101,
         "subAddress": "a3_832",
         "color": "#e8c93a",
-        "address": "BLADE AVENUE, #101",
+        "address": "EMBER DATAROUTE, #101",
         "blurb": "Il covo/laboratorio del ripperdoc Dr Neo è nascosto in una porzione di un enorme edificio verticale, tra centinaia di appartamenti e attività. Sorvegliato quanto basta per scoraggiare i curiosi: meglio citofonare. Sul retro c'è un piccolo accesso di servizio."
       },
       "geometry": {
@@ -342,8 +342,8 @@ const LANDMARK_FEATURES  = [
         "height": 5,
         "base": 0,
         "color": "#8cd406",
-        "address": "PHANTOM YARD, #326",
-        "street": "PHANTOM YARD",
+        "address": "INTEGRATED PASS, #326",
+        "street": "INTEGRATED PASS",
         "number": 326,
         "blurb": "FRESH MOONSHINE - 42°<br>Come in and taste the freshness of the real copper!<br><img src=\"img/night-owl.jpg\" alt=\"Mia Immagine\">Il Night Owl Bar è uno squallido buco aperto fino a quando resta qualcuno in piedi. Luci al neon mezze fulminate, tavoli appiccicosi e odore di fumo, sudore e distillato. Ma il vero motivo per cui la gente torna è il suo moonshine: roba illegale, micidiale e, a sentire il proprietario, «distillato con vero rame». Nessuno sa cosa significhi esattamente. Tutti concordano però che sia molto meglio della merda sintetica venduta altrove."  },
       "geometry": {
