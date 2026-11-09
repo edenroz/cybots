@@ -10,38 +10,45 @@
   html,body{margin:0;height:100%;background:var(--black);overflow:hidden;font-family:'Courier New',monospace;color:var(--white);}
   #cv{position:fixed;inset:0;touch-action:none;cursor:grab;}
   #cv.drag{cursor:grabbing;}
-  .box{background:rgba(10,9,8,0.88);border:1px solid rgba(242,237,228,0.25);backdrop-filter:blur(2px);}
+  .box{background:rgba(10,9,8,0.9);border:1px solid rgba(242,237,228,0.25);backdrop-filter:blur(2px);}
   #title{position:fixed;top:calc(14px + env(safe-area-inset-top));left:14px;padding:10px 14px;max-width:min(360px,60vw);}
   #title h1{font-family:Impact,'Arial Narrow',sans-serif;font-size:22px;margin:0 0 4px;letter-spacing:1px;}
   #title h1 span{color:var(--red);}
   #title .meta{font-size:10.5px;letter-spacing:.5px;color:var(--grey);line-height:1.6;}
-  #side{position:fixed;top:calc(14px + env(safe-area-inset-top));right:14px;width:250px;max-height:60vh;overflow-y:auto;padding:10px 12px;font-size:11px;}
+  #side{position:fixed;top:calc(14px + env(safe-area-inset-top));right:14px;width:300px;max-height:calc(100vh - 110px);overflow-y:auto;padding:10px 12px;font-size:11px;}
   #side h3{font-family:Impact,sans-serif;font-size:14px;margin:0 0 6px;letter-spacing:1px;color:var(--cyan);}
-  #side .r{display:flex;gap:6px;padding:3px 0;border-bottom:1px solid rgba(242,237,228,.1);}
+  #side .r{display:flex;gap:6px;padding:4px 2px;border-bottom:1px solid rgba(242,237,228,.1);cursor:pointer;}
+  #side .r:hover{background:rgba(0,255,242,.08);}
+  #side .r.sel{background:rgba(0,255,242,.14);}
   #side .r b{color:var(--yellow);min-width:22px;}
   #side .r i{margin-left:auto;color:var(--grey);font-style:normal;white-space:nowrap;}
+  #side .desc{padding:6px 6px 8px 28px;color:var(--white);line-height:1.55;border-bottom:1px solid rgba(242,237,228,.1);font-size:11.5px;}
+  #side .desc .n{color:var(--grey);display:block;margin-top:4px;}
+  #side .desc .gm{color:var(--mag);display:block;margin-top:4px;}
   #side .k{margin-top:8px;color:var(--grey);line-height:1.6;}
   #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;max-width:96vw;}
   #bar button{background:rgba(242,237,228,.08);border:1px solid rgba(242,237,228,.4);color:var(--white);font-family:inherit;font-size:12px;padding:6px 10px;cursor:pointer;}
   #bar button:hover{border-color:var(--cyan);color:var(--cyan);}
-  #bar input[type=range]{width:min(220px,40vw);accent-color:#00fff2;}
-  #flabel{min-width:150px;text-align:center;font-size:12px;letter-spacing:1px;}
+  #bar button.on{border-color:var(--mag);color:var(--mag);}
+  #bar input[type=range]{width:min(220px,36vw);accent-color:#00fff2;}
+  #flabel{min-width:190px;text-align:center;font-size:12px;letter-spacing:1px;}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--grey);}
-  @media (max-width:640px){#side{top:auto;bottom:70px;right:8px;left:8px;width:auto;max-height:26vh;}#title{max-width:90vw}}
+  @media (max-width:640px){#side{top:auto;bottom:70px;right:8px;left:8px;width:auto;max-height:30vh;}#title{max-width:90vw}}
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
 <div id="title" class="box"><h1><span>C</span>Y // DUNGEON</h1><div class="meta" id="meta"></div></div>
 <div id="side" class="box"><h3 id="side-h">CHIAVE</h3><div id="side-list"></div>
-  <div class="k">▲▼ scale &nbsp; E ascensore &nbsp; <span style="color:#e8c93a">▮</span> porta &nbsp; <span style="color:#ff2ee6">S</span> porta segreta<br>
-  <span style="color:#ff5a5a">M</span> presenza ostile &nbsp; <span style="color:#e8c93a">$</span> bottino &nbsp; <span style="color:#ff2ee6">!</span> trappola</div></div>
+  <div class="k">▲▼ scale &nbsp; E ascensore &nbsp; <span style="color:#e8c93a">▮</span> porta &nbsp; <span style="color:#ff5a5a">▮</span> chiusa a chiave &nbsp; ⌒ arco<br>
+  <span class="gmk" style="display:none"><span style="color:#ff2ee6">S</span> porta segreta &nbsp; <span style="color:#ff5a5a">M</span> ostile &nbsp; <span style="color:#e8c93a">$</span> bottino &nbsp; <span style="color:#ff2ee6">!</span> trappola</span></div></div>
 <div id="bar" class="box">
   <button id="b-down" title="Piano inferiore (↓)">▼</button>
   <input id="slider" type="range" min="0" max="0" value="0">
   <button id="b-up" title="Piano superiore (↑)">▲</button>
   <span id="flabel"></span>
   <button id="b-view" title="Cambia vista (V)">VISTA 3D</button>
+  <button id="b-gm" title="Mostra segreti, mostri, trappole (M)">MASTER</button>
   <button id="b-zout">−</button><button id="b-zin">+</button><button id="b-fit" title="Ricentra">⌖</button>
 </div>
 <div id="err">Coordinate mancanti.<br>Apri questa pagina dal pulsante "APRI DUNGEON" nel pannello di un edificio (parametri lat / lng / h / name / poly).</div>
@@ -50,8 +57,26 @@
 /* =========================================================================
    CY — DUNGEON DI EDIFICIO
    Parametri URL: lat, lng (seed), h (altezza in metri → numero di piani),
-   name, poly ("est:nord;est:nord;..." offset in metri dal centroide).
+   name, poly ("est:nord;est:nord;..." offset in metri dal centroide),
+   gm=1 (apre già in modalità master).
    Tutto è deterministico: stesso lat/lng = stesso dungeon, a ogni apertura.
+
+   LOGICA (ispirata a One Page Dungeon, ma "da edificio"):
+   1. SCHEMA STRUTTURALE stabile tra i piani (come in un vero palazzo): nucleo
+      scale/ascensore al centro, corridoio principale che lo attraversa lungo
+      l'asse lungo dell'edificio, corridoi trasversali e paralleli se l'edificio
+      è grande. Lo spazio che resta è diviso in "blocchi".
+   2. Ogni piano ha un TEMA (interrato, piano terra, residenziale, uffici,
+      attico) che decide dimensione e funzione delle stanze. I blocchi vengono
+      suddivisi (BSP) in stanze con muri di una sola cella.
+   3. Le porte non sono casuali: si costruisce il grafo delle stanze adiacenti
+      e le si collega a partire dal nucleo. Le stanze "pubbliche" (grandi)
+      si aprono sul corridoio, le piccole (bagni, camere) passano da una
+      stanza principale — così ogni appartamento/ufficio ha un senso. Poi
+      qualche porta extra per fare anelli, porte chiuse, archi e stanze segrete.
+   4. La funzione della stanza dipende dalla profondità nel grafo; poi si
+      arredano (letti, scrivanie, rack, auto...), si aggiungono descrizioni
+      e incontri.
    ========================================================================= */
 const Q = new URLSearchParams(location.search);
 const LAT = parseFloat(Q.get('lat')), LNG = parseFloat(Q.get('lng'));
@@ -67,6 +92,7 @@ function hashStr(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCo
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const SEED_STR = LAT.toFixed(6) + ',' + LNG.toFixed(6);
 const SEED_HEX = hashStr(SEED_STR).toString(16).toUpperCase().padStart(8, '0');
+const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
 
 /* ---------- piani ---------- */
 const FL_RAW = Math.round(BH / 3.5);
@@ -75,6 +101,27 @@ const NB = 1 + (hashStr(SEED_STR + 'basement') % 3);   // piani interrati 1..3
 const NL = NB + FL;                                    // livelli totali (indice 0 = più profondo)
 const levelOf = i => i - NB;
 const labelOf = i => { const n = levelOf(i); return n < 0 ? 'S' + (-n) : 'P' + n; };
+
+/* ---------- tema ---------- */
+const KIND = (function(){ const r = hashStr(SEED_STR + 'kind') % 100; return r < 45 ? 'residential' : r < 80 ? 'office' : 'mixed'; })();
+function themeOf(i){
+  const n = levelOf(i);
+  if (n < 0) return 'basement';
+  if (n === 0) return 'ground';
+  if (FL > 2 && n === FL-1) return 'penthouse';
+  if (KIND === 'residential') return 'residential';
+  if (KIND === 'office') return 'office';
+  return n <= Math.ceil(FL/3) ? 'office' : 'residential';
+}
+// area = metri quadri "obiettivo" per stanza; pub = sopra questa area la stanza si apre sul corridoio;
+// arch = sopra questa area due stanze possono essere unite da un arco invece che da una porta
+const THEME = {
+  basement:   {area:90,  splitP:.10, pub:30, arch:40, name:'interrato'},
+  ground:     {area:60,  splitP:.15, pub:24, arch:40, name:'piano terra'},
+  residential:{area:16,  splitP:.12, pub:20, arch:999,name:'residenziale'},
+  office:     {area:50,  splitP:.12, pub:30, arch:60, name:'uffici'},
+  penthouse:  {area:120, splitP:.10, pub:40, arch:60, name:'attico'}
+};
 
 /* ---------- sagoma ---------- */
 let poly = null;
@@ -127,104 +174,381 @@ const CORE = (function(){
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) if (mask[y*GW+x]) { const d=(x-mx)**2+(y-my)**2; if(d<bd){bd=d;best={x,y,s:1};} }
   return best;
 })();
+const inZone = (x,y) => x>=CORE.x-1 && x<=CORE.x+CORE.s && y>=CORE.y-1 && y<=CORE.y+CORE.s;
 
-/* ---------- generazione piano (BSP + corridoi) ---------- */
-const TYPES_UP   = ['Appartamento','Ufficio','Negozio','Bar clandestino','Clinica','Sala server','Magazzino','Dormitorio','Laboratorio','Archivio'];
-const TYPES_DOWN = ['Locale tecnico','Magazzino','Generatori','Cella frigorifera','Parcheggio','Laboratorio clandestino','Deposito merci','Cisterna'];
-const TYPE_COLOR = {'Appartamento':'#3a2a2a','Ufficio':'#242a3a','Negozio':'#3a3522','Bar clandestino':'#3a2238','Clinica':'#223a33','Sala server':'#1f3340','Magazzino':'#2e2a22','Dormitorio':'#2c2436','Laboratorio':'#25361f','Archivio':'#33302a',
-  'Locale tecnico':'#2b2b33','Generatori':'#38281e','Cella frigorifera':'#1e3038','Parcheggio':'#262626','Laboratorio clandestino':'#2d3a1f','Deposito merci':'#332a22','Cisterna':'#1d2a38','Atrio':'#3a3a2a','Attico':'#40283a','Nucleo':'#2a2a2a'};
+/* =========================================================================
+   SCHEMA STRUTTURALE (uguale a ogni piano)
+   ========================================================================= */
+const SKEL = (function(){
+  const rng = mulberry32(hashStr(SEED_STR + 'skel'));
+  const horiz = GW >= GD;
+  const U = horiz?GW:GD, V = horiz?GD:GW;
+  const xy = (u,v) => horiz ? [u,v] : [v,u];
+  const corr = new Uint8Array(GW*GD);
+  const put = (u,v) => { const [x,y]=xy(u,v); if (x>0&&y>0&&x<GW-1&&y<GD-1&&mask[y*GW+x]) corr[y*GW+x]=1; };
+  const cw = Math.min(GW,GD) >= 30 ? 2 : 1;
+  const v0 = horiz?CORE.y:CORE.x, u0 = horiz?CORE.x:CORE.y;
+  const sv = v0 + ((CORE.s - cw) >> 1);
+  // corridoio principale (passa dal nucleo)
+  for (let u=1;u<U-1;u++) for (let k=0;k<cw;k++) put(u, sv+k);
+  const ends = [];
+  { let a=-1,b=-1; for (let u=1;u<U-1;u++){ const [x,y]=xy(u,sv); if(corr[y*GW+x]){ if(a<0)a=u; b=u; } }
+    if (a>=0) { ends.push(xy(a,sv)); if (b!==a) ends.push(xy(b,sv)); } }
+  // corridoi trasversali (edifici lunghi)
+  const cross = [];
+  if (V >= 16) {
+    const n = Math.floor((U-2)/22);
+    for (let k=1;k<=n;k++) {
+      const u = 1 + Math.round((U-2)*k/(n+1)) + Math.floor((rng()-.5)*4);
+      if (Math.abs(u-(u0+(CORE.s>>1))) <= 4) continue;
+      cross.push(u);
+    }
+  }
+  cross.sort((a,b)=>a-b);
+  cross.forEach(u => { for (let v=1;v<V-1;v++) put(u,v); });
+  // fasce ai due lati del corridoio; se troppo profonde, un corridoio parallelo
+  let bands = [[1,sv-2],[sv+cw+1,V-2]];
+  const out = [];
+  while (bands.length) {
+    const [va,vb] = bands.pop();
+    if (vb-va+1 >= 19) {
+      const vc = va + ((vb-va)>>1);
+      for (let u=1;u<U-1;u++) put(u,vc);
+      bands.push([va,vc-2],[vc+2,vb]);
+    } else out.push([va,vb]);
+  }
+  const segs = []; let start = 1;
+  cross.forEach(u => { segs.push([start,u-2]); start = u+2; });
+  segs.push([start,U-2]);
+  const blocks = [];
+  out.forEach(([va,vb]) => segs.forEach(([ua,ub]) => {
+    if (ub-ua+1 < 4 || vb-va+1 < 4) return;
+    const [xa,ya]=xy(ua,va), [xb,yb]=xy(ub,vb);
+    blocks.push({x0:Math.min(xa,xb),y0:Math.min(ya,yb),x1:Math.max(xa,xb),y1:Math.max(ya,yb)});
+  }));
+  if (!blocks.length) blocks.push({x0:1,y0:1,x1:GW-2,y1:GD-2});
+  return {corr, blocks, ends};
+})();
+
+/* =========================================================================
+   TESTI (modificabili): descrizioni, incontri, arredi
+   ========================================================================= */
+const COND = [
+  'Le luci al neon sfarfallano.','Odore di ozono e muffa.','Un vecchio olo-poster si stacca dalla parete.',
+  'Cavi tranciati penzolano dal soffitto.','Il ronzio di un condizionatore riempie la stanza.',
+  'Un graffito di gang copre metà parete.','Una pozza scura si allarga sul pavimento.',
+  'Una telecamera spenta punta nel vuoto.','L\'aria è densa di fumo e profumo sintetico.','Dal muro arriva il basso di una festa lontana.'
+];
+const DESC = {
+  'Soggiorno/cucina':['Divano consumato davanti a un olo-schermo, una cucina compatta con piatti accatastati.','Un monolocale lasciato in fretta: tazze ancora tiepide, un neon rosa sulla finestra.'],
+  'Camera da letto':['Un letto disfatto, un armadio a muro e uno scaffale di vecchi chip.','Branda e coperte termiche: qualcuno ci dorme a turni.'],
+  'Bagno':['Piastrelle crepate, un lavandino che gocciola, specchio incrinato.','Cabina sanitaria con il pannello di controllo bruciato.'],
+  'Ripostiglio':['Scope, bidoni e un carrello della manutenzione.','Scaffali di detersivi industriali e rotoli di cavo.'],
+  'Lavanderia comune':['Lavatrici a gettoni, una delle quali ronza da sola.','Cestelli di panni abbandonati e un cartello con le tariffe in crediti.'],
+  'Locale spazzatura':['Compattatore e cassonetti: il fetore è insopportabile.','Rifiuti accatastati, qualcosa si muove là sotto.'],
+  'Open space':['File di scrivanie con terminali in standby; schermi che mostrano ancora il turno di ieri.','Un labirinto di cubicoli, tazze di caffè freddo e post-it olografici.'],
+  'Sala riunioni':['Un lungo tavolo, un proiettore olografico morto e sedie rovesciate.','Vetrata oscurata, tavolo lucido e una lavagna cancellata di fretta.'],
+  'Reception':['Bancone, poltroncine e un\'IA di benvenuto che ripete sempre la stessa frase.','Un banco con registro visitatori e un tastierino per le porte interne.'],
+  'Pausa caffè':['Distributore automatico, microonde e un tavolino unto.','Un angolo ristoro con un cartello: "Il caffè è un servizio premium".'],
+  'Ufficio dirigenziale':['Scrivania pesante, piante finte e una cassaforte a muro.','Pelle sintetica, whisky di fabbrica e una vista che costa un affitto.'],
+  'Archivio':['Scaffali di vecchi server e fascicoli sigillati.','Corridoi di armadi metallici, ciascuno con un codice a barre.'],
+  'Sala server':['Rack ronzanti e aria gelida; un LED rosso lampeggia insistente.','Cavi a grappolo, ventole al massimo e un odore di plastica calda.'],
+  'Negozio':['Scaffali semivuoti, un bancone blindato e un\'insegna che tremola.','Merce di dubbia provenienza esposta su banchi di metallo.'],
+  'Chiosco':['Un banchetto stretto con la serranda mezza abbassata.','Un chiosco di noodle: la pentola è ancora calda.'],
+  'Guardiola':['Monitor delle telecamere, una poltrona e un fucile sotto il bancone.','Un piccolo posto di guardia con un termos e una radio gracchiante.'],
+  'Magazzino':['Casse impilate fino al soffitto, etichette sbiadite.','Scaffali metallici carichi di scatole di merce non dichiarata.'],
+  'Retrobottega':['Il retro di un negozio: scatoloni, un frigo e un ufficio improvvisato.','Merce in attesa di essere "ricollocata".'],
+  'Locale personale':['Armadietti, una panca e un calendario con donne e moto.','Spogliatoio con tute da lavoro e odore di sudore.'],
+  'Bar clandestino':['Bancone ricavato da un portellone, luci basse e musica sorda.','Un locale senza insegna: si entra dicendo il nome giusto.'],
+  'Garage':['Auto parcheggiate tra i pilastri; una perdita d\'olio disegna arcobaleni.','Rampa, pilastri, vernice gialla scrostata e sedili vuoti.'],
+  'Locale tecnico':['Tubi, quadri elettrici e valvole: tutto vibra.','Un groviglio di condutture e un manometro che segna rosso.'],
+  'Generatori':['Due generatori diesel in sala, caldissimi, assordanti.','File di gruppi elettrogeni e taniche di carburante.'],
+  'Deposito merci':['Pallet e container ancora sigillati con marchi sconosciuti.','Un deposito senza orari: la merce arriva di notte.'],
+  'Cella di sicurezza':['Una cella spoglia con una branda inchiodata al pavimento.','Sbarre, un secchio e graffi sul muro che contano i giorni.'],
+  'Cella frigorifera':['Il freddo ti prende alla gola: carne, scatole, forse altro.','Ganci appesi, brina sul pavimento e una porta che non si apre da dentro.'],
+  'Laboratorio clandestino':['Banchi pieni di cyberware smontato, saldatori e fiale.','Un laboratorio improvvisato: odore di solventi e ozono.'],
+  'Cisterna':['Una vasca allagata, l\'acqua è scura e immobile.','Pareti gocciolanti, passerelle arrugginite e un gorgoglio profondo.'],
+  'Camera blindata':['Una porta spessa, scaffali di cassette di sicurezza e silenzio assoluto.','Una piccola sala corazzata: chi la usa non vuole essere trovato.'],
+  'Salone panoramico':['Una vetrata enorme sulla città, divani bassi, un olo-camino.','Lusso sintetico: marmo finto, luci calde e un mini-bar.'],
+  'Suite':['Un letto enorme, un bagno privato e tende elettrocromatiche.','Una camera da lusso con una cassaforte dietro lo specchio.'],
+  'Studio':['Una scrivania ingombra di datashard e una libreria di carta, rarissima.','Un angolo di lavoro con tre monitor e un divano letto.'],
+  'Stanza segreta':['Nascosta dietro un finto muro: scaffali, casse e un odore di chiuso.','Un nascondiglio dimenticato, con segni di visite molto recenti.']
+};
+const DESC_DEF = {basement:'Un locale grezzo, cemento nudo e cavi a vista.',ground:'Uno spazio commerciale anonimo.',residential:'Una stanza di un alloggio sovraffollato.',office:'Uno spazio d\'ufficio impersonale.',penthouse:'Una stanza di lusso fin troppo pulita.'};
+const MON = ['Gang locale (2-4)','Droni di guardia','Squatter armati','Rottamai','Guardia SecCorp','Cyberpsicotico','Ratti mutanti','Sicari in attesa'];
+const LOOT = ['Cassaforte nascosta','Cyberware rubato','Datashard criptato','Crediti in un barattolo','Scorta di stim','Armi in una cassa'];
+const TRAP = ['Mina a filo','Torretta nascosta','Scarica elettrica','Allarme silenzioso','Gas soporifero'];
+
+const TYPE_COLOR = {'Soggiorno/cucina':'#3a2c2a','Camera da letto':'#33283a','Bagno':'#1f3a3a','Ripostiglio':'#2e2a22','Lavanderia comune':'#22343a','Locale spazzatura':'#2a2e22',
+  'Open space':'#242a3a','Sala riunioni':'#2a2f42','Reception':'#3a3a2a','Pausa caffè':'#3a3522','Ufficio dirigenziale':'#3a2a3a','Archivio':'#33302a','Sala server':'#1f3340',
+  'Negozio':'#3a3522','Chiosco':'#3a3022','Guardiola':'#2a3a2a','Magazzino':'#2e2a22','Retrobottega':'#2c2822','Locale personale':'#2a2a33','Bar clandestino':'#3a2238',
+  'Garage':'#262626','Locale tecnico':'#2b2b33','Generatori':'#38281e','Deposito merci':'#332a22','Cella di sicurezza':'#2a2a2a','Cella frigorifera':'#1e3038',
+  'Laboratorio clandestino':'#2d3a1f','Cisterna':'#1d2a38','Camera blindata':'#33302a','Salone panoramico':'#40283a','Suite':'#38283e','Studio':'#2a3340','Stanza segreta':'#3a2030'};
+
+/* arredi: [tipo, dove, quantità]  dove: w=lungo i muri, i=interno, g=griglia (probabilità), r=casuale (probabilità) */
+const FURN = {
+  'Soggiorno/cucina':[['sofa','w',1],['table','i',1],['counter','w',2],['shelf','w',1]],
+  'Camera da letto':[['bed','w',1],['shelf','w',2]],
+  'Suite':[['bed','w',2],['shelf','w',2],['sofa','w',1]],
+  'Bagno':[['wc','w',1],['sink','w',1]],
+  'Open space':[['desk','g',.6],['shelf','w',2]],
+  'Sala riunioni':[['table','i',3]],
+  'Ufficio dirigenziale':[['desk','i',1],['shelf','w',2]],
+  'Archivio':[['shelf','g',.9]],
+  'Sala server':[['rack','g',.9]],
+  'Negozio':[['shelf','w',4],['counter','i',2]],
+  'Chiosco':[['counter','w',2]],
+  'Guardiola':[['desk','w',1]],
+  'Magazzino':[['crate','r',.28]],
+  'Retrobottega':[['crate','r',.2],['shelf','w',2]],
+  'Deposito merci':[['crate','r',.35]],
+  'Locale tecnico':[['machine','r',.12],['crate','w',1]],
+  'Generatori':[['machine','g',.7]],
+  'Laboratorio clandestino':[['machine','w',3],['table','i',2],['crate','w',1]],
+  'Cella di sicurezza':[['bed','w',1]],
+  'Cella frigorifera':[['crate','r',.25]],
+  'Camera blindata':[['crate','r',.2],['shelf','w',2]],
+  'Salone panoramico':[['sofa','w',3],['table','i',2],['counter','w',2]],
+  'Studio':[['desk','i',1],['shelf','w',3],['sofa','w',1]],
+  'Bar clandestino':[['counter','w',3],['table','i',3]],
+  'Pausa caffè':[['counter','w',2],['table','i',1]],
+  'Reception':[['counter','i',1],['sofa','w',2]],
+  'Ripostiglio':[['shelf','w',2],['crate','r',.2]],
+  'Lavanderia comune':[['machine','w',3]],
+  'Locale spazzatura':[['crate','r',.3]],
+  'Locale personale':[['shelf','w',2],['table','i',1]],
+  'Stanza segreta':[['crate','w',2],['shelf','w',1]]
+};
+
+function pick(a, rng){ return a[Math.floor(rng()*a.length)]; }
+function typeFor(theme, depth, areaM, rng, level){
+  switch (theme) {
+    case 'residential':
+      if (depth <= 1) return areaM >= 12 ? 'Soggiorno/cucina' : pick(['Ripostiglio','Lavanderia comune','Locale spazzatura'], rng);
+      return areaM <= 12 ? 'Bagno' : 'Camera da letto';
+    case 'penthouse':
+      if (depth <= 1) return areaM >= 60 ? 'Salone panoramico' : 'Studio';
+      return areaM <= 14 ? 'Bagno' : 'Suite';
+    case 'office':
+      if (depth <= 1) return areaM < 24 ? pick(['Reception','Pausa caffè'], rng) : (rng() < (areaM >= 45 ? .75 : .35) ? 'Open space' : 'Sala riunioni');
+      return areaM <= 9 ? 'Bagno' : pick(['Ufficio dirigenziale','Archivio','Sala server'], rng);
+    case 'ground':
+      if (depth <= 1) return rng()<.12 ? 'Bar clandestino' : areaM >= 18 ? 'Negozio' : pick(['Chiosco','Guardiola'], rng);
+      return areaM <= 9 ? 'Bagno' : pick(['Magazzino','Retrobottega','Locale personale'], rng);
+    default:
+      if (level === -1) { if (depth <= 1) return areaM >= 40 ? 'Garage' : 'Magazzino'; return pick(['Locale tecnico','Magazzino','Cella di sicurezza'], rng); }
+      if (depth <= 1) return pick(['Locale tecnico','Generatori','Deposito merci'], rng);
+      return pick(['Laboratorio clandestino','Cisterna','Camera blindata','Cella frigorifera'], rng);
+  }
+}
+
+/* =========================================================================
+   GENERAZIONE DI UN PIANO
+   g: 0 muro/vuoto 1 stanza 2 corridoio 3 porta 4 scale 5 ascensore
+      6 porta segreta 7 porta chiusa 8 arco 9 ingresso
+   ========================================================================= */
 const floorCache = [];
 function getFloor(i){ return floorCache[i] || (floorCache[i] = genFloor(i)); }
 
 function genFloor(i) {
   const rng = mulberry32(hashStr(SEED_STR + '#' + i));
-  const level = levelOf(i), top = i === NL-1, bottom = i === 0;
-  const g = new Uint8Array(GW*GD);              // 0 muro/vuoto 1 stanza 2 corridoio 3 porta 4 scale 5 ascensore 6 porta segreta
-  const inM = (x,y) => x>=0 && y>=0 && x<GW && y<GD && mask[y*GW+x]===1;
-  const rooms = [], doors = [];
-  const MIN = 6;
+  const level = levelOf(i), theme = themeOf(i), TH = THEME[theme];
+  const top = i === NL-1, bottom = i === 0;
+  const N = GW*GD;
+  const g = new Uint8Array(N), zid = new Int16Array(N).fill(-1), rid = new Int16Array(N).fill(-1);
+  const X = k => k % GW, Y = k => (k/GW)|0;
 
-  function leaf(x,y,w,h){
-    const aw=w-2, ah=h-2; if (aw<3||ah<3) return {};
-    const rw=Math.max(3, aw-Math.floor(rng()*(aw/3+1))), rh=Math.max(3, ah-Math.floor(rng()*(ah/3+1)));
-    const rx=x+1+Math.floor(rng()*(aw-rw+1)), ry=y+1+Math.floor(rng()*(ah-rh+1));
-    let c=0; for (let yy=ry;yy<ry+rh;yy++) for (let xx=rx;xx<rx+rw;xx++) if (inM(xx,yy)) c++;
-    if (c<6 || c<rw*rh*0.6) return {};
-    for (let yy=ry;yy<ry+rh;yy++) for (let xx=rx;xx<rx+rw;xx++) if (inM(xx,yy)) g[yy*GW+xx]=1;
-    const room={x:rx,y:ry,w:rw,h:rh,cx:Math.floor(rx+rw/2),cy:Math.floor(ry+rh/2)};
-    rooms.push(room); return {room};
-  }
-  function split(x,y,w,h,d){
-    const canH=h>=MIN*2, canV=w>=MIN*2;
-    if (d<7 && (canH||canV) && !(d>=2 && rng()<0.15)) {
-      const horiz = (canH&&canV) ? (h>w*1.2 ? true : w>h*1.2 ? false : rng()<.5) : canH;
-      if (horiz) { const c=MIN+Math.floor(rng()*(h-2*MIN+1)); return {a:split(x,y,w,c,d+1), b:split(x,y+c,w,h-c,d+1)}; }
-      const c=MIN+Math.floor(rng()*(w-2*MIN+1)); return {a:split(x,y,c,h,d+1), b:split(x+c,y,w-c,h,d+1)};
-    }
-    return leaf(x,y,w,h);
-  }
-  function anyRoom(n){
-    if (!n) return null; if (n.room) return n.room; if (!n.a) return null;
-    const f=rng()<.5; return anyRoom(f?n.a:n.b) || anyRoom(f?n.b:n.a);
-  }
-  function corridor(a,b){
-    const pts=[[a.cx,a.cy]]; let x=a.cx,y=a.cy;
-    const step=(tx,ty)=>{ while(x!==tx||y!==ty){ if(x!==tx) x+=Math.sign(tx-x); else y+=Math.sign(ty-y); pts.push([x,y]); } };
-    if (rng()<.5) { step(b.cx,a.cy); step(b.cx,b.cy); } else { step(a.cx,b.cy); step(b.cx,b.cy); }
-    const info = pts.map(([px,py]) => {
-      if (!inM(px,py)) return null;
-      const was=g[py*GW+px]; if (was===0) g[py*GW+px]=2;
-      return {x:px,y:py,room:was===1||was>=4,carved:was===0};
-    });
-    info.forEach((c,k) => {
-      if (!c||!c.carved) return;
-      const p=info[k-1], n=info[k+1];
-      if ((p&&p.room)||(n&&n.room)) { g[c.y*GW+c.x]=3; doors.push([c.x,c.y]); }
-    });
-  }
-  function conn(n){ if(!n||!n.a) return; conn(n.a); conn(n.b); const ra=anyRoom(n.a), rb=anyRoom(n.b); if(ra&&rb) corridor(ra,rb); }
-
-  const root = split(1,1,GW-2,GD-2,0);
-  if (!rooms.length) {   // forma strana: un unico locale che riempie la sagoma
-    for (let k=0;k<g.length;k++) if (mask[k]) g[k]=1;
-    rooms.push({x:1,y:1,w:GW-2,h:GD-2,cx:Math.floor(GW/2),cy:Math.floor(GD/2)});
-  } else conn(root);
-  if (rooms.length>3) for (let k=0;k<2;k++) if (rng()<.5) corridor(rooms[Math.floor(rng()*rooms.length)], rooms[Math.floor(rng()*rooms.length)]);
-
-  // nucleo
-  const s=CORE.s;
+  // corridoi + nucleo
+  for (let k=0;k<N;k++) if (SKEL.corr[k]) g[k]=2;
+  const s = CORE.s;
   for (let dy=0;dy<s;dy++) for (let dx=0;dx<s;dx++) g[(CORE.y+dy)*GW+CORE.x+dx]=1;
-  g[CORE.y*GW+CORE.x]=4;
-  if (s>=2) g[(CORE.y+s-1)*GW+CORE.x+s-1]=5;
-  const core={x:CORE.x,y:CORE.y,w:s,h:s,cx:CORE.x+(s>>1),cy:CORE.y+(s>>1),core:true,type:'Nucleo',id:'N'};
-  if (rooms.length) {
-    const sorted=rooms.slice().sort((a,b)=>((a.cx-core.cx)**2+(a.cy-core.cy)**2)-((b.cx-core.cx)**2+(b.cy-core.cy)**2));
-    corridor(core, sorted[0]);
-    if (sorted.length>2) corridor(core, sorted[1+Math.floor(rng()*(sorted.length-1))]);
+  // componenti connesse della rete corridoi/nucleo
+  let K = 0;
+  for (let k=0;k<N;k++) if (g[k] && zid[k]<0) {
+    const st=[k]; zid[k]=K;
+    while (st.length) { const c=st.pop(), cx=X(c), cy=Y(c);
+      for (const [dx,dy] of D4) { const nx=cx+dx, ny=cy+dy; if (nx<0||ny<0||nx>=GW||ny>=GD) continue; const nk=ny*GW+nx; if (g[nk] && zid[nk]<0) { zid[nk]=K; st.push(nk); } } }
+    K++;
   }
+  const coreComp = zid[CORE.y*GW+CORE.x];
+  g[CORE.y*GW+CORE.x] = 4;
+  if (s >= 2) g[(CORE.y+s-1)*GW+CORE.x+s-1] = 5;
 
-  // tipi, numerazione, incontri
-  const list = level<0 ? TYPES_DOWN : TYPES_UP;
-  rooms.forEach((r,k) => { r.type = list[Math.floor(rng()*list.length)]; r.id = k+1; });
-  const biggest = rooms.slice().sort((a,b)=>b.w*b.h-a.w*a.h)[0];
-  if (level===0 && biggest) biggest.type='Atrio';
-  else if (top && level>0 && biggest) biggest.type='Attico';
-  const feats=[];
-  rooms.forEach(r => {
-    if (r.type==='Atrio') return;
-    const roll=rng(); const k = roll<.22?'M' : roll<.47?'$' : roll<.57?'!' : null;
-    if (!k) return;
-    for (let t=0;t<12;t++) { const x=r.x+Math.floor(rng()*r.w), y=r.y+Math.floor(rng()*r.h); if (g[y*GW+x]===1) { feats.push({x,y,k}); break; } }
+  // stanze: BSP dei blocchi con muri di una cella
+  const rooms = [];
+  const cmin = Math.max(3, Math.round(3.2/CS)), maxA = Math.max(12, Math.round(TH.area/(CS*CS)));
+  function makeRoom(x0,y0,x1,y1){
+    const cells=[];
+    for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++) { const k=y*GW+x; if (mask[k] && !inZone(x,y) && g[k]===0) cells.push(k); }
+    if (cells.length < 6) return;
+    const set=new Set(cells), seen=new Set(); let best=[];
+    cells.forEach(c => {
+      if (seen.has(c)) return; const comp=[], st=[c]; seen.add(c);
+      while (st.length) { const q=st.pop(); comp.push(q);
+        for (const [dx,dy] of D4) { const nk=q+dx+dy*GW; if (set.has(nk) && !seen.has(nk)) { seen.add(nk); st.push(nk); } } }
+      if (comp.length > best.length) best = comp;
+    });
+    if (best.length < 6) return;
+    let bx0=1e9,by0=1e9,bx1=-1,by1=-1,sx=0,sy=0;
+    best.forEach(k => { const x=X(k), y=Y(k); bx0=Math.min(bx0,x); by0=Math.min(by0,y); bx1=Math.max(bx1,x); by1=Math.max(by1,y); sx+=x; sy+=y; });
+    const mx=sx/best.length, my=sy/best.length; let lk=best[0], ld=1e9;
+    best.forEach(k => { const d=(X(k)-mx)**2+(Y(k)-my)**2; if (d<ld){ld=d;lk=k;} });
+    const r = {cells:best,x:bx0,y:by0,w:bx1-bx0+1,h:by1-by0+1,lx:X(lk),ly:Y(lk),area:best.length*CS*CS};
+    rooms.push(r);
+    best.forEach(k => { g[k]=1; zid[k]=K+rooms.length-1; });
+  }
+  function bsp(x0,y0,x1,y1,d){
+    const w=x1-x0+1, h=y1-y0+1, canX=w>=2*cmin+1, canY=h>=2*cmin+1;
+    if (d<9 && (canX||canY) && (w*h>maxA || rng()<TH.splitP)) {
+      const ax = (canX&&canY) ? (w/h>1.3?'x':h/w>1.3?'y':(rng()<.5?'x':'y')) : (canX?'x':'y');
+      if (ax==='x') { let c=Math.round((x0+x1)/2+(rng()-.5)*w*.3); c=Math.max(x0+cmin,Math.min(x1-cmin,c)); bsp(x0,y0,c-1,y1,d+1); bsp(c+1,y0,x1,y1,d+1); }
+      else { let c=Math.round((y0+y1)/2+(rng()-.5)*h*.3); c=Math.max(y0+cmin,Math.min(y1-cmin,c)); bsp(x0,y0,x1,c-1,d+1); bsp(x0,c+1,x1,y1,d+1); }
+      return;
+    }
+    makeRoom(x0,y0,x1,y1);
+  }
+  SKEL.blocks.forEach(b => bsp(b.x0,b.y0,b.x1,b.y1,0));
+  rooms.forEach(r => { r.pub = r.area >= TH.pub || rng() < .3; });
+
+  // grafo di adiacenza (stanze/corridoi separati da UN muro di una cella)
+  const R = rooms.length, NN = K+R;
+  const adj = Array.from({length:NN}, () => new Map());
+  const link = (a,b,k) => { if (!adj[a].has(b)) { adj[a].set(b,[]); adj[b].set(a,[]); } adj[a].get(b).push(k); adj[b].get(a).push(k); };
+  for (let y=1;y<GD-1;y++) for (let x=1;x<GW-1;x++) {
+    const k=y*GW+x; if (g[k]!==0) continue;
+    const a=zid[k-1], b=zid[k+1]; if (a>=0&&b>=0&&a!==b) link(a,b,k);
+    const c=zid[k-GW], d=zid[k+GW]; if (c>=0&&d>=0&&c!==d) link(c,d,k);
+  }
+  const roomOf = n => n>=K ? rooms[n-K] : null;
+  const visited = new Set([coreComp]), doors = [], deg = new Array(NN).fill(0), doorSet = new Set(), hasDoor = new Set();
+  const dkey = (a,b) => a<b ? a+','+b : b+','+a;
+  function addDoor(a,b){
+    let cells = adj[a].get(b).filter(c => ![0,-1,1,-GW,GW].some(d => doorSet.has(c+d)));
+    if (!cells.length) cells = adj[a].get(b);
+    const c = cells[Math.floor(rng()*cells.length)];
+    const ra=roomOf(a), rb=roomOf(b); let kind=3;
+    if (theme==='basement' && rng()<.25) kind=7;
+    else if (ra && rb && ra.area>=TH.arch && rb.area>=TH.arch && rng()<.35) kind=8;
+    else if (rng()<.05) kind=7;
+    g[c]=kind; doorSet.add(c); deg[a]++; deg[b]++; hasDoor.add(dkey(a,b)); doors.push({c,a,b});
+  }
+  // 1) collega tutto partendo dal nucleo (le stanze pubbliche sul corridoio, le piccole tramite le grandi)
+  for (;;) {
+    const cands = [];
+    visited.forEach(a => adj[a].forEach((cells,b) => {
+      if (visited.has(b)) return;
+      const ra=roomOf(a), rb=roomOf(b); let w;
+      if (!ra && !rb) w=5; else if (!ra && rb) w = rb.pub ? 4 : 0.3; else if (ra && rb) w = rb.pub ? 1 : 3; else w=1;
+      cands.push([a,b,w]);
+    }));
+    if (!cands.length) break;
+    let t = rng()*cands.reduce((q,c)=>q+c[2],0), pk = cands[0];
+    for (const c of cands) { t -= c[2]; if (t<=0) { pk=c; break; } }
+    addDoor(pk[0],pk[1]); visited.add(pk[1]);
+  }
+  // stanze irraggiungibili: si murano
+  rooms.forEach((r,idx) => { if (!visited.has(K+idx)) { r.drop=true; r.cells.forEach(k => { g[k]=0; zid[k]=-1; }); } });
+  for (let k=0;k<N;k++) if (g[k] && g[k]<3 && zid[k]>=0 && zid[k]<K && !visited.has(zid[k])) { g[k]=0; zid[k]=-1; }
+  // 2) porte extra: anelli e scorciatoie
+  for (let a=0;a<NN;a++) adj[a].forEach((c,b) => {
+    if (b<=a || !visited.has(a) || !visited.has(b) || hasDoor.has(dkey(a,b))) return;
+    const ra=roomOf(a), rb=roomOf(b); let p;
+    if (ra && rb) p=.14; else if (!ra && !rb) p=.5; else p = (ra||rb).pub ? .5 : .25;
+    if ((ra&&ra.drop)||(rb&&rb.drop)) return;
+    if (rng()<p) addDoor(a,b);
   });
-  // porte segrete
-  doors.forEach(([x,y]) => { if (rng()<.1 && g[y*GW+x]===3) g[y*GW+x]=6; });
+  // 3) stanze segrete (foglie dell'albero, piccole)
+  let nSecret = 0;
+  rooms.forEach((r,idx) => {
+    const n=K+idx; if (r.drop || deg[n]!==1 || r.area>18 || nSecret>=1) return;
+    if (rng() < (theme==='basement'||theme==='ground' ? .45 : .2)) {
+      const d = doors.find(d => d.a===n||d.b===n); if (!d) return;
+      g[d.c]=6; r.secret=true; nSecret++;
+    }
+  });
+  // ingressi sul piano terra
+  if (theme==='ground') SKEL.ends.forEach(([x,y]) => { if (g[y*GW+x]===2) g[y*GW+x]=9; });
 
-  return {g, rooms:[core,...rooms], feats, level, top, bottom};
+  // profondità nel grafo delle porte → funzione della stanza
+  const nbr = Array.from({length:NN}, () => []);
+  doors.forEach(d => { nbr[d.a].push(d.b); nbr[d.b].push(d.a); });
+  const depth = new Map(), q = [];
+  doors.forEach(d => {
+    const room = d.a>=K ? d.a : d.b, corr = d.a>=K ? d.b : d.a;
+    if (corr < K && room >= K && !depth.has(room)) { depth.set(room,1); q.push(room); }
+  });
+  while (q.length) { const a=q.shift(); nbr[a].forEach(b => { if (b>=K && !depth.has(b)) { depth.set(b,depth.get(a)+1); q.push(b); } }); }
+
+  const kept = rooms.filter(r => !r.drop);
+  const coreRoom = {id:'N', type:'Nucleo', desc:'Vano scale e ascensore. Il cuore dell\'edificio: tutti i piani si incontrano qui.', notes:[], core:true, cells:[], x:CORE.x, y:CORE.y, w:s, h:s, lx:CORE.x+(s>>1), ly:CORE.y+(s>>1), area:s*s*CS*CS};
+  kept.forEach((r,n) => {
+    const node = K+rooms.indexOf(r), dp = depth.get(node) || 3;
+    r.node = node; r.depth = dp; r.id = n+1;
+    r.type = r.secret ? 'Stanza segreta' : typeFor(theme, dp, r.area, rng, level);
+    if (theme==='ground' && !r.secret && dp<=1 && r.area<=40 && ((r.lx-CORE.x)**2+(r.ly-CORE.y)**2) < 90 && rng()<.5) r.type='Guardiola';
+    r.flood = r.type==='Cisterna' || (level<=-2 && rng()<.15);
+    r.cells.forEach(k => { rid[k]=n; });
+  });
+
+  // arredi
+  const noProp = new Set();
+  doors.forEach(d => { noProp.add(d.c); [-1,1,-GW,GW].forEach(o => noProp.add(d.c+o)); });
+  for (let dy=-1;dy<=s;dy++) for (let dx=-1;dx<=s;dx++) noProp.add((CORE.y+dy)*GW+CORE.x+dx);
+  const props = [], occ = new Set();
+  const shuf = a => { a=a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const isWall = k => [-1,1,-GW,GW].some(d => g[k+d]===0);
+  function put(kind,k,w=1){ props.push({x:X(k),y:Y(k),k:kind,w,h:1}); for (let o=0;o<w;o++) occ.add(k+o); }
+  kept.forEach(r => {
+    if (r.flood) return;
+    const free = r.cells.filter(k => !noProp.has(k) && !occ.has(k));
+    const wallC = free.filter(isWall), innerC = free.filter(k => !isWall(k));
+    if (r.type==='Garage') {
+      free.forEach(k => { const x=X(k),y=Y(k); if (y%4===0 && x%5===0 && !occ.has(k)) put('pillar',k); });
+      free.forEach(k => { const x=X(k),y=Y(k); if (y%4===2 && x%5===1 && !occ.has(k) && !occ.has(k+1) && r.cells.includes(k+1) && !noProp.has(k+1) && rng()<.6) put('car',k,2); });
+      return;
+    }
+    (FURN[r.type]||[]).forEach(([kind,where,qty]) => {
+      let list;
+      if (where==='w') list = shuf(wallC.filter(k=>!occ.has(k)));
+      else if (where==='i') list = shuf(innerC.filter(k=>!occ.has(k)).concat(wallC.filter(k=>!occ.has(k))));
+      else if (where==='g') list = free.filter(k => !occ.has(k) && X(k)%2===0 && Y(k)%2===0 && rng()<qty);
+      else list = free.filter(k => !occ.has(k) && rng()<qty);
+      const n = (where==='g'||where==='r') ? list.length : qty;
+      for (let t=0;t<n && t<list.length;t++) if (!occ.has(list[t])) put(kind,list[t]);
+    });
+    if (r.w>=8 && r.h>=8 && r.type!=='Cisterna') free.forEach(k => { const x=X(k),y=Y(k); if (x%4===0 && y%4===0 && !isWall(k) && !occ.has(k)) put('pillar',k); });
+  });
+
+  // descrizioni e incontri
+  const feats = [];
+  kept.forEach(r => {
+    r.desc = pick(DESC[r.type] || [DESC_DEF[theme]], rng) + ' ' + pick(COND, rng) + (r.flood ? ' Il pavimento è sommerso da acqua scura.' : '');
+    r.notes = [];
+    const free = r.cells.filter(k => !noProp.has(k) && !occ.has(k));
+    const place = (kind,label) => { if (!free.length) return; const k = free.splice(Math.floor(rng()*free.length),1)[0]; feats.push({x:X(k),y:Y(k),k:kind,label}); r.notes.push(label); };
+    const bd = theme==='basement';
+    if (r.secret) { place('$', pick(LOOT,rng)); if (rng()<.5) place('!', pick(TRAP,rng)); return; }
+    if (rng() < (bd?.3:.2)) place('M', pick(MON,rng));
+    if (rng() < .25) place('$', pick(LOOT,rng));
+    if (rng() < (bd?.2:.1)) place('!', pick(TRAP,rng));
+  });
+  doors.forEach(d => { if (g[d.c]===7) { /* porta chiusa a chiave: già marcata */ } });
+
+  const wallCells = [];
+  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
+    if (g[y*GW+x]!==0) continue;
+    let near=false;
+    for (let dy=-1;dy<=1&&!near;dy++) for (let dx=-1;dx<=1;dx++) { const nx=x+dx, ny=y+dy; if (nx>=0&&ny>=0&&nx<GW&&ny<GD&&g[ny*GW+nx]!==0){near=true;break;} }
+    if (near) wallCells.push(y*GW+x);
+  }
+  return {g, rid, rooms:kept, core:coreRoom, feats, props, wallCells, level, theme, top, bottom};
 }
 
 /* ---------- stato / viste ---------- */
 let cur = Math.min(NL-1, NB);   // parte dal piano terra
 let mode = '2d';
+let GM = Q.get('gm') === '1';
+let sel = -1;                   // indice stanza selezionata (-2 = nucleo)
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let W=0, HH=0;
 const v2 = {s:10, ox:0, oy:0};
@@ -232,10 +556,11 @@ const v3 = {yaw:-0.6, pitch:0.9, zoom:6, px:0, py:0};
 const GAP3 = Math.max(2.5, Math.min(6, Math.max(GW,GD)*0.1));
 
 function fit(){
-  v2.s = Math.min((W-40)/GW, (HH-130)/GD);
-  v2.ox = (W-GW*v2.s)/2; v2.oy = (HH-GD*v2.s)/2 - 10;
+  const sideW = innerWidth>640 ? 320 : 0;
+  v2.s = Math.min((W-sideW-40)/GW, (HH-130)/GD);
+  v2.ox = (W-sideW-GW*v2.s)/2; v2.oy = (HH-GD*v2.s)/2 - 10;
   const ext = Math.max(GW, GD, NL*GAP3*0.9);
-  v3.zoom = Math.min(W,HH)*0.72/ext; v3.px=0; v3.py=0;
+  v3.zoom = Math.min(W-sideW,HH)*0.72/ext; v3.px=-sideW/2; v3.py=0;
 }
 function resize(){
   const dpr=window.devicePixelRatio||1; W=innerWidth; HH=innerHeight;
@@ -243,59 +568,126 @@ function resize(){
   fit(); draw();
 }
 
+const HATCH = (function(){
+  const c=document.createElement('canvas'); c.width=c.height=6; const t=c.getContext('2d');
+  t.strokeStyle='rgba(242,237,228,0.20)'; t.lineWidth=1; t.beginPath();
+  t.moveTo(0,6); t.lineTo(6,0); t.moveTo(-1,1); t.lineTo(1,-1); t.moveTo(5,7); t.lineTo(7,5); t.stroke();
+  return ctx.createPattern(c,'repeat');
+})();
+
 const accent = f => f.level<0 ? '#ff2ee6' : '#00fff2';
+const isF = (g,x,y) => x>=0&&y>=0&&x<GW&&y<GD&&g[y*GW+x]!==0;
+
+function drawProp(p,s){
+  const x=p.x*s, y=p.y*s, w=(p.w||1)*s, h=(p.h||1)*s, m=s*0.14;
+  switch (p.k) {
+    case 'sofa': ctx.fillStyle='#5d4b3c'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.fillStyle='#78634f'; ctx.fillRect(x+m,y+m,w-2*m,h*.28); break;
+    case 'table': ctx.fillStyle='#6e5d47'; ctx.beginPath(); ctx.arc(x+w/2,y+h/2,s*.36,0,7); ctx.fill(); break;
+    case 'desk': ctx.fillStyle='#4c525b'; ctx.fillRect(x+m,y+m,w-2*m,h*.55); ctx.fillStyle='#2a2e33'; ctx.beginPath(); ctx.arc(x+w/2,y+h*.8,s*.14,0,7); ctx.fill(); break;
+    case 'bed': ctx.fillStyle='#4c3d62'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.fillStyle='#cfc8e0'; ctx.fillRect(x+m*1.6,y+m*1.6,w-3.2*m,h*.22); break;
+    case 'shelf': ctx.fillStyle='#5e4d36'; ctx.fillRect(x+m,y+m*1.4,w-2*m,h-2.8*m); ctx.strokeStyle='#2a2216'; ctx.lineWidth=1; ctx.strokeRect(x+m,y+m*1.4,w-2*m,h-2.8*m); break;
+    case 'counter': ctx.fillStyle='#56626d'; ctx.fillRect(x+m*.4,y+m*.4,w-.8*m,h-.8*m); break;
+    case 'rack': ctx.fillStyle='#10181c'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.fillStyle='#00fff2'; ctx.fillRect(x+w*.3,y+h*.3,s*.1,s*.1); ctx.fillRect(x+w*.6,y+h*.55,s*.1,s*.1); break;
+    case 'crate': ctx.fillStyle='#6b5a3a'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.strokeStyle='#2c2412'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x+m,y+m); ctx.lineTo(x+w-m,y+h-m); ctx.moveTo(x+w-m,y+m); ctx.lineTo(x+m,y+h-m); ctx.stroke(); break;
+    case 'machine': ctx.fillStyle='#3e4b4e'; ctx.beginPath(); ctx.arc(x+w/2,y+h/2,s*.38,0,7); ctx.fill(); ctx.strokeStyle='#9fb3b8'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x+w*.3,y+h/2); ctx.lineTo(x+w*.7,y+h/2); ctx.moveTo(x+w/2,y+h*.3); ctx.lineTo(x+w/2,y+h*.7); ctx.stroke(); break;
+    case 'wc': ctx.fillStyle='#c9d3d8'; ctx.fillRect(x+w*.3,y+m,w*.4,h*.3); ctx.beginPath(); ctx.ellipse(x+w/2,y+h*.62,w*.22,h*.26,0,0,7); ctx.fill(); break;
+    case 'sink': ctx.fillStyle='#c9d3d8'; ctx.beginPath(); ctx.arc(x+w/2,y+h/2,s*.26,0,7); ctx.fill(); break;
+    case 'pillar': ctx.fillStyle='#8a8680'; ctx.beginPath(); ctx.arc(x+w/2,y+h/2,s*.34,0,7); ctx.fill(); break;
+    case 'car': ctx.fillStyle='#44525c'; ctx.fillRect(x+m,y+m*1.4,w-2*m,h-2.8*m); ctx.fillStyle='#8fb0c0'; ctx.fillRect(x+w*.62,y+h*.28,w*.18,h*.44); break;
+  }
+}
+
+function drawDoor(t,x,y,s,f){
+  const g=f.g, X=x*s, Y=y*s, cx=X+s/2, cy=Y+s/2;
+  const vertWall = isF(g,x-1,y) && isF(g,x+1,y);   // varco orizzontale in un muro verticale
+  const bw = vertWall ? s*.34 : s*.86, bh = vertWall ? s*.86 : s*.34;
+  if (t===3) { ctx.fillStyle='#e8c93a'; ctx.fillRect(cx-bw/2,cy-bh/2,bw,bh); }
+  else if (t===7) { ctx.fillStyle='#ff5a5a'; ctx.fillRect(cx-bw/2,cy-bh/2,bw,bh); ctx.fillStyle='#0a0908'; ctx.fillRect(cx-s*.08,cy-s*.08,s*.16,s*.16); }
+  else if (t===8) { ctx.strokeStyle='#e8c93a'; ctx.lineWidth=1.5; ctx.beginPath(); if (vertWall) { ctx.moveTo(cx,Y+s*.1); ctx.lineTo(cx,Y+s*.9);} else { ctx.moveTo(X+s*.1,cy); ctx.lineTo(X+s*.9,cy);} ctx.setLineDash([2,3]); ctx.stroke(); ctx.setLineDash([]); }
+  else if (t===6 && GM) { ctx.fillStyle='#ff2ee6'; ctx.fillRect(cx-bw/2,cy-bh/2,bw,bh); }
+  else if (t===9) { ctx.fillStyle='#00fff2'; ctx.fillRect(X+s*.1,Y+s*.1,s*.8,s*.8); ctx.fillStyle='#0a0908'; ctx.fillRect(X+s*.3,Y+s*.3,s*.4,s*.4); }
+}
 
 function draw2D(){
   const f=getFloor(cur), g=f.g, s=v2.s, acc=accent(f);
   ctx.save(); ctx.translate(v2.ox, v2.oy);
-  // sagoma edificio
-  ctx.fillStyle='#100f0e';
-  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) if (mask[y*GW+x]) ctx.fillRect(x*s,y*s,s+.5,s+.5);
+  // muri: cella piena, scura, tratteggiata
+  ctx.fillStyle='#0d0c0b';
+  f.wallCells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5));
+  ctx.fillStyle=HATCH;
+  f.wallCells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5));
   // pavimenti
-  f.rooms.forEach(r => {
-    ctx.fillStyle = TYPE_COLOR[r.type] || '#25221f';
-    for (let y=r.y;y<r.y+r.h;y++) for (let x=r.x;x<r.x+r.w;x++) { const t=g[y*GW+x]; if (t===1||t===4||t===5) ctx.fillRect(x*s,y*s,s+.5,s+.5); }
-  });
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
-    const t=g[y*GW+x]; if (t===2||t===3||t===6) { ctx.fillStyle='#1c1a19'; ctx.fillRect(x*s,y*s,s+.5,s+.5); }
+    const k=y*GW+x, t=g[k]; if (!t) continue;
+    if (t===6 && !GM) { ctx.fillStyle='#0d0c0b'; ctx.fillRect(x*s,y*s,s+.5,s+.5); ctx.fillStyle=HATCH; ctx.fillRect(x*s,y*s,s+.5,s+.5); continue; }
+    let col;
+    if (f.rid[k]>=0) col = TYPE_COLOR[f.rooms[f.rid[k]].type] || '#25221f';
+    else if (t===1||t===4||t===5) col='#0e3a38';
+    else col='#1c1a19';
+    ctx.fillStyle=col; ctx.fillRect(x*s,y*s,s+.5,s+.5);
   }
+  // stanze allagate
+  f.rooms.forEach(r => { if (!r.flood) return; ctx.fillStyle='rgba(40,110,200,0.45)'; r.cells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5)); });
   // griglia
-  ctx.strokeStyle='rgba(242,237,228,0.06)'; ctx.lineWidth=1; ctx.beginPath();
+  ctx.strokeStyle='rgba(242,237,228,0.05)'; ctx.lineWidth=1; ctx.beginPath();
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) if (g[y*GW+x]) ctx.rect(x*s,y*s,s,s);
   ctx.stroke();
-  // muri
-  ctx.strokeStyle=acc; ctx.lineWidth=Math.max(1.5,s*0.14); ctx.lineCap='square'; ctx.shadowColor=acc; ctx.shadowBlur=5;
+  // arredi
+  f.props.forEach(p => drawProp(p,s));
+  // contorno dei muri
+  ctx.strokeStyle=acc; ctx.lineWidth=Math.max(1.5,s*0.13); ctx.lineCap='square'; ctx.shadowColor=acc; ctx.shadowBlur=4;
   ctx.beginPath();
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
-    if (!g[y*GW+x]) continue;
+    const t=g[y*GW+x]; if (!t) continue;
+    const solid = !(t>=3 && t!==4 && t!==5 && !(t===6 && !GM));
+    if (!solid) continue;
     const X=x*s,Y=y*s;
-    if (y===0||!g[(y-1)*GW+x]) { ctx.moveTo(X,Y); ctx.lineTo(X+s,Y); }
-    if (y===GD-1||!g[(y+1)*GW+x]) { ctx.moveTo(X,Y+s); ctx.lineTo(X+s,Y+s); }
-    if (x===0||!g[y*GW+x-1]) { ctx.moveTo(X,Y); ctx.lineTo(X,Y+s); }
-    if (x===GW-1||!g[y*GW+x+1]) { ctx.moveTo(X+s,Y); ctx.lineTo(X+s,Y+s); }
+    const open = (nx,ny) => { const nt = nx>=0&&ny>=0&&nx<GW&&ny<GD ? g[ny*GW+nx] : 0; return nt!==0 && !(nt===6 && !GM); };
+    if (!open(x,y-1)) { ctx.moveTo(X,Y); ctx.lineTo(X+s,Y); }
+    if (!open(x,y+1)) { ctx.moveTo(X,Y+s); ctx.lineTo(X+s,Y+s); }
+    if (!open(x-1,y)) { ctx.moveTo(X,Y); ctx.lineTo(X,Y+s); }
+    if (!open(x+1,y)) { ctx.moveTo(X+s,Y); ctx.lineTo(X+s,Y+s); }
   }
   ctx.stroke(); ctx.shadowBlur=0;
-  // porte, scale, ascensore, segrete
+  // finestre sulle pareti esterne
+  if (f.level>=0) {
+    ctx.strokeStyle='#9fe8ff'; ctx.lineWidth=Math.max(1.5,s*.18); ctx.beginPath();
+    for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
+      const k=y*GW+x; if (g[k]!==1&&g[k]!==2) continue; if ((x*3+y*5)%4!==0) continue;
+      if (f.rid[k]<0 && g[k]!==2) continue;
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy]) => {
+        const nx=x+dx, ny=y+dy; if (nx<0||ny<0||nx>=GW||ny>=GD||mask[ny*GW+nx]||g[ny*GW+nx]!==0) return;
+        const cx=(nx+.5)*s, cy=(ny+.5)*s;
+        if (dx) { ctx.moveTo(cx,cy-s*.35); ctx.lineTo(cx,cy+s*.35); } else { ctx.moveTo(cx-s*.35,cy); ctx.lineTo(cx+s*.35,cy); }
+      });
+    }
+    ctx.stroke();
+  }
+  // porte, scale, ascensore
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  const fs=Math.max(8,s*0.8); ctx.font=`bold ${fs}px "Courier New",monospace`;
+  ctx.font=`bold ${Math.max(8,s*0.8)}px "Courier New",monospace`;
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
     const t=g[y*GW+x], cx=(x+.5)*s, cy=(y+.5)*s;
-    if (t===3) { ctx.fillStyle='#e8c93a'; ctx.fillRect(cx-s*.32,cy-s*.32,s*.64,s*.64); }
-    else if (t===6) { ctx.fillStyle='#ff2ee6'; ctx.fillText('S',cx,cy); }
+    if (t===3||t===6||t===7||t===8||t===9) drawDoor(t,x,y,s,f);
     else if (t===4) { ctx.fillStyle='#00fff2'; ctx.fillText(f.bottom?'▲':f.top?'▼':'⇅',cx,cy); }
     else if (t===5) { ctx.fillStyle='#e8c93a'; ctx.strokeStyle='#e8c93a'; ctx.lineWidth=1; ctx.strokeRect(x*s+2,y*s+2,s-4,s-4); ctx.fillText('E',cx,cy); }
   }
-  // incontri
-  f.feats.forEach(ft => {
+  // incontri (solo master)
+  if (GM) f.feats.forEach(ft => {
     ctx.fillStyle = ft.k==='M'?'#ff5a5a' : ft.k==='$'?'#e8c93a' : '#ff2ee6';
+    ctx.font=`bold ${Math.max(10,s*1.0)}px "Courier New",monospace`;
     ctx.fillText(ft.k,(ft.x+.5)*s,(ft.y+.5)*s);
   });
+  // stanza selezionata
+  const sr = sel===-2 ? f.core : f.rooms[sel];
+  if (sr && !sr.core) { ctx.fillStyle='rgba(0,255,242,0.16)'; sr.cells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5)); }
   // numeri stanza
-  ctx.font=`bold ${Math.max(10,s*1.1)}px "Courier New",monospace`; ctx.fillStyle='rgba(242,237,228,0.85)';
-  f.rooms.forEach(r => { if (!r.core) ctx.fillText(String(r.id),(r.x+r.w/2)*s,(r.y+r.h/2)*s - (r.h>3?s*.9:0)); });
-  // contorno edificio
-  ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(242,237,228,0.25)'; ctx.lineWidth=1; ctx.beginPath();
-  fpCells.forEach(([x,y],k)=>k?ctx.lineTo(x*s,y*s):ctx.moveTo(x*s,y*s)); ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+  ctx.font=`bold ${Math.max(10,s*1.1)}px "Courier New",monospace`;
+  f.rooms.forEach((r,idx) => {
+    const lbl = String(r.id), cx=(r.lx+.5)*s, cy=(r.ly+.5)*s;
+    ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(lbl,cx,cy);
+    ctx.fillStyle = idx===sel ? '#00fff2' : 'rgba(242,237,228,0.95)'; ctx.fillText(lbl,cx,cy);
+  });
   // scala
   const sc=10/CS*s; ctx.strokeStyle='#f2ede4'; ctx.fillStyle='#f2ede4'; ctx.lineWidth=2; ctx.textAlign='left'; ctx.font='11px "Courier New",monospace';
   ctx.beginPath(); ctx.moveTo(0,GD*s+14); ctx.lineTo(sc,GD*s+14); ctx.stroke(); ctx.fillText('10 m',sc+6,GD*s+14);
@@ -314,37 +706,32 @@ function quad(x,y,w,h,z){
   ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineTo(c[0],c[1]);ctx.lineTo(d[0],d[1]);ctx.closePath();
 }
 function draw3D(){
-  // asse nucleo
   const cx=CORE.x+CORE.s/2, cy=CORE.y+CORE.s/2;
   for (let i=0;i<NL;i++) {
     const z=i*GAP3, active=i===cur, down=levelOf(i)<0, col=down?'255,46,230':'0,255,242';
     ctx.beginPath(); fpCells.forEach(([x,y],k)=>{const p=P(x,y,z);k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}); ctx.closePath();
-    ctx.fillStyle=`rgba(${col},${active?0.16:0.04})`; ctx.fill();
+    ctx.fillStyle=`rgba(${col},${active?0.14:0.04})`; ctx.fill();
     ctx.strokeStyle=`rgba(${col},${active?0.95:0.3})`; ctx.lineWidth=active?2:1; ctx.stroke();
     const near=Math.abs(i-cur);
     if (active) {
-      const f=getFloor(i), g=f.g;
-      f.rooms.forEach(r => {
-        ctx.beginPath();
-        for (let y=r.y;y<r.y+r.h;y++) for (let x=r.x;x<r.x+r.w;x++) { const t=g[y*GW+x]; if (t===1||t===4||t===5) quad(x,y,1,1,z); }
-        ctx.fillStyle=TYPE_COLOR[r.type]||'#25221f'; ctx.fill();
-      });
-      ctx.beginPath();
-      for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) { const t=g[y*GW+x]; if (t===2||t===3||t===6) quad(x,y,1,1,z); }
-      ctx.fillStyle='#242120'; ctx.fill();
-      ctx.beginPath();
-      for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) if (g[y*GW+x]===3) quad(x,y,1,1,z);
-      ctx.fillStyle='#e8c93a'; ctx.fill();
-      ctx.fillStyle='#00fff2'; f.rooms.forEach(r=>{ if(r.core){ ctx.beginPath(); quad(r.x,r.y,r.w,r.h,z); ctx.fill(); }});
+      const f=getFloor(i), g=f.g, groups=new Map();
+      for (let k=0;k<GW*GD;k++) {
+        const t=g[k]; if (!t || (t===6&&!GM)) continue;
+        let c;
+        if (t>=3 && t!==4 && t!==5) c = t===7?'#ff5a5a' : t===9?'#00fff2' : t===6?'#ff2ee6' : '#e8c93a';
+        else if (f.rid[k]>=0) c = TYPE_COLOR[f.rooms[f.rid[k]].type]||'#25221f';
+        else if (t===4||t===5) c='#00fff2'; else if (t===1) c='#0e3a38'; else c='#242120';
+        if (!groups.has(c)) groups.set(c,[]); groups.get(c).push(k);
+      }
+      groups.forEach((ks,c) => { ctx.beginPath(); ks.forEach(k => quad(k%GW,(k/GW)|0,1,1,z)); ctx.fillStyle=c; ctx.fill(); });
       ctx.fillStyle=`rgb(${col})`; ctx.font='bold 13px "Courier New",monospace'; ctx.textAlign='left';
       const lp=P(GW,GD/2,z); ctx.fillText(labelOf(i),lp[0]+14,lp[1]);
     } else if (near<=4) {
       const f=getFloor(i);
-      ctx.beginPath(); f.rooms.forEach(r=>{ if(!r.core) quad(r.x,r.y,r.w,r.h,z); });
+      ctx.beginPath(); f.rooms.forEach(r=>quad(r.x,r.y,r.w,r.h,z));
       ctx.strokeStyle=`rgba(${col},${0.35-near*0.07})`; ctx.lineWidth=1; ctx.stroke();
     }
   }
-  // asse scale/ascensore
   const a=P(cx,cy,0), b=P(cx,cy,(NL-1)*GAP3);
   ctx.strokeStyle='rgba(232,201,58,0.8)'; ctx.setLineDash([3,3]); ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); ctx.setLineDash([]);
@@ -360,27 +747,36 @@ function draw(){
 const slider=document.getElementById('slider');
 slider.max=NL-1;
 document.getElementById('meta').innerHTML =
-  `seed ${SEED_HEX}<br>lat ${LAT.toFixed(5)} &nbsp; lng ${LNG.toFixed(5)}<br>altezza ${BH.toFixed(0)} m → ${FL} piani${FL_RAW>FL?' (limitato)':''} + ${NB} interrati<br>cella = ${CS.toFixed(1)} m`;
+  `seed ${SEED_HEX}<br>lat ${LAT.toFixed(5)} &nbsp; lng ${LNG.toFixed(5)}<br>altezza ${BH.toFixed(0)} m → ${FL} piani${FL_RAW>FL?' (limitato)':''} + ${NB} interrati<br>uso prevalente: ${KIND==='residential'?'residenziale':KIND==='office'?'uffici':'misto'} · cella = ${CS.toFixed(1)} m`;
 (function(){ const h=document.createElement('div'); h.style.cssText='font-size:12px;margin-bottom:4px;color:#f2ede4'; h.textContent=NAME; document.getElementById('meta').prepend(h); document.title='DUNGEON // '+NAME; })();
 
 function updateHud(){
   const f=getFloor(cur), n=levelOf(cur);
   slider.value=cur;
-  document.getElementById('flabel').textContent = `${n<0?'INTERRATO '+(-n):'PIANO '+n} (${labelOf(cur)}) · ${cur+1}/${NL}`;
+  document.getElementById('flabel').textContent = `${n<0?'INTERRATO '+(-n):'PIANO '+n} (${labelOf(cur)}) · ${THEME[f.theme].name} · ${cur+1}/${NL}`;
   document.getElementById('side-h').textContent = 'CHIAVE // '+labelOf(cur);
+  document.querySelector('.gmk').style.display = GM ? 'inline' : 'none';
+  document.getElementById('b-gm').classList.toggle('on', GM);
   const list=document.getElementById('side-list'); list.innerHTML='';
-  f.rooms.forEach(r => {
-    const d=document.createElement('div'); d.className='r';
+  [f.core,...f.rooms].forEach((r,idx) => {
+    const si = idx===0 ? -2 : idx-1;
+    const d=document.createElement('div'); d.className='r'+(sel===si?' sel':'');
     const b=document.createElement('b'); b.textContent=r.id;
-    const t=document.createElement('span'); t.textContent=r.type;
-    const i=document.createElement('i'); i.textContent=`${Math.round(r.w*CS)}×${Math.round(r.h*CS)} m`;
-    d.append(b,t,i); list.appendChild(d);
+    const t=document.createElement('span'); t.textContent = (GM && r.secret) ? r.type+' ✱' : r.type;
+    const i=document.createElement('i'); i.textContent=`${Math.round(r.area)} m²`;
+    d.append(b,t,i); d.onclick=()=>{ sel = sel===si ? -1 : si; updateHud(); draw(); };
+    list.appendChild(d);
+    if (sel===si) {
+      const e=document.createElement('div'); e.className='desc'; e.textContent=r.desc;
+      if (GM && r.notes && r.notes.length) { const m=document.createElement('span'); m.className='gm'; m.textContent='▸ '+r.notes.join(' · '); e.appendChild(m); }
+      if (GM && r.secret) { const m=document.createElement('span'); m.className='gm'; m.textContent='▸ accessibile solo da una porta segreta'; e.appendChild(m); }
+      list.appendChild(e);
+    }
   });
-  const cnt={M:0,'$':0,'!':0}; f.feats.forEach(x=>cnt[x.k]++);
-  const e=document.createElement('div'); e.className='k'; e.textContent=`M×${cnt.M}  $×${cnt['$']}  !×${cnt['!']}`; list.appendChild(e);
 }
-function setFloor(i){ cur=Math.max(0,Math.min(NL-1,i)); updateHud(); draw(); }
+function setFloor(i){ cur=Math.max(0,Math.min(NL-1,i)); sel=-1; updateHud(); draw(); }
 function setMode(m){ mode=m; document.getElementById('b-view').textContent = m==='2d'?'VISTA 3D':'VISTA 2D'; draw(); }
+function setGM(v){ GM=v; updateHud(); draw(); }
 function zoomBy(k,cx=W/2,cy=HH/2){
   if (mode==='2d') { const wx=(cx-v2.ox)/v2.s, wy=(cy-v2.oy)/v2.s; v2.s=Math.max(2,Math.min(80,v2.s*k)); v2.ox=cx-wx*v2.s; v2.oy=cy-wy*v2.s; }
   else v3.zoom=Math.max(1,Math.min(80,v3.zoom*k));
@@ -390,6 +786,7 @@ function zoomBy(k,cx=W/2,cy=HH/2){
 document.getElementById('b-up').onclick=()=>setFloor(cur+1);
 document.getElementById('b-down').onclick=()=>setFloor(cur-1);
 document.getElementById('b-view').onclick=()=>setMode(mode==='2d'?'3d':'2d');
+document.getElementById('b-gm').onclick=()=>setGM(!GM);
 document.getElementById('b-zin').onclick=()=>zoomBy(1.25);
 document.getElementById('b-zout').onclick=()=>zoomBy(0.8);
 document.getElementById('b-fit').onclick=()=>{fit();draw();};
@@ -399,11 +796,12 @@ window.addEventListener('keydown',e=>{
   if (e.key==='ArrowUp'||e.key==='PageUp') { e.preventDefault(); setFloor(cur+1); }
   else if (e.key==='ArrowDown'||e.key==='PageDown') { e.preventDefault(); setFloor(cur-1); }
   else if (e.key==='v'||e.key==='V') setMode(mode==='2d'?'3d':'2d');
+  else if (e.key==='m'||e.key==='M') setGM(!GM);
   else if (e.key==='+'||e.key==='=') zoomBy(1.25);
   else if (e.key==='-') zoomBy(0.8);
 });
 
-/* ---------- puntatore: pan / rotazione / click su piano (3D) ---------- */
+/* ---------- puntatore: pan / rotazione / click ---------- */
 let drag=null;
 cv.addEventListener('pointerdown',e=>{
   cv.setPointerCapture(e.pointerId);
@@ -418,10 +816,19 @@ cv.addEventListener('pointermove',e=>{
   draw();
 });
 cv.addEventListener('pointerup',e=>{
-  if (drag && drag.moved<5 && mode==='3d') {
-    let best=-1,bd=1e9;
-    for (let i=0;i<NL;i++) { const p=P(GW/2,GD/2,i*GAP3); const d=Math.hypot(p[0]-e.clientX,p[1]-e.clientY); if(d<bd){bd=d;best=i;} }
-    if (best>=0) setFloor(best);
+  if (drag && drag.moved<5) {
+    if (mode==='3d') {
+      let best=-1,bd=1e9;
+      for (let i=0;i<NL;i++) { const p=P(GW/2,GD/2,i*GAP3); const d=Math.hypot(p[0]-e.clientX,p[1]-e.clientY); if(d<bd){bd=d;best=i;} }
+      if (best>=0) setFloor(best);
+    } else {
+      const x=Math.floor((e.clientX-v2.ox)/v2.s), y=Math.floor((e.clientY-v2.oy)/v2.s);
+      if (x>=0&&y>=0&&x<GW&&y<GD) {
+        const f=getFloor(cur), k=y*GW+x;
+        sel = f.rid[k]>=0 ? f.rid[k] : (x>=CORE.x&&x<CORE.x+CORE.s&&y>=CORE.y&&y<CORE.y+CORE.s ? -2 : -1);
+        updateHud(); draw();
+      }
+    }
   }
   drag=null; cv.classList.remove('drag');
 });
