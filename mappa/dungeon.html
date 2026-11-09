@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CY // DUNGEON</title>
+<style>
+  :root{--black:#0a0908;--red:#c8102e;--yellow:#e8c93a;--white:#f2ede4;--grey:#b9b6b0;--cyan:#00fff2;--mag:#ff2ee6;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--black);overflow:hidden;font-family:'Courier New',monospace;color:var(--white);}
+  #cv{position:fixed;inset:0;touch-action:none;cursor:grab;}
+  #cv.drag{cursor:grabbing;}
+  .box{background:rgba(10,9,8,0.88);border:1px solid rgba(242,237,228,0.25);backdrop-filter:blur(2px);}
+  #title{position:fixed;top:calc(14px + env(safe-area-inset-top));left:14px;padding:10px 14px;max-width:min(360px,60vw);}
+  #title h1{font-family:Impact,'Arial Narrow',sans-serif;font-size:22px;margin:0 0 4px;letter-spacing:1px;}
+  #title h1 span{color:var(--red);}
+  #title .meta{font-size:10.5px;letter-spacing:.5px;color:var(--grey);line-height:1.6;}
+  #side{position:fixed;top:calc(14px + env(safe-area-inset-top));right:14px;width:250px;max-height:60vh;overflow-y:auto;padding:10px 12px;font-size:11px;}
+  #side h3{font-family:Impact,sans-serif;font-size:14px;margin:0 0 6px;letter-spacing:1px;color:var(--cyan);}
+  #side .r{display:flex;gap:6px;padding:3px 0;border-bottom:1px solid rgba(242,237,228,.1);}
+  #side .r b{color:var(--yellow);min-width:22px;}
+  #side .r i{margin-left:auto;color:var(--grey);font-style:normal;white-space:nowrap;}
+  #side .k{margin-top:8px;color:var(--grey);line-height:1.6;}
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;max-width:96vw;}
+  #bar button{background:rgba(242,237,228,.08);border:1px solid rgba(242,237,228,.4);color:var(--white);font-family:inherit;font-size:12px;padding:6px 10px;cursor:pointer;}
+  #bar button:hover{border-color:var(--cyan);color:var(--cyan);}
+  #bar input[type=range]{width:min(220px,40vw);accent-color:#00fff2;}
+  #flabel{min-width:150px;text-align:center;font-size:12px;letter-spacing:1px;}
+  #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--grey);}
+  @media (max-width:640px){#side{top:auto;bottom:70px;right:8px;left:8px;width:auto;max-height:26vh;}#title{max-width:90vw}}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="title" class="box"><h1><span>C</span>Y // DUNGEON</h1><div class="meta" id="meta"></div></div>
+<div id="side" class="box"><h3 id="side-h">CHIAVE</h3><div id="side-list"></div>
+  <div class="k">▲▼ scale &nbsp; E ascensore &nbsp; <span style="color:#e8c93a">▮</span> porta &nbsp; <span style="color:#ff2ee6">S</span> porta segreta<br>
+  <span style="color:#ff5a5a">M</span> presenza ostile &nbsp; <span style="color:#e8c93a">$</span> bottino &nbsp; <span style="color:#ff2ee6">!</span> trappola</div></div>
+<div id="bar" class="box">
+  <button id="b-down" title="Piano inferiore (↓)">▼</button>
+  <input id="slider" type="range" min="0" max="0" value="0">
+  <button id="b-up" title="Piano superiore (↑)">▲</button>
+  <span id="flabel"></span>
+  <button id="b-view" title="Cambia vista (V)">VISTA 3D</button>
+  <button id="b-zout">−</button><button id="b-zin">+</button><button id="b-fit" title="Ricentra">⌖</button>
+</div>
+<div id="err">Coordinate mancanti.<br>Apri questa pagina dal pulsante "APRI DUNGEON" nel pannello di un edificio (parametri lat / lng / h / name / poly).</div>
+
+<script>
+/* =========================================================================
+   CY — DUNGEON DI EDIFICIO
+   Parametri URL: lat, lng (seed), h (altezza in metri → numero di piani),
+   name, poly ("est:nord;est:nord;..." offset in metri dal centroide).
+   Tutto è deterministico: stesso lat/lng = stesso dungeon, a ogni apertura.
+   ========================================================================= */
+const Q = new URLSearchParams(location.search);
+const LAT = parseFloat(Q.get('lat')), LNG = parseFloat(Q.get('lng'));
+if (!isFinite(LAT) || !isFinite(LNG)) {
+  document.getElementById('err').style.display = 'flex';
+  ['title','side','bar'].forEach(i => document.getElementById(i).style.display = 'none');
+  throw new Error('lat/lng mancanti');
+}
+const NAME = Q.get('name') || 'Edificio';
+let BH = parseFloat(Q.get('h')); if (!isFinite(BH) || BH <= 0) BH = 12;
+
+function hashStr(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h>>>0;}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const SEED_STR = LAT.toFixed(6) + ',' + LNG.toFixed(6);
+const SEED_HEX = hashStr(SEED_STR).toString(16).toUpperCase().padStart(8, '0');
+
+/* ---------- piani ---------- */
+const FL_RAW = Math.round(BH / 3.5);
+const FL = Math.max(1, Math.min(90, FL_RAW));
+const NB = 1 + (hashStr(SEED_STR + 'basement') % 3);   // piani interrati 1..3
+const NL = NB + FL;                                    // livelli totali (indice 0 = più profondo)
+const levelOf = i => i - NB;
+const labelOf = i => { const n = levelOf(i); return n < 0 ? 'S' + (-n) : 'P' + n; };
+
+/* ---------- sagoma ---------- */
+let poly = null;
+const ps = Q.get('poly');
+if (ps) {
+  poly = ps.split(';').map(s => s.split(':').map(Number)).filter(a => a.length === 2 && isFinite(a[0]) && isFinite(a[1]));
+  if (poly.length < 3) poly = null;
+}
+if (!poly) {
+  const r = mulberry32(hashStr(SEED_STR + 'fp'));
+  const w = 16 + r() * 18, d = 12 + r() * 14, t = r() * Math.PI, c = Math.cos(t), s = Math.sin(t);
+  poly = [[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]].map(([x,y]) => [x*c - y*s, x*s + y*c]);
+}
+let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+poly.forEach(([x,y]) => { minX=Math.min(minX,x); maxX=Math.max(maxX,x); minY=Math.min(minY,y); maxY=Math.max(maxY,y); });
+const CS = Math.max(1, Math.max(maxX-minX, maxY-minY) / 56);   // metri per cella
+const GW = Math.ceil((maxX-minX)/CS) + 2, GD = Math.ceil((maxY-minY)/CS) + 2;
+function pointInPoly(px, py, pl) {
+  let inside = false;
+  for (let i = 0, j = pl.length-1; i < pl.length; j = i++) {
+    const [xi,yi] = pl[i], [xj,yj] = pl[j];
+    if (((yi>py) !== (yj>py)) && (px < (xj-xi)*(py-yi)/(yj-yi)+xi)) inside = !inside;
+  }
+  return inside;
+}
+const mask = new Uint8Array(GW*GD);
+let maskCount = 0;
+for (let y=1;y<GD-1;y++) for (let x=1;x<GW-1;x++) {
+  if (pointInPoly(minX+(x-1+.5)*CS, maxY-(y-1+.5)*CS, poly)) { mask[y*GW+x]=1; maskCount++; }
+}
+if (maskCount < 10) { for (let y=1;y<GD-1;y++) for (let x=1;x<GW-1;x++) mask[y*GW+x]=1; maskCount=(GW-2)*(GD-2); }
+const fpCells = poly.map(([x,y]) => [(x-minX)/CS+1, (maxY-y)/CS+1]);
+
+/* ---------- nucleo scale/ascensore (stessa posizione a ogni piano) ---------- */
+const CORE = (function(){
+  let sx=0,sy=0,n=0;
+  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) if (mask[y*GW+x]) { sx+=x; sy+=y; n++; }
+  const mx=sx/n, my=sy/n;
+  for (const s of [3,2,1]) {
+    if (s*s*4 > n) continue;
+    let best=null, bd=1e9;
+    for (let y=1;y+s<=GD-1;y++) for (let x=1;x+s<=GW-1;x++) {
+      let ok=true;
+      for (let dy=0;dy<s&&ok;dy++) for (let dx=0;dx<s;dx++) if(!mask[(y+dy)*GW+x+dx]){ok=false;break;}
+      if (ok) { const d=(x+s/2-mx)**2+(y+s/2-my)**2; if (d<bd){bd=d;best={x,y,s};} }
+    }
+    if (best) return best;
+  }
+  let best=null,bd=1e9;
+  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) if (mask[y*GW+x]) { const d=(x-mx)**2+(y-my)**2; if(d<bd){bd=d;best={x,y,s:1};} }
+  return best;
+})();
+
+/* ---------- generazione piano (BSP + corridoi) ---------- */
+const TYPES_UP   = ['Appartamento','Ufficio','Negozio','Bar clandestino','Clinica','Sala server','Magazzino','Dormitorio','Laboratorio','Archivio'];
+const TYPES_DOWN = ['Locale tecnico','Magazzino','Generatori','Cella frigorifera','Parcheggio','Laboratorio clandestino','Deposito merci','Cisterna'];
+const TYPE_COLOR = {'Appartamento':'#3a2a2a','Ufficio':'#242a3a','Negozio':'#3a3522','Bar clandestino':'#3a2238','Clinica':'#223a33','Sala server':'#1f3340','Magazzino':'#2e2a22','Dormitorio':'#2c2436','Laboratorio':'#25361f','Archivio':'#33302a',
+  'Locale tecnico':'#2b2b33','Generatori':'#38281e','Cella frigorifera':'#1e3038','Parcheggio':'#262626','Laboratorio clandestino':'#2d3a1f','Deposito merci':'#332a22','Cisterna':'#1d2a38','Atrio':'#3a3a2a','Attico':'#40283a','Nucleo':'#2a2a2a'};
+const floorCache = [];
+function getFloor(i){ return floorCache[i] || (floorCache[i] = genFloor(i)); }
+
+function genFloor(i) {
+  const rng = mulberry32(hashStr(SEED_STR + '#' + i));
+  const level = levelOf(i), top = i === NL-1, bottom = i === 0;
+  const g = new Uint8Array(GW*GD);              // 0 muro/vuoto 1 stanza 2 corridoio 3 porta 4 scale 5 ascensore 6 porta segreta
+  const inM = (x,y) => x>=0 && y>=0 && x<GW && y<GD && mask[y*GW+x]===1;
+  const rooms = [], doors = [];
+  const MIN = 6;
+
+  function leaf(x,y,w,h){
+    const aw=w-2, ah=h-2; if (aw<3||ah<3) return {};
+    const rw=Math.max(3, aw-Math.floor(rng()*(aw/3+1))), rh=Math.max(3, ah-Math.floor(rng()*(ah/3+1)));
+    const rx=x+1+Math.floor(rng()*(aw-rw+1)), ry=y+1+Math.floor(rng()*(ah-rh+1));
+    let c=0; for (let yy=ry;yy<ry+rh;yy++) for (let xx=rx;xx<rx+rw;xx++) if (inM(xx,yy)) c++;
+    if (c<6 || c<rw*rh*0.6) return {};
+    for (let yy=ry;yy<ry+rh;yy++) for (let xx=rx;xx<rx+rw;xx++) if (inM(xx,yy)) g[yy*GW+xx]=1;
+    const room={x:rx,y:ry,w:rw,h:rh,cx:Math.floor(rx+rw/2),cy:Math.floor(ry+rh/2)};
+    rooms.push(room); return {room};
+  }
+  function split(x,y,w,h,d){
+    const canH=h>=MIN*2, canV=w>=MIN*2;
+    if (d<7 && (canH||canV) && !(d>=2 && rng()<0.15)) {
+      const horiz = (canH&&canV) ? (h>w*1.2 ? true : w>h*1.2 ? false : rng()<.5) : canH;
+      if (horiz) { const c=MIN+Math.floor(rng()*(h-2*MIN+1)); return {a:split(x,y,w,c,d+1), b:split(x,y+c,w,h-c,d+1)}; }
+      const c=MIN+Math.floor(rng()*(w-2*MIN+1)); return {a:split(x,y,c,h,d+1), b:split(x+c,y,w-c,h,d+1)};
+    }
+    return leaf(x,y,w,h);
+  }
+  function anyRoom(n){
+    if (!n) return null; if (n.room) return n.room; if (!n.a) return null;
+    const f=rng()<.5; return anyRoom(f?n.a:n.b) || anyRoom(f?n.b:n.a);
+  }
+  function corridor(a,b){
+    const pts=[[a.cx,a.cy]]; let x=a.cx,y=a.cy;
+    const step=(tx,ty)=>{ while(x!==tx||y!==ty){ if(x!==tx) x+=Math.sign(tx-x); else y+=Math.sign(ty-y); pts.push([x,y]); } };
+    if (rng()<.5) { step(b.cx,a.cy); step(b.cx,b.cy); } else { step(a.cx,b.cy); step(b.cx,b.cy); }
+    const info = pts.map(([px,py]) => {
+      if (!inM(px,py)) return null;
+      const was=g[py*GW+px]; if (was===0) g[py*GW+px]=2;
+      return {x:px,y:py,room:was===1||was>=4,carved:was===0};
+    });
+    info.forEach((c,k) => {
+      if (!c||!c.carved) return;
+      const p=info[k-1], n=info[k+1];
+      if ((p&&p.room)||(n&&n.room)) { g[c.y*GW+c.x]=3; doors.push([c.x,c.y]); }
+    });
+  }
+  function conn(n){ if(!n||!n.a) return; conn(n.a); conn(n.b); const ra=anyRoom(n.a), rb=anyRoom(n.b); if(ra&&rb) corridor(ra,rb); }
+
+  const root = split(1,1,GW-2,GD-2,0);
+  if (!rooms.length) {   // forma strana: un unico locale che riempie la sagoma
+    for (let k=0;k<g.length;k++) if (mask[k]) g[k]=1;
+    rooms.push({x:1,y:1,w:GW-2,h:GD-2,cx:Math.floor(GW/2),cy:Math.floor(GD/2)});
+  } else conn(root);
+  if (rooms.length>3) for (let k=0;k<2;k++) if (rng()<.5) corridor(rooms[Math.floor(rng()*rooms.length)], rooms[Math.floor(rng()*rooms.length)]);
+
+  // nucleo
+  const s=CORE.s;
+  for (let dy=0;dy<s;dy++) for (let dx=0;dx<s;dx++) g[(CORE.y+dy)*GW+CORE.x+dx]=1;
+  g[CORE.y*GW+CORE.x]=4;
+  if (s>=2) g[(CORE.y+s-1)*GW+CORE.x+s-1]=5;
+  const core={x:CORE.x,y:CORE.y,w:s,h:s,cx:CORE.x+(s>>1),cy:CORE.y+(s>>1),core:true,type:'Nucleo',id:'N'};
+  if (rooms.length) {
+    const sorted=rooms.slice().sort((a,b)=>((a.cx-core.cx)**2+(a.cy-core.cy)**2)-((b.cx-core.cx)**2+(b.cy-core.cy)**2));
+    corridor(core, sorted[0]);
+    if (sorted.length>2) corridor(core, sorted[1+Math.floor(rng()*(sorted.length-1))]);
+  }
+
+  // tipi, numerazione, incontri
+  const list = level<0 ? TYPES_DOWN : TYPES_UP;
+  rooms.forEach((r,k) => { r.type = list[Math.floor(rng()*list.length)]; r.id = k+1; });
+  const biggest = rooms.slice().sort((a,b)=>b.w*b.h-a.w*a.h)[0];
+  if (level===0 && biggest) biggest.type='Atrio';
+  else if (top && level>0 && biggest) biggest.type='Attico';
+  const feats=[];
+  rooms.forEach(r => {
+    if (r.type==='Atrio') return;
+    const roll=rng(); const k = roll<.22?'M' : roll<.47?'$' : roll<.57?'!' : null;
+    if (!k) return;
+    for (let t=0;t<12;t++) { const x=r.x+Math.floor(rng()*r.w), y=r.y+Math.floor(rng()*r.h); if (g[y*GW+x]===1) { feats.push({x,y,k}); break; } }
+  });
+  // porte segrete
+  doors.forEach(([x,y]) => { if (rng()<.1 && g[y*GW+x]===3) g[y*GW+x]=6; });
+
+  return {g, rooms:[core,...rooms], feats, level, top, bottom};
+}
+
+/* ---------- stato / viste ---------- */
+let cur = Math.min(NL-1, NB);   // parte dal piano terra
+let mode = '2d';
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let W=0, HH=0;
+const v2 = {s:10, ox:0, oy:0};
+const v3 = {yaw:-0.6, pitch:0.9, zoom:6, px:0, py:0};
+const GAP3 = Math.max(2.5, Math.min(6, Math.max(GW,GD)*0.1));
+
+function fit(){
+  v2.s = Math.min((W-40)/GW, (HH-130)/GD);
+  v2.ox = (W-GW*v2.s)/2; v2.oy = (HH-GD*v2.s)/2 - 10;
+  const ext = Math.max(GW, GD, NL*GAP3*0.9);
+  v3.zoom = Math.min(W,HH)*0.72/ext; v3.px=0; v3.py=0;
+}
+function resize(){
+  const dpr=window.devicePixelRatio||1; W=innerWidth; HH=innerHeight;
+  cv.width=W*dpr; cv.height=HH*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  fit(); draw();
+}
+
+const accent = f => f.level<0 ? '#ff2ee6' : '#00fff2';
+
+function draw2D(){
+  const f=getFloor(cur), g=f.g, s=v2.s, acc=accent(f);
+  ctx.save(); ctx.translate(v2.ox, v2.oy);
+  // sagoma edificio
+  ctx.fillStyle='#100f0e';
+  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) if (mask[y*GW+x]) ctx.fillRect(x*s,y*s,s+.5,s+.5);
+  // pavimenti
+  f.rooms.forEach(r => {
+    ctx.fillStyle = TYPE_COLOR[r.type] || '#25221f';
+    for (let y=r.y;y<r.y+r.h;y++) for (let x=r.x;x<r.x+r.w;x++) { const t=g[y*GW+x]; if (t===1||t===4||t===5) ctx.fillRect(x*s,y*s,s+.5,s+.5); }
+  });
+  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
+    const t=g[y*GW+x]; if (t===2||t===3||t===6) { ctx.fillStyle='#1c1a19'; ctx.fillRect(x*s,y*s,s+.5,s+.5); }
+  }
+  // griglia
+  ctx.strokeStyle='rgba(242,237,228,0.06)'; ctx.lineWidth=1; ctx.beginPath();
+  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) if (g[y*GW+x]) ctx.rect(x*s,y*s,s,s);
+  ctx.stroke();
+  // muri
+  ctx.strokeStyle=acc; ctx.lineWidth=Math.max(1.5,s*0.14); ctx.lineCap='square'; ctx.shadowColor=acc; ctx.shadowBlur=5;
+  ctx.beginPath();
+  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
+    if (!g[y*GW+x]) continue;
+    const X=x*s,Y=y*s;
+    if (y===0||!g[(y-1)*GW+x]) { ctx.moveTo(X,Y); ctx.lineTo(X+s,Y); }
+    if (y===GD-1||!g[(y+1)*GW+x]) { ctx.moveTo(X,Y+s); ctx.lineTo(X+s,Y+s); }
+    if (x===0||!g[y*GW+x-1]) { ctx.moveTo(X,Y); ctx.lineTo(X,Y+s); }
+    if (x===GW-1||!g[y*GW+x+1]) { ctx.moveTo(X+s,Y); ctx.lineTo(X+s,Y+s); }
+  }
+  ctx.stroke(); ctx.shadowBlur=0;
+  // porte, scale, ascensore, segrete
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  const fs=Math.max(8,s*0.8); ctx.font=`bold ${fs}px "Courier New",monospace`;
+  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
+    const t=g[y*GW+x], cx=(x+.5)*s, cy=(y+.5)*s;
+    if (t===3) { ctx.fillStyle='#e8c93a'; ctx.fillRect(cx-s*.32,cy-s*.32,s*.64,s*.64); }
+    else if (t===6) { ctx.fillStyle='#ff2ee6'; ctx.fillText('S',cx,cy); }
+    else if (t===4) { ctx.fillStyle='#00fff2'; ctx.fillText(f.bottom?'▲':f.top?'▼':'⇅',cx,cy); }
+    else if (t===5) { ctx.fillStyle='#e8c93a'; ctx.strokeStyle='#e8c93a'; ctx.lineWidth=1; ctx.strokeRect(x*s+2,y*s+2,s-4,s-4); ctx.fillText('E',cx,cy); }
+  }
+  // incontri
+  f.feats.forEach(ft => {
+    ctx.fillStyle = ft.k==='M'?'#ff5a5a' : ft.k==='$'?'#e8c93a' : '#ff2ee6';
+    ctx.fillText(ft.k,(ft.x+.5)*s,(ft.y+.5)*s);
+  });
+  // numeri stanza
+  ctx.font=`bold ${Math.max(10,s*1.1)}px "Courier New",monospace`; ctx.fillStyle='rgba(242,237,228,0.85)';
+  f.rooms.forEach(r => { if (!r.core) ctx.fillText(String(r.id),(r.x+r.w/2)*s,(r.y+r.h/2)*s - (r.h>3?s*.9:0)); });
+  // contorno edificio
+  ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(242,237,228,0.25)'; ctx.lineWidth=1; ctx.beginPath();
+  fpCells.forEach(([x,y],k)=>k?ctx.lineTo(x*s,y*s):ctx.moveTo(x*s,y*s)); ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+  // scala
+  const sc=10/CS*s; ctx.strokeStyle='#f2ede4'; ctx.fillStyle='#f2ede4'; ctx.lineWidth=2; ctx.textAlign='left'; ctx.font='11px "Courier New",monospace';
+  ctx.beginPath(); ctx.moveTo(0,GD*s+14); ctx.lineTo(sc,GD*s+14); ctx.stroke(); ctx.fillText('10 m',sc+6,GD*s+14);
+  ctx.restore();
+}
+
+function P(x,y,z){
+  const cx=x-GW/2, cy=y-GD/2, c=Math.cos(v3.yaw), sn=Math.sin(v3.yaw);
+  const rx=cx*c-cy*sn, ry=cx*sn+cy*c;
+  const sx=rx, sy=ry*Math.sin(v3.pitch) - z*Math.cos(v3.pitch);
+  const midZ=(NL-1)*GAP3/2;
+  return [W/2+v3.px+sx*v3.zoom, HH/2+v3.py+(sy+midZ*Math.cos(v3.pitch))*v3.zoom];
+}
+function quad(x,y,w,h,z){
+  const a=P(x,y,z),b=P(x+w,y,z),c=P(x+w,y+h,z),d=P(x,y+h,z);
+  ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineTo(c[0],c[1]);ctx.lineTo(d[0],d[1]);ctx.closePath();
+}
+function draw3D(){
+  // asse nucleo
+  const cx=CORE.x+CORE.s/2, cy=CORE.y+CORE.s/2;
+  for (let i=0;i<NL;i++) {
+    const z=i*GAP3, active=i===cur, down=levelOf(i)<0, col=down?'255,46,230':'0,255,242';
+    ctx.beginPath(); fpCells.forEach(([x,y],k)=>{const p=P(x,y,z);k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}); ctx.closePath();
+    ctx.fillStyle=`rgba(${col},${active?0.16:0.04})`; ctx.fill();
+    ctx.strokeStyle=`rgba(${col},${active?0.95:0.3})`; ctx.lineWidth=active?2:1; ctx.stroke();
+    const near=Math.abs(i-cur);
+    if (active) {
+      const f=getFloor(i), g=f.g;
+      f.rooms.forEach(r => {
+        ctx.beginPath();
+        for (let y=r.y;y<r.y+r.h;y++) for (let x=r.x;x<r.x+r.w;x++) { const t=g[y*GW+x]; if (t===1||t===4||t===5) quad(x,y,1,1,z); }
+        ctx.fillStyle=TYPE_COLOR[r.type]||'#25221f'; ctx.fill();
+      });
+      ctx.beginPath();
+      for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) { const t=g[y*GW+x]; if (t===2||t===3||t===6) quad(x,y,1,1,z); }
+      ctx.fillStyle='#242120'; ctx.fill();
+      ctx.beginPath();
+      for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) if (g[y*GW+x]===3) quad(x,y,1,1,z);
+      ctx.fillStyle='#e8c93a'; ctx.fill();
+      ctx.fillStyle='#00fff2'; f.rooms.forEach(r=>{ if(r.core){ ctx.beginPath(); quad(r.x,r.y,r.w,r.h,z); ctx.fill(); }});
+      ctx.fillStyle=`rgb(${col})`; ctx.font='bold 13px "Courier New",monospace'; ctx.textAlign='left';
+      const lp=P(GW,GD/2,z); ctx.fillText(labelOf(i),lp[0]+14,lp[1]);
+    } else if (near<=4) {
+      const f=getFloor(i);
+      ctx.beginPath(); f.rooms.forEach(r=>{ if(!r.core) quad(r.x,r.y,r.w,r.h,z); });
+      ctx.strokeStyle=`rgba(${col},${0.35-near*0.07})`; ctx.lineWidth=1; ctx.stroke();
+    }
+  }
+  // asse scale/ascensore
+  const a=P(cx,cy,0), b=P(cx,cy,(NL-1)*GAP3);
+  ctx.strokeStyle='rgba(232,201,58,0.8)'; ctx.setLineDash([3,3]); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); ctx.setLineDash([]);
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,HH);
+  ctx.fillStyle='#0a0908'; ctx.fillRect(0,0,W,HH);
+  if (mode==='2d') draw2D(); else draw3D();
+}
+
+/* ---------- HUD ---------- */
+const slider=document.getElementById('slider');
+slider.max=NL-1;
+document.getElementById('meta').innerHTML =
+  `seed ${SEED_HEX}<br>lat ${LAT.toFixed(5)} &nbsp; lng ${LNG.toFixed(5)}<br>altezza ${BH.toFixed(0)} m → ${FL} piani${FL_RAW>FL?' (limitato)':''} + ${NB} interrati<br>cella = ${CS.toFixed(1)} m`;
+(function(){ const h=document.createElement('div'); h.style.cssText='font-size:12px;margin-bottom:4px;color:#f2ede4'; h.textContent=NAME; document.getElementById('meta').prepend(h); document.title='DUNGEON // '+NAME; })();
+
+function updateHud(){
+  const f=getFloor(cur), n=levelOf(cur);
+  slider.value=cur;
+  document.getElementById('flabel').textContent = `${n<0?'INTERRATO '+(-n):'PIANO '+n} (${labelOf(cur)}) · ${cur+1}/${NL}`;
+  document.getElementById('side-h').textContent = 'CHIAVE // '+labelOf(cur);
+  const list=document.getElementById('side-list'); list.innerHTML='';
+  f.rooms.forEach(r => {
+    const d=document.createElement('div'); d.className='r';
+    const b=document.createElement('b'); b.textContent=r.id;
+    const t=document.createElement('span'); t.textContent=r.type;
+    const i=document.createElement('i'); i.textContent=`${Math.round(r.w*CS)}×${Math.round(r.h*CS)} m`;
+    d.append(b,t,i); list.appendChild(d);
+  });
+  const cnt={M:0,'$':0,'!':0}; f.feats.forEach(x=>cnt[x.k]++);
+  const e=document.createElement('div'); e.className='k'; e.textContent=`M×${cnt.M}  $×${cnt['$']}  !×${cnt['!']}`; list.appendChild(e);
+}
+function setFloor(i){ cur=Math.max(0,Math.min(NL-1,i)); updateHud(); draw(); }
+function setMode(m){ mode=m; document.getElementById('b-view').textContent = m==='2d'?'VISTA 3D':'VISTA 2D'; draw(); }
+function zoomBy(k,cx=W/2,cy=HH/2){
+  if (mode==='2d') { const wx=(cx-v2.ox)/v2.s, wy=(cy-v2.oy)/v2.s; v2.s=Math.max(2,Math.min(80,v2.s*k)); v2.ox=cx-wx*v2.s; v2.oy=cy-wy*v2.s; }
+  else v3.zoom=Math.max(1,Math.min(80,v3.zoom*k));
+  draw();
+}
+
+document.getElementById('b-up').onclick=()=>setFloor(cur+1);
+document.getElementById('b-down').onclick=()=>setFloor(cur-1);
+document.getElementById('b-view').onclick=()=>setMode(mode==='2d'?'3d':'2d');
+document.getElementById('b-zin').onclick=()=>zoomBy(1.25);
+document.getElementById('b-zout').onclick=()=>zoomBy(0.8);
+document.getElementById('b-fit').onclick=()=>{fit();draw();};
+slider.oninput=()=>setFloor(parseInt(slider.value,10));
+window.addEventListener('keydown',e=>{
+  if (e.target.tagName==='INPUT' && e.key!=='ArrowUp' && e.key!=='ArrowDown') return;
+  if (e.key==='ArrowUp'||e.key==='PageUp') { e.preventDefault(); setFloor(cur+1); }
+  else if (e.key==='ArrowDown'||e.key==='PageDown') { e.preventDefault(); setFloor(cur-1); }
+  else if (e.key==='v'||e.key==='V') setMode(mode==='2d'?'3d':'2d');
+  else if (e.key==='+'||e.key==='=') zoomBy(1.25);
+  else if (e.key==='-') zoomBy(0.8);
+});
+
+/* ---------- puntatore: pan / rotazione / click su piano (3D) ---------- */
+let drag=null;
+cv.addEventListener('pointerdown',e=>{
+  cv.setPointerCapture(e.pointerId);
+  drag={x:e.clientX,y:e.clientY,moved:0,pan:e.shiftKey||e.button===2||mode==='2d'};
+  cv.classList.add('drag');
+});
+cv.addEventListener('pointermove',e=>{
+  if (!drag) return;
+  const dx=e.clientX-drag.x, dy=e.clientY-drag.y; drag.x=e.clientX; drag.y=e.clientY; drag.moved+=Math.abs(dx)+Math.abs(dy);
+  if (drag.pan) { if(mode==='2d'){v2.ox+=dx;v2.oy+=dy;} else {v3.px+=dx;v3.py+=dy;} }
+  else { v3.yaw+=dx*0.008; v3.pitch=Math.max(0.15,Math.min(1.55,v3.pitch+dy*0.006)); }
+  draw();
+});
+cv.addEventListener('pointerup',e=>{
+  if (drag && drag.moved<5 && mode==='3d') {
+    let best=-1,bd=1e9;
+    for (let i=0;i<NL;i++) { const p=P(GW/2,GD/2,i*GAP3); const d=Math.hypot(p[0]-e.clientX,p[1]-e.clientY); if(d<bd){bd=d;best=i;} }
+    if (best>=0) setFloor(best);
+  }
+  drag=null; cv.classList.remove('drag');
+});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomBy(e.deltaY<0?1.12:1/1.12,e.clientX,e.clientY); },{passive:false});
+window.addEventListener('resize',resize);
+
+resize(); updateHud(); draw();
+</script>
+</body>
+</html>

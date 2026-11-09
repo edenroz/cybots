@@ -172,6 +172,15 @@
     font-size:11px;letter-spacing:0.5px;color:var(--cy-neon-cyan);opacity:0.75;
   }
 
+  #popup-panel .dungeon-btn{
+    display:inline-block;margin-top:14px;padding:8px 14px;
+    font-family:'Courier New',monospace;font-size:12px;letter-spacing:2px;
+    color:var(--cy-neon-cyan);border:1px solid var(--cy-neon-cyan);
+    background:rgba(0,255,242,0.08);text-decoration:none;
+    transition:background 0.15s,color 0.15s;
+  }
+  #popup-panel .dungeon-btn:hover{background:var(--cy-neon-cyan);color:var(--cy-black);}
+
   .maplibregl-ctrl-attrib{background:rgba(10,9,8,0.7)!important;color:var(--cy-grey)!important;}
   .maplibregl-ctrl-attrib a{color:var(--cy-grey)!important;}
 
@@ -882,7 +891,7 @@ function addDefaultBuildingHighlightLayer() {
     }
 
     const p = e.features[0].properties;
-    openPanel({ name: p.name, type: 'edificio', color: p.color, blurb: p.blurb });
+    openPanel({ name: p.name, type: 'edificio', color: p.color, blurb: p.blurb, dungeonUrl: p.dungeonUrl });
   });
   map.on('mouseenter', 'cy-default-building-highlight-glow', () => { if (!selectingPoint) map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'cy-default-building-highlight-glow', () => { map.getCanvas().style.cursor = ''; });
@@ -991,7 +1000,8 @@ function highlightDefaultBuilding(key, feature, entry, addr) {
       color: entry.color || '#00fff2',
       height: buildingHeight + 2,
       name: panelName,
-      blurb: `${entry.blurb || ''}${addrTag}${gmNote}`
+      blurb: `${entry.blurb || ''}${addrTag}${gmNote}`,
+      dungeonUrl: buildDungeonUrl({ lng: cx, lat: cy, height: buildingHeight, name: panelName, ring })
     },
     geometry: { type: 'Polygon', coordinates: [enlargedRing] }
   });
@@ -1088,7 +1098,13 @@ function addCustomBuildingCube(entry, lng, lat) {
       // specifica entry.height/entry.base li usiamo, altrimenti ricadiamo
       // sui valori di default usati finora (cubetto piatto 1.5/0).
       height: entry.height !== undefined ? entry.height : 1.5,
-      base: entry.base !== undefined ? entry.base : 0
+      base: entry.base !== undefined ? entry.base : 0,
+      dungeonUrl: buildDungeonUrl({
+        lng, lat,
+        height: (entry.height !== undefined ? entry.height : 1.5) - (entry.base !== undefined ? entry.base : 0),
+        name: entry.name || 'Edificio personalizzato',
+        ring: customBuildingRing(entry, lng, lat)
+      })
     },
     geometry: { type: 'Polygon', coordinates: [customBuildingRing(entry, lng, lat)] }
   });
@@ -1125,7 +1141,7 @@ function addCustomBuildingLayer() {
   map.on('click', 'cy-custom-building-cube', (e) => {
     if (selectingPoint) return;
     const p = e.features[0].properties;
-    openPanel({ name: p.name, type: 'edificio', color: p.color, blurb: p.blurb });
+    openPanel({ name: p.name, type: 'edificio', color: p.color, blurb: p.blurb, dungeonUrl: p.dungeonUrl });
   });
   map.on('mouseenter', 'cy-custom-building-cube', () => { if (!selectingPoint) map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'cy-custom-building-cube', () => map.getCanvas().style.cursor = '');
@@ -2034,10 +2050,21 @@ function addBuildingClickHandlers() {
       // DESCRIPTIONS senza dover ricostruire l'ID a mano.
       const gmNote = gmNoteForBuilding(key || 'n/d', addr);
 
+      // Dungeon: seed = centroide dell'edificio (addr.lng/lat), piani dall'altezza
+      // reale mostrata in mappa (render_height × BUILDING_HEIGHT_MULTIPLIER).
+      const rawH = f.properties && Number(f.properties.render_height);
+      const dungeonUrl = buildDungeonUrl({
+        lng: addr.lng, lat: addr.lat,
+        height: (isFinite(rawH) && rawH > 0) ? rawH * BUILDING_HEIGHT_MULTIPLIER : 12,
+        name: (custom && custom.name) || (defaultDesc && defaultDesc.name) || ('Edificio #' + addr.number),
+        ring: f.geometry && f.geometry.coordinates && f.geometry.coordinates[0]
+      });
+
       if (custom) {
         addCustomBuildingCube(custom, addr.lng, addr.lat);
         openPanel({
           name: custom.name || ('Edificio #' + addr.number),
+          dungeonUrl,
           type: 'edificio',
           color: custom.color || '#e8c93a',
           blurb: `${custom.blurb}<br><span style="opacity:0.55;font-size:10px;letter-spacing:1px;">${addr.streetName}, #${addr.number}</span>${gmNote}`
@@ -2045,6 +2072,7 @@ function addBuildingClickHandlers() {
       } else if (defaultDesc) {
         openPanel({
           name: defaultDesc.name || ('Edificio #' + addr.number),
+          dungeonUrl,
           type: 'edificio',
           color: defaultDesc.color || '#e8c93a',
           blurb: `${defaultDesc.blurb || ''}<br><span style="opacity:0.55;font-size:10px;letter-spacing:1px;">${addr.streetName}, #${addr.number}</span>${gmNote}`
@@ -2052,6 +2080,7 @@ function addBuildingClickHandlers() {
       } else {
         openPanel({
           name: 'Edificio #' + addr.number,
+          dungeonUrl,
           type: 'edificio',
           color: '#e8c93a',
           blurb: 'Edificio anonimo di Cy. Nessun dato ulteriore in archivio.<br>[DLC LOCKED]<br>Questo contenuto non è stato acquistato. La tua esperienza è stata artificialmente impoverita per motivi commerciali.<br>[ACQUISTA DLC]<br>499.99¤' + gmNote
@@ -2148,6 +2177,20 @@ landmarkFeatures = []
 function addLandmarkLayer() {
   landmarkFeatures = LANDMARK_FEATURES;
 
+  // Link al dungeon per ogni landmark (esclusi i "null": live feed/decorativi).
+  landmarkFeatures.forEach(ft => {
+    const pr = ft.properties || {};
+    if (!pr.name || pr.name === 'null') return;
+    const c = computeBuildingCentroid(ft.geometry);
+    if (!c) return;
+    pr.dungeonUrl = buildDungeonUrl({
+      lng: c[0], lat: c[1],
+      height: (pr.height || 0) - (pr.base || 0),
+      name: pr.name,
+      ring: ft.geometry.coordinates && ft.geometry.coordinates[0]
+    });
+  });
+
   registerLandmarkAddresses(landmarkFeatures);
   map.addSource('cy-landmarks', {
     type: 'geojson',
@@ -2190,7 +2233,8 @@ function addLandmarkLayer() {
       name: p.name || 'Landmark',
       type: 'landmark',
       color: p.color || '#e8c93a',
-      blurb: (p.blurb || '') + addrTag
+      blurb: (p.blurb || '') + addrTag,
+      dungeonUrl: p.dungeonUrl
     });
   });
 
@@ -2802,8 +2846,48 @@ function openPanel(p) {
     <div class="district-tag" style="color:${p.color || '#f2ede4'}">${(p.type || '').toString().toUpperCase()}</div>
     <h2>${p.name}</h2>
     <p>${p.blurb || ''}</p>
+    ${p.dungeonUrl ? `<a class="dungeon-btn" href="${p.dungeonUrl}" target="_blank" rel="noopener">⛏ APRI DUNGEON</a>` : ''}
   `;
   panel.classList.add('open');
+}
+
+/* =========================================================================
+   LINK AL DUNGEON DELL'EDIFICIO (dungeon.html, in una nuova scheda)
+   Il seed del dungeon è la coppia lat/lng (centroide a 6 decimali, la stessa
+   chiave di buildingCacheKey): stesso edificio = stesso dungeon, sempre.
+   Passiamo anche altezza (→ numero di piani) e sagoma, come offset in metri
+   dal centroide (est:nord, max 48 vertici), per far combaciare la pianta.
+   ========================================================================= */
+function stripTags(s) {
+  return String(s || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function ringToDungeonPoly(ring, lng0, lat0) {
+  if (!Array.isArray(ring) || ring.length < 3 || !Array.isArray(ring[0]) || typeof ring[0][0] !== 'number') return '';
+  let pts = ring;
+  const last = pts[pts.length - 1];
+  if (last[0] === pts[0][0] && last[1] === pts[0][1]) pts = pts.slice(0, -1);
+  if (pts.length > 48) {
+    const k = pts.length / 48;
+    pts = Array.from({ length: 48 }, (_, i) => pts[Math.floor(i * k)]);
+  }
+  const kx = 111320 * Math.cos(lat0 * Math.PI / 180), ky = 111320;
+  return pts.map(([lng, lat]) =>
+    ((lng - lng0) * kx).toFixed(1) + ':' + ((lat - lat0) * ky).toFixed(1)
+  ).join(';');
+}
+
+function buildDungeonUrl({ lng, lat, height, name, ring }) {
+  if (!isFinite(lng) || !isFinite(lat)) return '';
+  const q = new URLSearchParams({
+    lat: lat.toFixed(6),
+    lng: lng.toFixed(6),
+    h: String(Math.round(Math.max(3, height || 12) * 10) / 10),
+    name: stripTags(name) || 'Edificio'
+  });
+  const poly = ringToDungeonPoly(ring, lng, lat);
+  if (poly) q.set('poly', poly);
+  return 'dungeon.html?' + q.toString();
 }
 function closePanel() {
   document.getElementById('popup-panel').classList.remove('open');
