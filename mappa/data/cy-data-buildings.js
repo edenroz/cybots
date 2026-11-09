@@ -78,6 +78,14 @@ const DEFAULT_BUILDING_DESCRIPTIONS = [
     subAddress: "277_3<br><small>South Central</small>",
   },
   {
+    id: "18.067838,59.327463",
+    name: "Santuario della bestia brutale",
+    color: "#e83adf",
+    street: "UNDERPASS SEWERWAY",
+    number: 218,
+    blurb: ""
+  },
+  {
     id: "17.882019,59.345687",
     name: "Shop 2",
     color: "#3ab7e8",
