@@ -32,6 +32,7 @@
   #bar button.on{border-color:var(--mag);color:var(--mag);}
   #bar input[type=range]{width:min(220px,36vw);accent-color:#00fff2;}
   #flabel{min-width:190px;text-align:center;font-size:12px;letter-spacing:1px;}
+  #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));padding:8px 14px;display:none;font-size:12px;color:var(--yellow);max-width:90vw;text-align:center;}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--grey);}
   @media (max-width:640px){#side{top:auto;bottom:70px;right:8px;left:8px;width:auto;max-height:30vh;}#title{max-width:90vw}}
 </style>
@@ -40,7 +41,7 @@
 <canvas id="cv"></canvas>
 <div id="title" class="box"><h1><span>C</span>Y // DUNGEON</h1><div class="meta" id="meta"></div></div>
 <div id="side" class="box"><h3 id="side-h">CHIAVE</h3><div id="side-list"></div>
-  <div class="k">▲▼ scale &nbsp; E ascensore &nbsp; <span style="color:#e8c93a">▮</span> porta &nbsp; <span style="color:#ff5a5a">▮</span> chiusa a chiave &nbsp; ⌒ arco<br>
+  <div class="k"><span style="color:#f2ede4">●</span> gruppo: clicca una cella esplorata per muoverti &nbsp; ▲▼ scale &nbsp; E ascensore &nbsp; <span style="color:#e8c93a">▮</span> porta &nbsp; <span style="color:#ff5a5a">▮</span> chiusa a chiave &nbsp; ⌒ arco<br>
   <span class="gmk" style="display:none"><span style="color:#ff2ee6">S</span> porta segreta &nbsp; <span style="color:#ff5a5a">M</span> ostile &nbsp; <span style="color:#e8c93a">$</span> bottino &nbsp; <span style="color:#ff2ee6">!</span> trappola</span></div></div>
 <div id="bar" class="box">
   <button id="b-down" title="Piano inferiore (↓)">▼</button>
@@ -48,9 +49,11 @@
   <button id="b-up" title="Piano superiore (↑)">▲</button>
   <span id="flabel"></span>
   <button id="b-view" title="Cambia vista (V)">VISTA 3D</button>
-  <button id="b-gm" title="Mostra segreti, mostri, trappole (M)">MASTER</button>
+  <button id="b-gm" title="Mostra tutto: segreti, mostri, trappole, niente nebbia (M)">MASTER</button>
+  <button id="b-fog" title="Azzera la nebbia di guerra" style="display:none">RESET NEBBIA</button>
   <button id="b-zout">−</button><button id="b-zin">+</button><button id="b-fit" title="Ricentra">⌖</button>
 </div>
+<div id="toast" class="box"></div>
 <div id="err">Coordinate mancanti.<br>Apri questa pagina dal pulsante "APRI DUNGEON" nel pannello di un edificio (parametri lat / lng / h / name / poly).</div>
 
 <script>
@@ -227,7 +230,7 @@ const SKEL = (function(){
     blocks.push({x0:Math.min(xa,xb),y0:Math.min(ya,yb),x1:Math.max(xa,xb),y1:Math.max(ya,yb)});
   }));
   if (!blocks.length) blocks.push({x0:1,y0:1,x1:GW-2,y1:GD-2});
-  return {corr, blocks, ends};
+  return {corr, blocks, ends, horiz};
 })();
 
 /* =========================================================================
@@ -467,7 +470,11 @@ function genFloor(i) {
     }
   });
   // ingressi sul piano terra
-  if (theme==='ground') SKEL.ends.forEach(([x,y]) => { if (g[y*GW+x]===2) g[y*GW+x]=9; });
+  // ingressi: nel muro esterno oltre la fine del corridoio principale (non dentro il corridoio)
+  if (theme==='ground') SKEL.ends.forEach(([x,y],ei) => {
+    const dir = ei===0 ? -1 : 1, nx = x + (SKEL.horiz?dir:0), ny = y + (SKEL.horiz?0:dir);
+    if (g[y*GW+x]===2 && nx>=0 && ny>=0 && nx<GW && ny<GD && g[ny*GW+nx]===0) g[ny*GW+nx]=9;
+  });
 
   // profondità nel grafo delle porte → funzione della stanza
   const nbr = Array.from({length:NN}, () => []);
@@ -541,7 +548,8 @@ function genFloor(i) {
     for (let dy=-1;dy<=1&&!near;dy++) for (let dx=-1;dx<=1;dx++) { const nx=x+dx, ny=y+dy; if (nx>=0&&ny>=0&&nx<GW&&ny<GD&&g[ny*GW+nx]!==0){near=true;break;} }
     if (near) wallCells.push(y*GW+x);
   }
-  return {g, rid, rooms:kept, core:coreRoom, feats, props, wallCells, level, theme, top, bottom};
+  const wm = new Uint8Array(N); wallCells.forEach(k => { wm[k]=1; });
+  return {g, rid, rooms:kept, core:coreRoom, feats, props, wallCells, wm, level, theme, top, bottom};
 }
 
 /* ---------- stato / viste ---------- */
@@ -553,6 +561,95 @@ const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let W=0, HH=0;
 const v2 = {s:10, ox:0, oy:0};
 const v3 = {yaw:-0.6, pitch:0.9, zoom:6, px:0, py:0};
+/* ---------- NEBBIA DI GUERRA (solo vista giocatori) ----------
+   La pedina (gruppo) vede in linea retta: i muri, le porte chiuse, le porte a
+   chiave e le porte segrete bloccano la vista; archi e pavimenti no. Ciò che è
+   stato visto resta "esplorato" (mostrato scuro), il resto è nero. Lo stato è
+   salvato nel browser (localStorage), per edificio. Con MASTER si vede tutto. */
+const FOG_KEY = 'cydg-fog:' + SEED_HEX;
+const fog = {tok:null, exp:{}, vis:null};
+const VIS_R = Math.max(5, Math.min(18, Math.round(16/CS)));
+function computeVis(f, tx, ty){
+  const vis = new Uint8Array(GW*GD), g = f.g, R = VIS_R;
+  const blocks = k => { const t=g[k]; return t===0||t===3||t===6||t===7||t===9; };
+  for (let y=Math.max(0,ty-R); y<=Math.min(GD-1,ty+R); y++) for (let x=Math.max(0,tx-R); x<=Math.min(GW-1,tx+R); x++) {
+    if ((x-tx)**2+(y-ty)**2 > R*R) continue;
+    let x0=tx, y0=ty, ok=true;
+    const dx=Math.abs(x-x0), dy=Math.abs(y-y0), sx=x0<x?1:-1, sy=y0<y?1:-1; let err=dx-dy;
+    while (!(x0===x && y0===y)) {
+      const e2=2*err; let mx=0, my=0;
+      if (e2>-dy) { err-=dy; mx=sx; }
+      if (e2<dx)  { err+=dx; my=sy; }
+      if (mx && my && blocks(y0*GW+x0+mx) && blocks((y0+my)*GW+x0)) { ok=false; break; }   // niente spiragli negli angoli
+      x0+=mx; y0+=my;
+      if (x0===x && y0===y) break;
+      if (blocks(y0*GW+x0)) { ok=false; break; }
+    }
+    if (ok) vis[y*GW+x]=1;
+  }
+  vis[ty*GW+tx]=1;
+  return vis;
+}
+function fogReveal(){
+  const t=fog.tok; if (!t) return;
+  const f=getFloor(t.f);
+  fog.vis = computeVis(f, t.x, t.y);
+  const e = fog.exp[t.f] || (fog.exp[t.f] = new Uint8Array(GW*GD));
+  for (let k=0;k<fog.vis.length;k++) if (fog.vis[k]) e[k]=1;
+}
+function fogSave(){
+  try {
+    const exp={};
+    Object.keys(fog.exp).forEach(k => { const a=fog.exp[k], l=[]; for (let i=0;i<a.length;i++) if (a[i]) l.push(i); exp[k]=l; });
+    localStorage.setItem(FOG_KEY, JSON.stringify({gw:GW,gd:GD,tok:fog.tok,exp}));
+  } catch(e) {}
+}
+function fogLoad(){
+  try {
+    const j = JSON.parse(localStorage.getItem(FOG_KEY) || 'null');
+    if (!j || j.gw!==GW || j.gd!==GD || !j.tok) return false;
+    fog.tok = j.tok; fog.exp = {};
+    Object.keys(j.exp||{}).forEach(k => { const a=new Uint8Array(GW*GD); j.exp[k].forEach(i => { a[i]=1; }); fog.exp[k]=a; });
+    return true;
+  } catch(e) { return false; }
+}
+function fogStart(){
+  const gi = Math.min(NL-1, NB);
+  fog.exp = {};
+  const [sx,sy] = SKEL.ends.length ? SKEL.ends[0] : [CORE.x, CORE.y];
+  fog.tok = {f:gi, x:sx, y:sy};
+  fogReveal();
+}
+function drawFog(f,s){
+  const e = fog.exp[cur] || new Uint8Array(GW*GD);
+  const v = (fog.tok && fog.tok.f===cur && fog.vis) ? fog.vis : new Uint8Array(GW*GD);
+  for (let k=0;k<GW*GD;k++) {
+    if (!f.g[k] && !f.wm[k]) continue;
+    const x=k%GW, y=(k/GW)|0;
+    if (!e[k]) { ctx.fillStyle='#0a0908'; ctx.fillRect(x*s-.5,y*s-.5,s+1.5,s+1.5); }
+    else if (!v[k]) { ctx.fillStyle='rgba(10,9,8,0.55)'; ctx.fillRect(x*s,y*s,s+.5,s+.5); }
+  }
+}
+let toastT=null;
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toastT); toastT=setTimeout(()=>{t.style.display='none';},2800); }
+function roomSeen(f,r){
+  const e=fog.exp[cur]; if (!e) return false;
+  if (r.core) { for (let dy=0;dy<CORE.s;dy++) for (let dx=0;dx<CORE.s;dx++) if (e[(CORE.y+dy)*GW+CORE.x+dx]) return true; return false; }
+  return r.cells.some(k => e[k]);
+}
+// cambio piano: libero per il master; ai giocatori serve stare su scale (±1 piano) o ascensore
+function tryFloor(i){
+  i = Math.max(0, Math.min(NL-1, i));
+  if (GM) { setFloor(i); return; }
+  const from = fog.tok.f;
+  if (i===from) { updateHud(); return; }
+  const t = getFloor(from).g[fog.tok.y*GW+fog.tok.x];
+  if (t!==4 && t!==5) { toast('Per cambiare piano raggiungi le scale (▲▼) o l\'ascensore (E).'); updateHud(); return; }
+  if (t===4 && Math.abs(i-from)!==1) { toast('Le scale portano solo al piano adiacente: serve l\'ascensore (E).'); updateHud(); return; }
+  fog.tok = {f:i, x:fog.tok.x, y:fog.tok.y};
+  cur = i; sel = -1; fogReveal(); fogSave(); updateHud(); draw();
+}
+
 const GAP3 = Math.max(2.5, Math.min(6, Math.max(GW,GD)*0.1));
 
 function fit(){
@@ -598,14 +695,33 @@ function drawProp(p,s){
 }
 
 function drawDoor(t,x,y,s,f){
-  const g=f.g, X=x*s, Y=y*s, cx=X+s/2, cy=Y+s/2;
-  const vertWall = isF(g,x-1,y) && isF(g,x+1,y);   // varco orizzontale in un muro verticale
-  const bw = vertWall ? s*.34 : s*.86, bh = vertWall ? s*.86 : s*.34;
-  if (t===3) { ctx.fillStyle='#e8c93a'; ctx.fillRect(cx-bw/2,cy-bh/2,bw,bh); }
-  else if (t===7) { ctx.fillStyle='#ff5a5a'; ctx.fillRect(cx-bw/2,cy-bh/2,bw,bh); ctx.fillStyle='#0a0908'; ctx.fillRect(cx-s*.08,cy-s*.08,s*.16,s*.16); }
-  else if (t===8) { ctx.strokeStyle='#e8c93a'; ctx.lineWidth=1.5; ctx.beginPath(); if (vertWall) { ctx.moveTo(cx,Y+s*.1); ctx.lineTo(cx,Y+s*.9);} else { ctx.moveTo(X+s*.1,cy); ctx.lineTo(X+s*.9,cy);} ctx.setLineDash([2,3]); ctx.stroke(); ctx.setLineDash([]); }
-  else if (t===6 && GM) { ctx.fillStyle='#ff2ee6'; ctx.fillRect(cx-bw/2,cy-bh/2,bw,bh); }
-  else if (t===9) { ctx.fillStyle='#00fff2'; ctx.fillRect(X+s*.1,Y+s*.1,s*.8,s*.8); ctx.fillStyle='#0a0908'; ctx.fillRect(X+s*.3,Y+s*.3,s*.4,s*.4); }
+  const g=f.g, X=x*s, Y=y*s, cx=X+s/2, cy=Y+s/2, acc=accent(f);
+  const op=(nx,ny)=>{ if(nx<0||ny<0||nx>=GW||ny>=GD) return 0; const q=g[ny*GW+nx]; return (q===1||q===2||q===4||q===5)?1:0; };
+  const hp = (op(x-1,y)+op(x+1,y)) > (op(x,y-1)+op(x,y+1));   // true = si attraversa in orizzontale (muro verticale)
+  // la cella della porta è un tratto di muro...
+  ctx.fillStyle='#0d0c0b'; ctx.fillRect(X,Y,s+.5,s+.5); ctx.fillStyle=HATCH; ctx.fillRect(X,Y,s+.5,s+.5);
+  if (t===6 && !GM) return;                               // porta segreta: per i giocatori è muro
+  // ...con un varco al centro
+  const gap=s*.72;
+  ctx.fillStyle='#1c1a19';
+  if (hp) ctx.fillRect(X,cy-gap/2,s+.5,gap); else ctx.fillRect(cx-gap/2,Y,gap,s+.5);
+  // bordi del varco: continuano la linea dei muri
+  ctx.strokeStyle=acc; ctx.lineWidth=Math.max(1.5,s*.13); ctx.beginPath();
+  if (hp) { ctx.moveTo(X,cy-gap/2); ctx.lineTo(X+s,cy-gap/2); ctx.moveTo(X,cy+gap/2); ctx.lineTo(X+s,cy+gap/2); }
+  else { ctx.moveTo(cx-gap/2,Y); ctx.lineTo(cx-gap/2,Y+s); ctx.moveTo(cx+gap/2,Y); ctx.lineTo(cx+gap/2,Y+s); }
+  ctx.stroke();
+  // battente: sottile, nello spessore del muro, chiude il varco
+  const th=Math.max(2,s*.2);
+  const leaf=col=>{ ctx.fillStyle=col; if (hp) ctx.fillRect(cx-th/2,cy-gap/2,th,gap); else ctx.fillRect(cx-gap/2,cy-th/2,gap,th); };
+  if (t===3) leaf('#e8c93a');
+  else if (t===7) { leaf('#ff5a5a'); ctx.fillStyle='#0a0908'; ctx.fillRect(cx-s*.07,cy-s*.07,s*.14,s*.14); }
+  else if (t===6) leaf('#ff2ee6');
+  else if (t===9) { leaf('#00fff2'); ctx.fillRect(hp?cx-th*1.5:cx-gap/2,hp?cy-gap/2:cy-th*1.5,hp?th*3:gap,hp?gap:th*3); }
+  else if (t===8) {                                          // arco: solo due stipiti
+    const p=Math.max(2.5,s*.2); ctx.fillStyle='#e8c93a';
+    if (hp) { ctx.fillRect(cx-p/2,cy-gap/2-p/2,p,p); ctx.fillRect(cx-p/2,cy+gap/2-p/2,p,p); }
+    else { ctx.fillRect(cx-gap/2-p/2,cy-p/2,p,p); ctx.fillRect(cx+gap/2-p/2,cy-p/2,p,p); }
+  }
 }
 
 function draw2D(){
@@ -618,8 +734,7 @@ function draw2D(){
   f.wallCells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5));
   // pavimenti
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
-    const k=y*GW+x, t=g[k]; if (!t) continue;
-    if (t===6 && !GM) { ctx.fillStyle='#0d0c0b'; ctx.fillRect(x*s,y*s,s+.5,s+.5); ctx.fillStyle=HATCH; ctx.fillRect(x*s,y*s,s+.5,s+.5); continue; }
+    const k=y*GW+x, t=g[k]; if (!t || t===3||t===6||t===7||t===8||t===9) continue;
     let col;
     if (f.rid[k]>=0) col = TYPE_COLOR[f.rooms[f.rid[k]].type] || '#25221f';
     else if (t===1||t===4||t===5) col='#0e3a38';
@@ -630,7 +745,7 @@ function draw2D(){
   f.rooms.forEach(r => { if (!r.flood) return; ctx.fillStyle='rgba(40,110,200,0.45)'; r.cells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5)); });
   // griglia
   ctx.strokeStyle='rgba(242,237,228,0.05)'; ctx.lineWidth=1; ctx.beginPath();
-  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) if (g[y*GW+x]) ctx.rect(x*s,y*s,s,s);
+  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) { const t=g[y*GW+x]; if (t && !(t>=6&&t<=9) && t!==3) ctx.rect(x*s,y*s,s,s); }
   ctx.stroke();
   // arredi
   f.props.forEach(p => drawProp(p,s));
@@ -688,6 +803,12 @@ function draw2D(){
     ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(lbl,cx,cy);
     ctx.fillStyle = idx===sel ? '#00fff2' : 'rgba(242,237,228,0.95)'; ctx.fillText(lbl,cx,cy);
   });
+  if (!GM) drawFog(f,s);
+  if (fog.tok && fog.tok.f===cur) {
+    const tx=(fog.tok.x+.5)*s, ty=(fog.tok.y+.5)*s;
+    ctx.shadowColor=acc; ctx.shadowBlur=10; ctx.fillStyle='#f2ede4'; ctx.strokeStyle=acc; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(tx,ty,Math.max(4,s*.36),0,7); ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+  }
   // scala
   const sc=10/CS*s; ctx.strokeStyle='#f2ede4'; ctx.fillStyle='#f2ede4'; ctx.lineWidth=2; ctx.textAlign='left'; ctx.font='11px "Courier New",monospace';
   ctx.beginPath(); ctx.moveTo(0,GD*s+14); ctx.lineTo(sc,GD*s+14); ctx.stroke(); ctx.fillText('10 m',sc+6,GD*s+14);
@@ -717,6 +838,7 @@ function draw3D(){
       const f=getFloor(i), g=f.g, groups=new Map();
       for (let k=0;k<GW*GD;k++) {
         const t=g[k]; if (!t || (t===6&&!GM)) continue;
+        if (!GM && !(fog.exp[i] && fog.exp[i][k])) continue;
         let c;
         if (t>=3 && t!==4 && t!==5) c = t===7?'#ff5a5a' : t===9?'#00fff2' : t===6?'#ff2ee6' : '#e8c93a';
         else if (f.rid[k]>=0) c = TYPE_COLOR[f.rooms[f.rid[k]].type]||'#25221f';
@@ -726,7 +848,8 @@ function draw3D(){
       groups.forEach((ks,c) => { ctx.beginPath(); ks.forEach(k => quad(k%GW,(k/GW)|0,1,1,z)); ctx.fillStyle=c; ctx.fill(); });
       ctx.fillStyle=`rgb(${col})`; ctx.font='bold 13px "Courier New",monospace'; ctx.textAlign='left';
       const lp=P(GW,GD/2,z); ctx.fillText(labelOf(i),lp[0]+14,lp[1]);
-    } else if (near<=4) {
+      if (fog.tok && fog.tok.f===i) { const tp=P(fog.tok.x+.5,fog.tok.y+.5,z); ctx.fillStyle='#f2ede4'; ctx.beginPath(); ctx.arc(tp[0],tp[1],4,0,7); ctx.fill(); }
+    } else if (near<=4 && GM) {
       const f=getFloor(i);
       ctx.beginPath(); f.rooms.forEach(r=>quad(r.x,r.y,r.w,r.h,z));
       ctx.strokeStyle=`rgba(${col},${0.35-near*0.07})`; ctx.lineWidth=1; ctx.stroke();
@@ -757,8 +880,10 @@ function updateHud(){
   document.getElementById('side-h').textContent = 'CHIAVE // '+labelOf(cur);
   document.querySelector('.gmk').style.display = GM ? 'inline' : 'none';
   document.getElementById('b-gm').classList.toggle('on', GM);
+  document.getElementById('b-fog').style.display = GM ? '' : 'none';
   const list=document.getElementById('side-list'); list.innerHTML='';
   [f.core,...f.rooms].forEach((r,idx) => {
+    if (!GM && !roomSeen(f,r)) return;
     const si = idx===0 ? -2 : idx-1;
     const d=document.createElement('div'); d.className='r'+(sel===si?' sel':'');
     const b=document.createElement('b'); b.textContent=r.id;
@@ -776,25 +901,26 @@ function updateHud(){
 }
 function setFloor(i){ cur=Math.max(0,Math.min(NL-1,i)); sel=-1; updateHud(); draw(); }
 function setMode(m){ mode=m; document.getElementById('b-view').textContent = m==='2d'?'VISTA 3D':'VISTA 2D'; draw(); }
-function setGM(v){ GM=v; updateHud(); draw(); }
+function setGM(v){ GM=v; sel=-1; if (!GM && fog.tok) cur=fog.tok.f; updateHud(); draw(); }
 function zoomBy(k,cx=W/2,cy=HH/2){
   if (mode==='2d') { const wx=(cx-v2.ox)/v2.s, wy=(cy-v2.oy)/v2.s; v2.s=Math.max(2,Math.min(80,v2.s*k)); v2.ox=cx-wx*v2.s; v2.oy=cy-wy*v2.s; }
   else v3.zoom=Math.max(1,Math.min(80,v3.zoom*k));
   draw();
 }
 
-document.getElementById('b-up').onclick=()=>setFloor(cur+1);
-document.getElementById('b-down').onclick=()=>setFloor(cur-1);
+document.getElementById('b-up').onclick=()=>tryFloor(cur+1);
+document.getElementById('b-down').onclick=()=>tryFloor(cur-1);
+document.getElementById('b-fog').onclick=()=>{ if (confirm('Azzerare la nebbia di guerra e riportare il gruppo all\'ingresso?')) { fogStart(); fogSave(); updateHud(); draw(); } };
 document.getElementById('b-view').onclick=()=>setMode(mode==='2d'?'3d':'2d');
 document.getElementById('b-gm').onclick=()=>setGM(!GM);
 document.getElementById('b-zin').onclick=()=>zoomBy(1.25);
 document.getElementById('b-zout').onclick=()=>zoomBy(0.8);
 document.getElementById('b-fit').onclick=()=>{fit();draw();};
-slider.oninput=()=>setFloor(parseInt(slider.value,10));
+slider.oninput=()=>tryFloor(parseInt(slider.value,10));
 window.addEventListener('keydown',e=>{
   if (e.target.tagName==='INPUT' && e.key!=='ArrowUp' && e.key!=='ArrowDown') return;
-  if (e.key==='ArrowUp'||e.key==='PageUp') { e.preventDefault(); setFloor(cur+1); }
-  else if (e.key==='ArrowDown'||e.key==='PageDown') { e.preventDefault(); setFloor(cur-1); }
+  if (e.key==='ArrowUp'||e.key==='PageUp') { e.preventDefault(); tryFloor(cur+1); }
+  else if (e.key==='ArrowDown'||e.key==='PageDown') { e.preventDefault(); tryFloor(cur-1); }
   else if (e.key==='v'||e.key==='V') setMode(mode==='2d'?'3d':'2d');
   else if (e.key==='m'||e.key==='M') setGM(!GM);
   else if (e.key==='+'||e.key==='=') zoomBy(1.25);
@@ -820,12 +946,15 @@ cv.addEventListener('pointerup',e=>{
     if (mode==='3d') {
       let best=-1,bd=1e9;
       for (let i=0;i<NL;i++) { const p=P(GW/2,GD/2,i*GAP3); const d=Math.hypot(p[0]-e.clientX,p[1]-e.clientY); if(d<bd){bd=d;best=i;} }
-      if (best>=0) setFloor(best);
+      if (best>=0) tryFloor(best);
     } else {
       const x=Math.floor((e.clientX-v2.ox)/v2.s), y=Math.floor((e.clientY-v2.oy)/v2.s);
       if (x>=0&&y>=0&&x<GW&&y<GD) {
-        const f=getFloor(cur), k=y*GW+x;
-        sel = f.rid[k]>=0 ? f.rid[k] : (x>=CORE.x&&x<CORE.x+CORE.s&&y>=CORE.y&&y<CORE.y+CORE.s ? -2 : -1);
+        const f=getFloor(cur), k=y*GW+x, ex=fog.exp[cur];
+        const seen = GM || (ex && ex[k]);
+        const inCore = x>=CORE.x&&x<CORE.x+CORE.s&&y>=CORE.y&&y<CORE.y+CORE.s;
+        sel = !seen ? -1 : f.rid[k]>=0 ? f.rid[k] : (inCore ? -2 : -1);
+        if (!GM && seen && f.g[k]!==0 && f.g[k]!==6) { fog.tok={f:cur,x,y}; fogReveal(); fogSave(); }   // il gruppo si sposta
         updateHud(); draw();
       }
     }
@@ -836,6 +965,8 @@ cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomBy(e.deltaY<0?1.12:1/1.12,e.clientX,e.clientY); },{passive:false});
 window.addEventListener('resize',resize);
 
+if (fogLoad()) fogReveal(); else fogStart();
+if (!GM) cur = fog.tok.f;
 resize(); updateHud(); draw();
 </script>
 </body>
