@@ -2889,6 +2889,46 @@ function buildDungeonUrl({ lng, lat, height, name, ring }) {
   if (poly) q.set('poly', poly);
   return 'dungeon.html?' + q.toString();
 }
+
+/* Sagome degli edifici vicini per la vista 3D del dungeon: al click su "APRI DUNGEON"
+   salviamo (localStorage, chiave per seed) i palazzi OSM entro ~140 m già caricati in mappa,
+   come offset in metri dal centroide + altezza. dungeon.html li legge e li accenna intorno. */
+function storeDungeonNeighbors(lat, lng) {
+  if (!isFinite(lat) || !isFinite(lng)) return;
+  try {
+    const feats = map.querySourceFeatures('openmaptiles', { sourceLayer: 'building' });
+    const kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 111320, R = 140;
+    const seen = new Set(), out = [];
+    feats.forEach(raw => explodeBuildingFeature(raw).forEach(sf => {
+      const ring = sf.geometry.coordinates && sf.geometry.coordinates[0];
+      if (!ring || ring.length < 4) return;
+      const c = computeBuildingCentroid(sf.geometry); if (!c) return;
+      const d = Math.hypot((c[0] - lng) * kx, (c[1] - lat) * ky);
+      if (d > R || d < 1.5) return;                      // fuori raggio, oppure è l'edificio stesso
+      const key = c[0].toFixed(6) + ',' + c[1].toFixed(6);
+      if (seen.has(key)) return; seen.add(key);
+      let pts = ring.slice(0, -1);
+      if (pts.length > 14) { const k = pts.length / 14; pts = Array.from({ length: 14 }, (_, i) => pts[Math.floor(i * k)]); }
+      const rh = Number(sf.properties && sf.properties.render_height);
+      out.push({
+        d,
+        h: Math.round((isFinite(rh) && rh > 0 ? rh : 8) * BUILDING_HEIGHT_MULTIPLIER),
+        p: pts.map(([x, y]) => [Math.round((x - lng) * kx * 10) / 10, Math.round((y - lat) * ky * 10) / 10])
+      });
+    }));
+    out.sort((a, b) => a.d - b.d);
+    localStorage.setItem('cydg-nb:' + lat.toFixed(6) + ',' + lng.toFixed(6),
+      JSON.stringify(out.slice(0, 80).map(({ h, p }) => ({ h, p }))));
+  } catch (e) { /* storage non disponibile: il dungeon si apre senza sagome intorno */ }
+}
+document.getElementById('popup-panel').addEventListener('click', (e) => {
+  const a = e.target && e.target.closest && e.target.closest('.dungeon-btn');
+  if (!a) return;
+  try {
+    const u = new URL(a.href, location.href);
+    storeDungeonNeighbors(parseFloat(u.searchParams.get('lat')), parseFloat(u.searchParams.get('lng')));
+  } catch (_) {}
+});
 function closePanel() {
   document.getElementById('popup-panel').classList.remove('open');
 }
