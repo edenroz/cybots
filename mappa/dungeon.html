@@ -1373,7 +1373,7 @@ cv.addEventListener('pointerup',e=>{
         const inCore = x>=CORE.x&&x<CORE.x+CORE.s&&y>=CORE.y&&y<CORE.y+CORE.s;
         const rr = f.rid[k];
         sel = !seen ? -1 : (rr>=0 && !(PLAN && f.rooms[rr].secret)) ? rr : (inCore ? -2 : -1);
-        if (!GM && !PLAN && seen && f.g[k]!==0 && f.g[k]!==6) { fog.tok={f:cur,x,y}; fogReveal(); fogSave(); }   // il gruppo si sposta
+        if (!PLAN && seen && f.g[k]!==0 && f.g[k]!==6) { fog.tok={f:cur,x,y}; fogReveal(); fogSave(); }   // il gruppo si sposta
         updateHud(); draw();
       }
     }
