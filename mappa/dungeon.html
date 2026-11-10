@@ -50,6 +50,8 @@
   <span id="flabel"></span>
   <button id="b-view" title="Cambia vista (V)">VISTA 3D</button>
   <button id="b-gm" title="Mostra tutto: segreti, mostri, trappole, niente nebbia (M)">MASTER</button>
+  <button id="b-plan" title="Planimetria: tutta la pianta, senza arredi, incontri né porte e stanze segrete (P)">PLANIMETRIA</button>
+  <button id="b-props" style="display:none" title="Mostra/nascondi gli arredi">ARREDI</button>
   <button id="b-fog" title="Azzera la nebbia di guerra" style="display:none">RESET NEBBIA</button>
   <button id="b-zout">−</button><button id="b-zin">+</button><button id="b-fit" title="Ricentra">⌖</button>
 </div>
@@ -536,6 +538,8 @@ function genFloor(i) {
     r.cells.forEach(k => { rid[k]=n; });
   });
 
+  let pc=0; kept.forEach(r => { if (!r.secret) r.pid=++pc; });   // numerazione senza buchi per la planimetria
+
   // arredi
   const noProp = new Set();
   doors.forEach(d => { noProp.add(d.c); [-1,1,-GW,GW].forEach(o => noProp.add(d.c+o)); });
@@ -580,21 +584,31 @@ function genFloor(i) {
   });
   doors.forEach(d => { if (g[d.c]===7) { /* porta chiusa a chiave: già marcata */ } });
 
-  const wallCells = [];
-  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
-    if (g[y*GW+x]!==0) continue;
-    let near=false;
-    for (let dy=-1;dy<=1&&!near;dy++) for (let dx=-1;dx<=1;dx++) { const nx=x+dx, ny=y+dy; if (nx>=0&&ny>=0&&nx<GW&&ny<GD&&g[ny*GW+nx]!==0){near=true;break;} }
-    if (near) wallCells.push(y*GW+x);
-  }
-  const wm = new Uint8Array(N); wallCells.forEach(k => { wm[k]=1; });
-  return {g, rid, rooms:kept, core:coreRoom, feats, props, wallCells, wm, level, theme, top, bottom};
+  const wallsOf = arr => {
+    const cells=[], wmk=new Uint8Array(N);
+    for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
+      if (arr[y*GW+x]!==0) continue;
+      let near=false;
+      for (let dy=-1;dy<=1&&!near;dy++) for (let dx=-1;dx<=1;dx++) { const nx=x+dx, ny=y+dy; if (nx>=0&&ny>=0&&nx<GW&&ny<GD&&arr[ny*GW+nx]!==0){near=true;break;} }
+      if (near) { cells.push(y*GW+x); wmk[y*GW+x]=1; }
+    }
+    return {cells, wmk};
+  };
+  // pianta "pulita" per la planimetria: via stanze segrete e porte segrete (diventano muro)
+  const pg = g.slice();
+  kept.forEach(r => { if (r.secret) r.cells.forEach(k => { pg[k]=0; }); });
+  for (let k=0;k<N;k++) if (pg[k]===6) pg[k]=0;
+  const W1=wallsOf(g), W2=wallsOf(pg);
+  return {g, pg, rid, rooms:kept, core:coreRoom, feats, props, wallCells:W1.cells, wm:W1.wmk, pwall:W2.cells, pwm:W2.wmk, level, theme, top, bottom};
 }
 
 /* ---------- stato / viste ---------- */
 let cur = Math.min(NL-1, NB);   // parte dal piano terra
 let mode = '2d';
 let GM = Q.get('gm') === '1';
+// PLANIMETRIA: tutta la pianta senza nebbia, ma senza oggetti/incontri, senza porte segrete e senza stanze segrete
+let PLAN = Q.get('plan') === '1' && !GM;
+let SHOWPROPS = Q.get('arredi') === '1';
 let sel = -1;                   // indice stanza selezionata (-2 = nucleo)
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let W=0, HH=0;
@@ -679,7 +693,7 @@ function roomSeen(f,r){
 // cambio piano: libero per il master; ai giocatori serve stare su scale (±1 piano) o ascensore
 function tryFloor(i){
   i = Math.max(0, Math.min(NL-1, i));
-  if (GM) { setFloor(i); return; }
+  if (GM || PLAN) { setFloor(i); return; }
   const from = fog.tok.f;
   if (i===from) { updateHud(); return; }
   const t = getFloor(from).g[fog.tok.y*GW+fog.tok.x];
@@ -734,7 +748,7 @@ function drawProp(p,s){
 }
 
 function drawDoor(t,x,y,s,f){
-  const g=f.g, X=x*s, Y=y*s, cx=X+s/2, cy=Y+s/2, acc=accent(f);
+  const g=PLAN?f.pg:f.g, X=x*s, Y=y*s, cx=X+s/2, cy=Y+s/2, acc=accent(f);
   const op=(nx,ny)=>{ if(nx<0||ny<0||nx>=GW||ny>=GD) return 0; const q=g[ny*GW+nx]; return (q===1||q===2||q===4||q===5)?1:0; };
   const hp = (op(x-1,y)+op(x+1,y)) > (op(x,y-1)+op(x,y+1));   // true = si attraversa in orizzontale (muro verticale)
   // la cella della porta è un tratto di muro...
@@ -764,7 +778,7 @@ function drawDoor(t,x,y,s,f){
 }
 
 function draw2D(){
-  const f=getFloor(cur), g=f.g, s=v2.s, acc=accent(f);
+  const f=getFloor(cur), g=PLAN?f.pg:f.g, s=v2.s, acc=accent(f);
   ctx.save(); ctx.translate(v2.ox, v2.oy);
   // piano terra: le strade intorno all'edificio
   if (f.level===0) ROADS.forEach(r => {
@@ -776,9 +790,10 @@ function draw2D(){
   });
   // muri: cella piena, scura, tratteggiata
   ctx.fillStyle='#0d0c0b';
-  f.wallCells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5));
+  const WC = PLAN ? f.pwall : f.wallCells;
+  WC.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5));
   ctx.fillStyle=HATCH;
-  f.wallCells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5));
+  WC.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5));
   // pavimenti
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
     const k=y*GW+x, t=g[k]; if (!t || t===3||t===6||t===7||t===8||t===9) continue;
@@ -789,13 +804,13 @@ function draw2D(){
     ctx.fillStyle=col; ctx.fillRect(x*s,y*s,s+.5,s+.5);
   }
   // stanze allagate
-  f.rooms.forEach(r => { if (!r.flood) return; ctx.fillStyle='rgba(40,110,200,0.45)'; r.cells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5)); });
+  f.rooms.forEach(r => { if (!r.flood || (PLAN && r.secret)) return; ctx.fillStyle='rgba(40,110,200,0.45)'; r.cells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5)); });
   // griglia
   ctx.strokeStyle='rgba(242,237,228,0.05)'; ctx.lineWidth=1; ctx.beginPath();
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) { const t=g[y*GW+x]; if (t && !(t>=6&&t<=9) && t!==3) ctx.rect(x*s,y*s,s,s); }
   ctx.stroke();
   // arredi
-  f.props.forEach(p => drawProp(p,s));
+  if (!PLAN || SHOWPROPS) f.props.forEach(p => { if (!PLAN || g[p.y*GW+p.x]) drawProp(p,s); });
   // contorno dei muri
   ctx.strokeStyle=acc; ctx.lineWidth=Math.max(1.5,s*0.13); ctx.lineCap='square'; ctx.shadowColor=acc; ctx.shadowBlur=4;
   ctx.beginPath();
@@ -842,24 +857,25 @@ function draw2D(){
   });
   // stanza selezionata
   const sr = sel===-2 ? f.core : f.rooms[sel];
-  if (sr && !sr.core) { ctx.fillStyle='rgba(0,255,242,0.16)'; sr.cells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5)); }
+  if (sr && !sr.core && !(PLAN && sr.secret)) { ctx.fillStyle='rgba(0,255,242,0.16)'; sr.cells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5)); }
   // numeri stanza
   ctx.font=`bold ${Math.max(10,s*1.1)}px "Courier New",monospace`;
   f.rooms.forEach((r,idx) => {
-    const lbl = String(r.id), cx=(r.lx+.5)*s, cy=(r.ly+.5)*s;
+    if (PLAN && r.secret) return;
+    const lbl = String(PLAN ? r.pid : r.id), cx=(r.lx+.5)*s, cy=(r.ly+.5)*s;
     ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(lbl,cx,cy);
     ctx.fillStyle = idx===sel ? '#00fff2' : 'rgba(242,237,228,0.95)'; ctx.fillText(lbl,cx,cy);
   });
-  if (!GM) drawFog(f,s);
+  if (!GM && !PLAN) drawFog(f,s);
   if (f.level===0) entranceLinks().forEach(l => {
-    if (!GM && !(fog.exp[cur] && fog.exp[cur][l.k])) return;     // si vede solo se l'ingresso è stato visto
+    if (!GM && !PLAN && !(fog.exp[cur] && fog.exp[cur][l.k])) return;     // si vede solo se l'ingresso è stato visto
     ctx.strokeStyle='rgba(232,201,58,0.85)'; ctx.lineWidth=Math.max(2,s*.25); ctx.setLineDash([s*.5,s*.4]);
     ctx.beginPath(); ctx.moveTo(l.ex*s,l.ey*s); ctx.lineTo(l.rx*s,l.ry*s); ctx.stroke(); ctx.setLineDash([]);
     const txt=(l.name ? l.name+' · ' : '')+l.m+' m', mx=(l.ex+l.rx)/2*s, my=(l.ey+l.ry)/2*s-9;
     ctx.font='11px "Courier New",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(txt,mx,my); ctx.fillStyle='#e8c93a'; ctx.fillText(txt,mx,my);
   });
-  if (fog.tok && fog.tok.f===cur) {
+  if (!PLAN && fog.tok && fog.tok.f===cur) {
     const tx=(fog.tok.x+.5)*s, ty=(fog.tok.y+.5)*s;
     ctx.shadowColor=acc; ctx.shadowBlur=10; ctx.fillStyle='#f2ede4'; ctx.strokeStyle=acc; ctx.lineWidth=2;
     ctx.beginPath(); ctx.arc(tx,ty,Math.max(4,s*.36),0,7); ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
@@ -920,10 +936,10 @@ function draw3D(){
     ctx.strokeStyle=`rgba(${col},${active?0.95:0.3})`; ctx.lineWidth=active?2:1; ctx.stroke();
     const near=Math.abs(i-cur);
     if (active) {
-      const f=getFloor(i), g=f.g, groups=new Map();
+      const f=getFloor(i), g=PLAN?f.pg:f.g, groups=new Map();
       for (let k=0;k<GW*GD;k++) {
         const t=g[k]; if (!t || (t===6&&!GM)) continue;
-        if (!GM && !(fog.exp[i] && fog.exp[i][k])) continue;
+        if (!GM && !PLAN && !(fog.exp[i] && fog.exp[i][k])) continue;
         let c;
         if (t>=3 && t!==4 && t!==5) c = t===7?'#ff5a5a' : t===9?'#00fff2' : t===6?'#ff2ee6' : '#e8c93a';
         else if (f.rid[k]>=0) c = TYPE_COLOR[f.rooms[f.rid[k]].type]||'#25221f';
@@ -933,10 +949,10 @@ function draw3D(){
       groups.forEach((ks,c) => { ctx.beginPath(); ks.forEach(k => quad(k%GW,(k/GW)|0,1,1,z)); ctx.fillStyle=c; ctx.fill(); });
       ctx.fillStyle=`rgb(${col})`; ctx.font='bold 13px "Courier New",monospace'; ctx.textAlign='left';
       const lp=P(GW,GD/2,z); ctx.fillText(labelOf(i),lp[0]+14,lp[1]);
-      if (fog.tok && fog.tok.f===i) { const tp=P(fog.tok.x+.5,fog.tok.y+.5,z); ctx.fillStyle='#f2ede4'; ctx.beginPath(); ctx.arc(tp[0],tp[1],4,0,7); ctx.fill(); }
-    } else if (near<=4 && GM) {
+      if (!PLAN && fog.tok && fog.tok.f===i) { const tp=P(fog.tok.x+.5,fog.tok.y+.5,z); ctx.fillStyle='#f2ede4'; ctx.beginPath(); ctx.arc(tp[0],tp[1],4,0,7); ctx.fill(); }
+    } else if (near<=4 && (GM||PLAN)) {
       const f=getFloor(i);
-      ctx.beginPath(); f.rooms.forEach(r=>quad(r.x,r.y,r.w,r.h,z));
+      ctx.beginPath(); f.rooms.forEach(r=>{ if (!(PLAN&&r.secret)) quad(r.x,r.y,r.w,r.h,z); });
       ctx.strokeStyle=`rgba(${col},${0.35-near*0.07})`; ctx.lineWidth=1; ctx.stroke();
     }
   }
@@ -972,13 +988,17 @@ function updateHud(){
   document.getElementById('side-h').textContent = 'CHIAVE // '+labelOf(cur);
   document.querySelector('.gmk').style.display = GM ? 'inline' : 'none';
   document.getElementById('b-gm').classList.toggle('on', GM);
+  document.getElementById('b-plan').classList.toggle('on', PLAN);
+  document.getElementById('b-props').style.display = PLAN ? '' : 'none';
+  document.getElementById('b-props').classList.toggle('on', SHOWPROPS);
   document.getElementById('b-fog').style.display = GM ? '' : 'none';
   const list=document.getElementById('side-list'); list.innerHTML='';
   [f.core,...f.rooms].forEach((r,idx) => {
-    if (!GM && !roomSeen(f,r)) return;
+    if (!GM && !PLAN && !roomSeen(f,r)) return;
+    if (PLAN && r.secret) return;
     const si = idx===0 ? -2 : idx-1;
     const d=document.createElement('div'); d.className='r'+(sel===si?' sel':'');
-    const b=document.createElement('b'); b.textContent=r.id;
+    const b=document.createElement('b'); b.textContent=(PLAN && r.pid) ? r.pid : r.id;
     const t=document.createElement('span'); t.textContent = (GM && r.secret) ? r.type+' ✱' : r.type;
     const i=document.createElement('i'); i.textContent=`${Math.round(r.area)} m²`;
     d.append(b,t,i); d.onclick=()=>{ sel = sel===si ? -1 : si; updateHud(); draw(); };
@@ -993,7 +1013,9 @@ function updateHud(){
 }
 function setFloor(i){ cur=Math.max(0,Math.min(NL-1,i)); sel=-1; updateHud(); draw(); }
 function setMode(m){ mode=m; document.getElementById('b-view').textContent = m==='2d'?'VISTA 3D':'VISTA 2D'; draw(); }
-function setGM(v){ GM=v; sel=-1; if (!GM && fog.tok) cur=fog.tok.f; updateHud(); draw(); }
+function viewChanged(){ sel=-1; if (!GM && !PLAN && fog.tok) cur=fog.tok.f; updateHud(); draw(); }
+function setGM(v){ GM=v; if (v) PLAN=false; viewChanged(); }
+function setPlan(v){ PLAN=v; if (v) GM=false; viewChanged(); }
 function zoomBy(k,cx=W/2,cy=HH/2){
   if (mode==='2d') { const wx=(cx-v2.ox)/v2.s, wy=(cy-v2.oy)/v2.s; v2.s=Math.max(2,Math.min(80,v2.s*k)); v2.ox=cx-wx*v2.s; v2.oy=cy-wy*v2.s; }
   else v3.zoom=Math.max(1,Math.min(80,v3.zoom*k));
@@ -1005,6 +1027,8 @@ document.getElementById('b-down').onclick=()=>tryFloor(cur-1);
 document.getElementById('b-fog').onclick=()=>{ if (confirm('Azzerare la nebbia di guerra e riportare il gruppo all\'ingresso?')) { fogStart(); fogSave(); updateHud(); draw(); } };
 document.getElementById('b-view').onclick=()=>setMode(mode==='2d'?'3d':'2d');
 document.getElementById('b-gm').onclick=()=>setGM(!GM);
+document.getElementById('b-plan').onclick=()=>setPlan(!PLAN);
+document.getElementById('b-props').onclick=()=>{ SHOWPROPS=!SHOWPROPS; updateHud(); draw(); };
 document.getElementById('b-zin').onclick=()=>zoomBy(1.25);
 document.getElementById('b-zout').onclick=()=>zoomBy(0.8);
 document.getElementById('b-fit').onclick=()=>{fit();draw();};
@@ -1015,6 +1039,7 @@ window.addEventListener('keydown',e=>{
   else if (e.key==='ArrowDown'||e.key==='PageDown') { e.preventDefault(); tryFloor(cur-1); }
   else if (e.key==='v'||e.key==='V') setMode(mode==='2d'?'3d':'2d');
   else if (e.key==='m'||e.key==='M') setGM(!GM);
+  else if (e.key==='p'||e.key==='P') setPlan(!PLAN);
   else if (e.key==='+'||e.key==='=') zoomBy(1.25);
   else if (e.key==='-') zoomBy(0.8);
 });
@@ -1043,10 +1068,11 @@ cv.addEventListener('pointerup',e=>{
       const x=Math.floor((e.clientX-v2.ox)/v2.s), y=Math.floor((e.clientY-v2.oy)/v2.s);
       if (x>=0&&y>=0&&x<GW&&y<GD) {
         const f=getFloor(cur), k=y*GW+x, ex=fog.exp[cur];
-        const seen = GM || (ex && ex[k]);
+        const seen = GM || PLAN || (ex && ex[k]);
         const inCore = x>=CORE.x&&x<CORE.x+CORE.s&&y>=CORE.y&&y<CORE.y+CORE.s;
-        sel = !seen ? -1 : f.rid[k]>=0 ? f.rid[k] : (inCore ? -2 : -1);
-        if (!GM && seen && f.g[k]!==0 && f.g[k]!==6) { fog.tok={f:cur,x,y}; fogReveal(); fogSave(); }   // il gruppo si sposta
+        const rr = f.rid[k];
+        sel = !seen ? -1 : (rr>=0 && !(PLAN && f.rooms[rr].secret)) ? rr : (inCore ? -2 : -1);
+        if (!GM && !PLAN && seen && f.g[k]!==0 && f.g[k]!==6) { fog.tok={f:cur,x,y}; fogReveal(); fogSave(); }   // il gruppo si sposta
         updateHud(); draw();
       }
     }
@@ -1058,7 +1084,7 @@ cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomBy(e.deltaY<0?1.12:1/1.
 window.addEventListener('resize',resize);
 
 if (fogLoad()) fogReveal(); else fogStart();
-if (!GM) cur = fog.tok.f;
+if (!GM && !PLAN) cur = fog.tok.f;
 resize(); updateHud(); draw();
 </script>
 </body>
