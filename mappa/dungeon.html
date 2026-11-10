@@ -874,11 +874,11 @@ function draw2D(){
   if (!GM && !PLAN) drawFog(f,s);
   if (f.level===0) entranceLinks().forEach(l => {
     if (!GM && !PLAN && !(fog.exp[cur] && fog.exp[cur][l.k])) return;     // si vede solo se l'ingresso è stato visto
-    ctx.strokeStyle='rgba(232,201,58,0.85)'; ctx.lineWidth=Math.max(2,s*.25); ctx.setLineDash([s*.5,s*.4]);
+    ctx.strokeStyle='rgba(232,201,58,0.85)'; ctx.lineWidth=1; ctx.setLineDash([s*.5,s*.4]);
     ctx.beginPath(); ctx.moveTo(l.ex*s,l.ey*s); ctx.lineTo(l.rx*s,l.ry*s); ctx.stroke(); ctx.setLineDash([]);
     const txt=(l.name ? l.name+' · ' : '')+l.m+' m', mx=(l.ex+l.rx)/2*s, my=(l.ey+l.ry)/2*s-9;
     ctx.font='11px "Courier New",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(txt,mx,my); ctx.fillStyle='#e8c93a'; ctx.fillText(txt,mx,my);
+    ctx.lineWidth=1; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(txt,mx,my); ctx.fillStyle='#e8c93a'; ctx.fillText(txt,mx,my);
   });
   if (!PLAN && fog.tok && fog.tok.f===cur) {
     const tx=(fog.tok.x+.5)*s, ty=(fog.tok.y+.5)*s;
