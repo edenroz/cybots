@@ -148,15 +148,8 @@ if (!poly) {
 }
 let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
 poly.forEach(([x,y]) => { minX=Math.min(minX,x); maxX=Math.max(maxX,x); minY=Math.min(minY,y); maxY=Math.max(maxY,y); });
-
-// --- CONFIGURAZIONE DIMENSIONI E CELLE ---
-const targetDivisions = 56; // Aumentalo (es. da 56 a 250) per avere MOLTE PIÙ CELLE (risoluzione finissima)
-// Abbassato il limite minimo a 0.05 per permettere celle inferiori al metro se necessario
-const CS = Math.max(0.05, Math.max(maxX-minX, maxY-minY) / targetDivisions);   
-
-const pad = 8; // Numero di celle di margine (padding) attorno al poligono (prima era fisso a 1)
-const GW = Math.ceil((maxX-minX)/CS) + pad * 2, GD = Math.ceil((maxY-minY)/CS) + pad * 2;
-
+const CS = Math.max(1, Math.max(maxX-minX, maxY-minY) / 56);   // metri per cella
+const GW = Math.ceil((maxX-minX)/CS) + 2, GD = Math.ceil((maxY-minY)/CS) + 2;
 function pointInPoly(px, py, pl) {
   let inside = false;
   for (let i = 0, j = pl.length-1; i < pl.length; j = i++) {
@@ -165,31 +158,13 @@ function pointInPoly(px, py, pl) {
   }
   return inside;
 }
-
 const mask = new Uint8Array(GW*GD);
 let maskCount = 0;
-
-// Ciclo aggiornato per rispettare il nuovo "pad" dinamico
-for (let y = pad; y < GD - pad; y++) {
-  for (let x = pad; x < GW - pad; x++) {
-    if (pointInPoly(minX + (x - pad + 0.5) * CS, maxY - (y - pad + 0.5) * CS, poly)) { 
-      mask[y * GW + x] = 1; 
-      maskCount++; 
-    }
-  }
+for (let y=1;y<GD-1;y++) for (let x=1;x<GW-1;x++) {
+  if (pointInPoly(minX+(x-1+.5)*CS, maxY-(y-1+.5)*CS, poly)) { mask[y*GW+x]=1; maskCount++; }
 }
-
-if (maskCount < 10) { 
-  for (let y = pad; y < GD - pad; y++) {
-    for (let x = pad; x < GW - pad; x++) {
-      mask[y * GW + x] = 1; 
-    }
-  }
-  maskCount = (GW - pad * 2) * (GD - pad * 2); 
-}
-
-// Allineato anche fpCells con il nuovo "pad"
-const fpCells = poly.map(([x, y]) => [(x - minX) / CS + pad, (maxY - y) / CS + pad]);
+if (maskCount < 10) { for (let y=1;y<GD-1;y++) for (let x=1;x<GW-1;x++) mask[y*GW+x]=1; maskCount=(GW-2)*(GD-2); }
+const fpCells = poly.map(([x,y]) => [(x-minX)/CS+1, (maxY-y)/CS+1]);
 // edifici circostanti (salvati da index.html al click su APRI DUNGEON): solo sagome accennate nella vista 3D
 let NEIGH = [];
 try { NEIGH = JSON.parse(localStorage.getItem('cydg-nb:' + SEED_STR) || '[]') || []; } catch(e) {}
