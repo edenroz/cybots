@@ -337,6 +337,31 @@ const FURN = {
   'Stanza segreta':[['crate','w',2],['shelf','w',1]]
 };
 
+/* collegamenti ingresso → strada più vicina (piano terra): per ogni ingresso, il punto della strada più
+   vicino (entro 150 m) e, se c'è, il nome della strada. Usato in 2D (piano terra) e in 3D. */
+let _EL = null;
+function entranceLinks(){
+  if (_EL) return _EL;
+  _EL = [];
+  if (!ROADS.length) return _EL;
+  const g = getFloor(NB).g;
+  for (let k=0;k<g.length;k++) if (g[k]===9) {
+    const ex=(k%GW)+.5, ey=((k/GW)|0)+.5; let best=null;
+    ROADS.forEach(r => { for (let i=0;i<r.pts.length-1;i++) {
+      const a=r.pts[i], b=r.pts[i+1], dx=b[0]-a[0], dy=b[1]-a[1], L=dx*dx+dy*dy;
+      let t = L ? ((ex-a[0])*dx+(ey-a[1])*dy)/L : 0; t=Math.max(0,Math.min(1,t));
+      const px=a[0]+t*dx, py=a[1]+t*dy, dd=Math.hypot(px-ex,py-ey);
+      if (!best || dd<best.d) best={d:dd,x:px,y:py};
+    }});
+    if (best && best.d*CS <= 150) {
+      let lab=null, ld=1e9;
+      RLAB.forEach(l => { const dd=Math.hypot(l.x-best.x,l.y-best.y)*CS; if (dd<ld && dd<70) { ld=dd; lab=l; } });
+      _EL.push({k, ex, ey, rx:best.x, ry:best.y, m:Math.round(best.d*CS), name:lab?lab.n:null});
+    }
+  }
+  return _EL;
+}
+
 function pick(a, rng){ return a[Math.floor(rng()*a.length)]; }
 function typeFor(theme, depth, areaM, rng, level){
   switch (theme) {
@@ -741,6 +766,14 @@ function drawDoor(t,x,y,s,f){
 function draw2D(){
   const f=getFloor(cur), g=f.g, s=v2.s, acc=accent(f);
   ctx.save(); ctx.translate(v2.ox, v2.oy);
+  // piano terra: le strade intorno all'edificio
+  if (f.level===0) ROADS.forEach(r => {
+    const major=['motorway','trunk','primary','secondary','tertiary'].includes(r.c);
+    ctx.beginPath(); r.pts.forEach(([x,y],k)=>k?ctx.lineTo(x*s,y*s):ctx.moveTo(x*s,y*s));
+    ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.strokeStyle='rgba(242,237,228,0.05)'; ctx.lineWidth=Math.max(3,(({motorway:10,trunk:9,primary:8,secondary:7,tertiary:6,minor:5,service:3,track:2.5})[r.c]||4)/CS*s); ctx.stroke();
+    ctx.strokeStyle=major?'rgba(0,255,242,0.35)':'rgba(255,140,241,0.3)'; ctx.lineWidth=1; ctx.stroke();
+  });
   // muri: cella piena, scura, tratteggiata
   ctx.fillStyle='#0d0c0b';
   f.wallCells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5));
@@ -818,6 +851,14 @@ function draw2D(){
     ctx.fillStyle = idx===sel ? '#00fff2' : 'rgba(242,237,228,0.95)'; ctx.fillText(lbl,cx,cy);
   });
   if (!GM) drawFog(f,s);
+  if (f.level===0) entranceLinks().forEach(l => {
+    if (!GM && !(fog.exp[cur] && fog.exp[cur][l.k])) return;     // si vede solo se l'ingresso è stato visto
+    ctx.strokeStyle='rgba(232,201,58,0.85)'; ctx.lineWidth=Math.max(2,s*.25); ctx.setLineDash([s*.5,s*.4]);
+    ctx.beginPath(); ctx.moveTo(l.ex*s,l.ey*s); ctx.lineTo(l.rx*s,l.ry*s); ctx.stroke(); ctx.setLineDash([]);
+    const txt=(l.name ? l.name+' · ' : '')+l.m+' m', mx=(l.ex+l.rx)/2*s, my=(l.ey+l.ry)/2*s-9;
+    ctx.font='11px "Courier New",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(txt,mx,my); ctx.fillStyle='#e8c93a'; ctx.fillText(txt,mx,my);
+  });
   if (fog.tok && fog.tok.f===cur) {
     const tx=(fog.tok.x+.5)*s, ty=(fog.tok.y+.5)*s;
     ctx.shadowColor=acc; ctx.shadowBlur=10; ctx.fillStyle='#f2ede4'; ctx.strokeStyle=acc; ctx.lineWidth=2;
@@ -854,6 +895,14 @@ function draw3D(){
     ctx.strokeStyle='rgba(242,237,228,0.06)'; ctx.lineWidth=Math.max(2,(RW[r.c]||4)/CS*v3.zoom*(0.4+0.6*Math.sin(v3.pitch))); ctx.stroke();
     ctx.strokeStyle=major?'rgba(0,255,242,0.40)':'rgba(255,140,241,0.32)'; ctx.lineWidth=1;
     ctx.setLineDash(r.c==='service'||r.c==='track'?[3,4]:[]); ctx.stroke(); ctx.setLineDash([]);
+  });
+  // ingressi: sentiero tratteggiato fino alla strada più vicina
+  entranceLinks().forEach(l => {
+    const a=P(l.ex,l.ey,z0), b=P(l.rx,l.ry,z0);
+    ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]);
+    ctx.strokeStyle='rgba(232,201,58,0.9)'; ctx.lineWidth=2; ctx.setLineDash([5,4]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#00fff2'; ctx.beginPath(); ctx.arc(a[0],a[1],4,0,7); ctx.fill();
+    ctx.fillStyle='#e8c93a'; ctx.beginPath(); ctx.arc(b[0],b[1],3,0,7); ctx.fill();
   });
   NEIGH.forEach(n => {
     const zt=z0+Math.min(n.h/FLOOR_H, 400)*GAP3;
