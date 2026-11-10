@@ -613,7 +613,7 @@ let mode = '2d';
 let GM = Q.get('gm') === '1';
 // PLANIMETRIA: tutta la pianta senza nebbia, ma senza oggetti/incontri, senza porte segrete e senza stanze segrete
 let PLAN = Q.get('plan') === '1' && !GM;
-let SHOWPROPS = Q.get('arredi') === '1';
+let SHOWPROPS = true//Q.get('arredi') === '1';
 let sel = -1;                   // indice stanza selezionata (-2 = nucleo)
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let W=0, HH=0;
