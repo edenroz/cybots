@@ -98,7 +98,7 @@ const SEED_HEX = hashStr(SEED_STR).toString(16).toUpperCase().padStart(8, '0');
 const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
 
 /* ---------- piani ---------- */
-const FLOOR_H = 2.65;                                  // metri per piano (533 m → 201 piani)
+const FLOOR_H = 3.65;                                  // metri per piano (533 m → 201 piani)
 const FL_RAW = Math.round(BH / FLOOR_H);
 const FL = Math.max(1, Math.min(1500, FL_RAW));
 const NB = 3 + (hashStr(SEED_STR + 'basement') % 4);   // piani interrati 3..6
