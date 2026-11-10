@@ -103,8 +103,13 @@ const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
 const FLOOR_H = 3.65;                                  // metri per piano (533 m → 201 piani)
 const FL_RAW = Math.round(BH / FLOOR_H);
 const FL = Math.max(1, Math.min(1500, FL_RAW));
-const NB = 3 + (hashStr(SEED_STR + 'basement') % 4);   // piani interrati 3..6
-const NL = NB + FL;                                    // livelli totali (indice 0 = più profondo)
+// Definiamo un minimo fisso (es. 1) e un massimo scalato in base a FL (es. 1 piano interrato ogni 4 fuori terra)
+const minNB = 1;
+const maxNB = Math.max(minNB, Math.floor(FL / 4)); // Più alto è FL, più alto è il tetto massimo interrato
+const range = maxNB - minNB + 1;
+
+// Calcoliamo NB usando l'hash all'interno del range dinamico
+const NB = minNB + (hashStr(SEED_STR + 'basement') % range);const NL = NB + FL;                                    // livelli totali (indice 0 = più profondo)
 const levelOf = i => i - NB;
 const labelOf = i => { const n = levelOf(i); return n < 0 ? 'S' + (-n) : 'P' + n; };
 
