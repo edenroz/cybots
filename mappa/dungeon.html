@@ -282,51 +282,322 @@ const SKEL = (function(){
 /* =========================================================================
    TESTI (modificabili): descrizioni, incontri, arredi
    ========================================================================= */
+
+/* =========================================================================
+   TESTI (modificabili): descrizioni, incontri, arredi
+   ========================================================================= */
+
 const COND = [
-  'Le luci al neon sfarfallano.','Odore di ozono e muffa.','Un vecchio olo-poster si stacca dalla parete.',
-  'Cavi tranciati penzolano dal soffitto.','Il ronzio di un condizionatore riempie la stanza.',
-  'Un graffito di gang copre metà parete.','Una pozza scura si allarga sul pavimento.',
-  'Una telecamera spenta punta nel vuoto.','L\'aria è densa di fumo e profumo sintetico.','Dal muro arriva il basso di una festa lontana.'
+  'Le luci al neon sfarfallano a intervalli irregolari, tingendo le pareti di un rosa malato. Ogni tanto una sezione del soffitto rimane completamente al buio.',
+  'L’aria puzza di ozono, muffa e plastica bruciata. L’odore è così persistente che sembra essersi impregnato persino nel cemento.',
+  'Un vecchio olo-poster pubblicitario si sta staccando dalla parete. La figura della modella continua a sorridere anche se metà del volto è ormai scomparsa.',
+  'Cavi tranciati penzolano dal soffitto come viscere nere. Alcuni sono ancora alimentati e producono minuscole scintille quando vengono mossi.',
+  'Il ronzio di un condizionatore industriale riempie la stanza. L’apparecchio sputa aria tiepida e polvere, ma il display indica una temperatura di diciotto gradi.',
+  'Un graffito di gang copre quasi interamente una parete. Qualcuno ha cercato di cancellarlo con vernice bianca, senza riuscire a nascondere il simbolo sottostante.',
+  'Una pozza scura si allarga lentamente sul pavimento. Potrebbe essere acqua contaminata, olio esausto o qualcosa di organico. Le impronte che la attraversano vanno in entrambe le direzioni.',
+  'Una telecamera di sorveglianza spenta punta verso un angolo vuoto. Il suo involucro è integro, ma qualcuno ha rimosso con cura l’obiettivo e il cablaggio.',
+  'L’aria è densa di fumo e profumo sintetico, una fragranza economica che cerca disperatamente di coprire qualcosa di molto meno gradevole.',
+  'Dal muro arriva il basso di una festa lontana. Il ritmo è distorto dalle tubature e sembra provenire da un piano che, secondo le planimetrie, non esiste.',
+  'La vernice si gonfia in grosse bolle umide. Sotto la superficie si intravedono vecchi strati di carta da parati e simboli tracciati con un pennarello nero.',
+  'Un display pubblicitario continua a trasmettere una promozione scaduta da undici anni. Il volto sorridente del testimonial presenta un evidente difetto di rendering.',
+  'Un tubo perde una sostanza lattiginosa che reagisce con il pavimento producendo piccole bolle. Qualcuno ha sistemato sotto una bacinella piena di mozziconi.',
+  'Il pavimento vibra leggermente a intervalli regolari. Non sembra provenire da macchinari presenti nell’edificio.',
+  'Una porta è stata riparata con lastre di metallo, viti e saldature grossolane. Sul lato interno qualcuno ha inciso una serie di nomi.',
+  'Un vecchio altoparlante gracchia annunci automatici incomprensibili. Ogni tanto interrompe la trasmissione per chiedere agli occupanti di evacuare.',
+  'Un odore acre di disinfettante copre quello di sangue vecchio. Le tracce di pulizia sono recenti, ma il lavoro è stato fatto in fretta.',
+  'La stanza è insolitamente calda. Una griglia di ventilazione soffia aria rovente e dall’interno proviene un rumore simile a unghie trascinate sul metallo.',
+  'Qualcuno ha lasciato una fila di candele consumate lungo il battiscopa. I mozziconi sono disposti con una precisione quasi rituale.',
+  'Un terminale abbandonato mostra ancora una schermata di accesso. Sul monitor lampeggia un messaggio: SESSIONE APERTA - UTENTE NON PRESENTE.'
 ];
+
 const DESC = {
-  'Soggiorno/cucina':['Divano consumato davanti a un olo-schermo, una cucina compatta con piatti accatastati.','Un monolocale lasciato in fretta: tazze ancora tiepide, un neon rosa sulla finestra.'],
-  'Camera da letto':['Un letto disfatto, un armadio a muro e uno scaffale di vecchi chip.','Branda e coperte termiche: qualcuno ci dorme a turni.'],
-  'Bagno':['Piastrelle crepate, un lavandino che gocciola, specchio incrinato.','Cabina sanitaria con il pannello di controllo bruciato.'],
-  'Ripostiglio':['Scope, bidoni e un carrello della manutenzione.','Scaffali di detersivi industriali e rotoli di cavo.'],
-  'Lavanderia comune':['Lavatrici a gettoni, una delle quali ronza da sola.','Cestelli di panni abbandonati e un cartello con le tariffe in crediti.'],
-  'Locale spazzatura':['Compattatore e cassonetti: il fetore è insopportabile.','Rifiuti accatastati, qualcosa si muove là sotto.'],
-  'Open space':['File di scrivanie con terminali in standby; schermi che mostrano ancora il turno di ieri.','Un labirinto di cubicoli, tazze di caffè freddo e post-it olografici.'],
-  'Sala riunioni':['Un lungo tavolo, un proiettore olografico morto e sedie rovesciate.','Vetrata oscurata, tavolo lucido e una lavagna cancellata di fretta.'],
-  'Reception':['Bancone, poltroncine e un\'IA di benvenuto che ripete sempre la stessa frase.','Un banco con registro visitatori e un tastierino per le porte interne.'],
-  'Pausa caffè':['Distributore automatico, microonde e un tavolino unto.','Un angolo ristoro con un cartello: "Il caffè è un servizio premium".'],
-  'Ufficio dirigenziale':['Scrivania pesante, piante finte e una cassaforte a muro.','Pelle sintetica, whisky di fabbrica e una vista che costa un affitto.'],
-  'Archivio':['Scaffali di vecchi server e fascicoli sigillati.','Corridoi di armadi metallici, ciascuno con un codice a barre.'],
-  'Sala server':['Rack ronzanti e aria gelida; un LED rosso lampeggia insistente.','Cavi a grappolo, ventole al massimo e un odore di plastica calda.'],
-  'Negozio':['Scaffali semivuoti, un bancone blindato e un\'insegna che tremola.','Merce di dubbia provenienza esposta su banchi di metallo.'],
-  'Chiosco':['Un banchetto stretto con la serranda mezza abbassata.','Un chiosco di noodle: la pentola è ancora calda.'],
-  'Guardiola':['Monitor delle telecamere, una poltrona e un fucile sotto il bancone.','Un piccolo posto di guardia con un termos e una radio gracchiante.'],
-  'Magazzino':['Casse impilate fino al soffitto, etichette sbiadite.','Scaffali metallici carichi di scatole di merce non dichiarata.'],
-  'Retrobottega':['Il retro di un negozio: scatoloni, un frigo e un ufficio improvvisato.','Merce in attesa di essere "ricollocata".'],
-  'Locale personale':['Armadietti, una panca e un calendario con donne e moto.','Spogliatoio con tute da lavoro e odore di sudore.'],
-  'Bar clandestino':['Bancone ricavato da un portellone, luci basse e musica sorda.','Un locale senza insegna: si entra dicendo il nome giusto.'],
-  'Garage':['Auto parcheggiate tra i pilastri; una perdita d\'olio disegna arcobaleni.','Rampa, pilastri, vernice gialla scrostata e sedili vuoti.'],
-  'Locale tecnico':['Tubi, quadri elettrici e valvole: tutto vibra.','Un groviglio di condutture e un manometro che segna rosso.'],
-  'Generatori':['Due generatori diesel in sala, caldissimi, assordanti.','File di gruppi elettrogeni e taniche di carburante.'],
-  'Deposito merci':['Pallet e container ancora sigillati con marchi sconosciuti.','Un deposito senza orari: la merce arriva di notte.'],
-  'Cella di sicurezza':['Una cella spoglia con una branda inchiodata al pavimento.','Sbarre, un secchio e graffi sul muro che contano i giorni.'],
-  'Cella frigorifera':['Il freddo ti prende alla gola: carne, scatole, forse altro.','Ganci appesi, brina sul pavimento e una porta che non si apre da dentro.'],
-  'Laboratorio clandestino':['Banchi pieni di cyberware smontato, saldatori e fiale.','Un laboratorio improvvisato: odore di solventi e ozono.'],
-  'Cisterna':['Una vasca allagata, l\'acqua è scura e immobile.','Pareti gocciolanti, passerelle arrugginite e un gorgoglio profondo.'],
-  'Camera blindata':['Una porta spessa, scaffali di cassette di sicurezza e silenzio assoluto.','Una piccola sala corazzata: chi la usa non vuole essere trovato.'],
-  'Salone panoramico':['Una vetrata enorme sulla città, divani bassi, un olo-camino.','Lusso sintetico: marmo finto, luci calde e un mini-bar.'],
-  'Suite':['Un letto enorme, un bagno privato e tende elettrocromatiche.','Una camera da lusso con una cassaforte dietro lo specchio.'],
-  'Studio':['Una scrivania ingombra di datashard e una libreria di carta, rarissima.','Un angolo di lavoro con tre monitor e un divano letto.'],
-  'Stanza segreta':['Nascosta dietro un finto muro: scaffali, casse e un odore di chiuso.','Un nascondiglio dimenticato, con segni di visite molto recenti.']
+  'Soggiorno/cucina': [
+    'Un divano sfondato occupa quasi tutto il soggiorno, rivolto verso un olo-schermo crepato che trasmette un notiziario senza audio. La cucina compatta è ricoperta di piatti sporchi, confezioni alimentari e stoviglie economiche. Sul frigorifero qualcuno ha attaccato fotografie stampate di persone che probabilmente non si vedono da anni.',
+    'Un monolocale arredato con mobili recuperati dalla strada. Due tazze sono ancora sul tavolo, una contiene un liquido ormai solidificato. Un neon rosa illumina la finestra oscurata da fogli di plastica. Sotto il lavello, un piccolo generatore alimenta qualcosa che ronza continuamente.',
+    'La cucina è separata dal soggiorno da un bancone di laminato scheggiato. Sul piano cottura una pentola carbonizzata è ancora collegata alla corrente. Il divano è coperto da coperte termiche e vecchi vestiti. Un terminale domestico continua a ricordare il pagamento dell’affitto.',
+    'Un ambiente sovraffollato, organizzato per ospitare più persone di quante ne possa contenere. Materassi pieghevoli, sedie spaiate e contenitori di cibo si contendono ogni centimetro. Qualcuno ha costruito una piccola parete divisoria con cartongesso e pannelli pubblicitari.',
+    'Un soggiorno sorprendentemente ordinato. Il divano è coperto da un telo, il pavimento è stato spazzato e sul tavolo non c’è un granello di polvere. L’unica anomalia è il televisore: mostra ininterrottamente una ripresa in diretta della porta d’ingresso.'
+  ],
+
+  'Camera da letto': [
+    'Un letto sfatto con materasso sottile, un armadio a muro e uno scaffale pieno di vecchi chip di memoria. Sulla parete ci sono fotografie, ricevute e un calendario fermo a un mese di parecchi anni fa. Il cassetto del comodino è stato forzato.',
+    'Una branda militare, coperte termiche e una lampada da lavoro fissata con nastro adesivo. Qualcuno sembra dormire qui a turni: ci sono più spazzolini, più paia di scarpe e diverse confezioni di stimolanti. Nessun oggetto personale.',
+    'La stanza è talmente piccola che il letto occupa quasi tutto lo spazio. Un armadio trabocca di vestiti sintetici e uniformi da lavoro. Sul muro, scritto con un pennarello, compare un elenco di debiti e nomi cancellati.',
+    'Un letto matrimoniale con lenzuola economiche e un vecchio ventilatore da soffitto. Sotto il materasso si intravede un involucro di plastica sigillato. La finestra è stata oscurata dall’interno con pannelli isolanti.',
+    'Una camera abbandonata in tutta fretta. Cassetti aperti, vestiti sul pavimento e un caricatore ancora inserito nella presa. Sul terminale personale è rimasto aperto un messaggio mai inviato.'
+  ],
+
+  'Bagno': [
+    'Piastrelle crepate, un lavandino che perde e uno specchio incrinato in più punti. Il rubinetto eroga acqua giallastra con un odore metallico. Qualcuno ha coperto il foro di ventilazione con una busta di plastica.',
+    'Una cabina sanitaria prefabbricata con il pannello di controllo bruciato. Il distributore automatico di salviette continua a funzionare, ma eroga strisce di carta termica. Sul pavimento c’è una montagna di confezioni di farmaci vuote.',
+    'Il bagno è ricoperto da piastrelle bianche ormai ingiallite. Una doccia senza tenda, uno scarico intasato e un WC che non smette di riempirsi. Sullo specchio qualcuno ha scritto un numero di telefono con il rossetto.',
+    'Un piccolo bagno condiviso, sporco ma ancora utilizzabile. Gli asciugamani sono appesi a un tubo arrugginito e una radio impermeabile trasmette musica religiosa a volume bassissimo.',
+    'Una vasca da bagno è stata trasformata in deposito. Contiene bottiglie d’acqua, batterie, cavi e un piccolo involucro avvolto in diversi strati di pellicola. Lo specchio è stato rimosso dalla parete.'
+  ],
+
+  'Ripostiglio': [
+    'Un locale stretto e senza finestre, stipato di scope, bidoni e attrezzi per la manutenzione. Una lampadina nuda pende dal soffitto. Dietro un carrello arrugginito si intravede una botola nel pavimento.',
+    'Scaffali metallici carichi di detersivi industriali, solventi e rotoli di cavo. Diverse confezioni sono state aperte e il loro contenuto travasato in bottiglie senza etichetta. Una tanica perde lentamente.',
+    'Un deposito improvvisato dove vengono accumulati tutti gli oggetti che nessuno vuole buttare. Vecchi terminali, sedie rotte, ventole e componenti elettronici sono ammassati fino al soffitto.',
+    'Il locale è chiuso da una porta leggera con un lucchetto nuovo. All’interno ci sono solo una cassetta degli attrezzi, una scala pieghevole e una sedia rivolta verso la parete.',
+    'Un ripostiglio insolitamente pulito. Ogni oggetto è etichettato e disposto con precisione. Su uno scaffale, una piccola telecamera registra continuamente l’ingresso.'
+  ],
+
+  'Lavanderia comune': [
+    'Una fila di lavatrici a gettoni occupa la parete principale. Una delle macchine ronza da sola nonostante il pannello sia spento. Cestelli di panni abbandonati marciscono sul pavimento e il listino prezzi è stato aggiornato con un pennarello.',
+    'Un ambiente umido e male illuminato. Le lavatrici sono vecchie, alcune tenute insieme da fascette e nastro isolante. Un distributore di detersivo è stato svuotato e riempito con una sostanza scura.',
+    'Cestini di plastica, sedie pieghevoli e una bacheca piena di annunci. Qualcuno cerca un coinquilino, qualcun altro vende un rene sintetico. Una macchina centrifuga emette colpi ritmici come se contenesse qualcosa di pesante.',
+    'La lavanderia è stata trasformata in un dormitorio temporaneo. Materassi e coperte occupano gli spazi tra le macchine. Un cartello vieta di utilizzare le lavatrici dopo le ventidue, per ragioni non specificate.'
+  ],
+
+  'Locale spazzatura': [
+    'Un compattatore industriale occupa il fondo del locale. I cassonetti sono traboccanti e il fetore è quasi insopportabile. Tra i rifiuti si distinguono imballaggi aziendali, vecchi componenti cybernetici e resti di pasti confezionati.',
+    'Sacchi neri e contenitori rovesciati ricoprono il pavimento. Qualcosa si muove sotto la massa di rifiuti, ma ogni volta che provi a guardare direttamente il rumore si interrompe.',
+    'Un ambiente caldo e infestato da insetti. Il compattatore è bloccato a metà corsa e sul suo bordo ci sono profondi graffi metallici. Un terminale di manutenzione segnala un malfunzionamento ignorato da 438 giorni.',
+    'I rifiuti sono stati accuratamente separati in pile diverse: plastica, metallo, organico e componenti elettronici. In un angolo, una montagna di vecchi chip è stata disposta come un piccolo altare.',
+    'Un locale apparentemente normale, con cassonetti industriali e un pavimento lavato di recente. La porta sul retro è stata saldata dall’interno. Sul muro qualcuno ha scritto: NON APRIRE DOPO IL TURNO.'
+  ],
+
+  'Open space': [
+    'File interminabili di scrivanie modulari, terminali in standby e sedie ergonomiche ormai distrutte. Gli schermi mostrano ancora le attività del turno precedente: ticket irrisolti, grafici di produttività e messaggi automatici di congratulazioni.',
+    'Un labirinto di cubicoli bassi, tazze di caffè freddo e post-it olografici. Le postazioni sono numerate, ma diverse targhette sono state rimosse. Una stampante continua a produrre fogli completamente neri.',
+    'L’ambiente è illuminato da pannelli LED bianchi che non lasciano ombre. Ogni scrivania è identica alle altre, con tastiera, terminale e una piccola pianta sintetica. Un display centrale mostra il rendimento individuale dei dipendenti.',
+    'Una parte dell’open space è stata evacuata. Le sedie sono rovesciate, i terminali strappati dalle prese e i divisori macchiati da schizzi scuri. Sulle pareti lampeggiano ancora gli avvisi motivazionali dell’azienda.',
+    'Postazioni vuote e una sola scrivania ancora occupata. Il terminale è acceso, la sedia è rivolta verso lo schermo e una tazza di caffè è ancora tiepida. Non c’è nessuno nella stanza.'
+  ],
+
+  'Sala riunioni': [
+    'Un lungo tavolo in materiale composito, sedie girevoli e un proiettore olografico ormai morto. Alcune sedie sono rovesciate e sul tavolo restano bicchieri, confezioni di stimolanti e un datashard dimenticato.',
+    'Una vetrata oscurata separa la sala dal resto dell’ufficio. Il tavolo è lucido e perfettamente pulito, ma la lavagna è stata cancellata in fretta. Restano visibili frammenti di diagrammi e una parola cerchiata più volte: TRADIMENTO.',
+    'La stanza è progettata per impressionare i clienti. Sedute imbottite, isolamento acustico e un sistema di registrazione integrato. Il pannello di controllo è stato manomesso e ora mostra un messaggio di errore permanente.',
+    'Un tavolo ovale circondato da sedie identiche. Ogni posto è contrassegnato con il nome di un dirigente, tranne uno. Davanti a quel posto c’è un bicchiere vuoto e un fascicolo sigillato.',
+    'Una sala riunioni abbandonata dopo una discussione violenta. Il proiettore riproduce ancora una diapositiva con il logo aziendale e la scritta: RISTRUTTURAZIONE DEL PERSONALE - FASE 3.'
+  ],
+
+  'Reception': [
+    'Un bancone di laminato, poltroncine imbottite e una pianta sintetica impolverata. L’IA di benvenuto ripete sempre la stessa frase, interrompendosi a metà per riavviare il programma. Il registro visitatori è ancora aperto.',
+    'Un banco reception con tastierino per le porte interne, scanner biometrici e un terminale di registrazione. Le credenziali dell’ultimo visitatore sono rimaste memorizzate sullo schermo.',
+    'L’ingresso è stato arredato per sembrare più accogliente di quanto sia realmente. Pareti chiare, musica ambientale e un distributore di acqua aromatizzata. Una telecamera segue ogni movimento nella stanza.',
+    'La reception è deserta. Sul bancone ci sono un mazzo di chiavi, una pistola stordente e una fotografia di gruppo con diversi volti cancellati digitalmente.',
+    'Una piccola area d’attesa con poltrone economiche e riviste aziendali. Il terminale di accoglienza richiede un codice che cambia ogni ora. Qualcuno ha scritto una sequenza di numeri sotto il bancone.'
+  ],
+
+  'Pausa caffè': [
+    'Un distributore automatico, un microonde ingiallito e un tavolino unto. Il distributore offre ancora caffè, ma il prezzo è aumentato tre volte rispetto all’ultimo aggiornamento. Una fila di bicchieri usati occupa il lavandino.',
+    'Un angolo ristoro con sedie di plastica e un frigorifero condiviso. Sullo sportello è appeso un cartello: IL CAFFÈ È UN SERVIZIO PREMIUM. Qualcuno ha aggiunto sotto: ANCHE L’ACQUA, A QUANTO PARE.',
+    'Il microonde è stato riparato con nastro isolante e una vite troppo grande. Sul tavolo ci sono confezioni di cibo sintetico, mozziconi e un giornale locale. Una piccola radio trasmette notizie di licenziamenti.',
+    'Una macchina del caffè professionale occupa il centro del locale. È ancora funzionante, ma qualcuno ha collegato al suo serbatoio un tubo proveniente da una tanica non identificata.',
+    'L’area ristoro è stata trasformata in un piccolo mercato nero. Dietro il distributore si scambiano farmaci, credenziali aziendali e componenti rubati.'
+  ],
+
+  'Ufficio dirigenziale': [
+    'Una scrivania massiccia, poltrona ergonomica in pelle sintetica e piante artificiali perfettamente curate. Una cassaforte a muro è nascosta dietro un quadro motivazionale. Il terminale è protetto da un sistema di autenticazione biometrica.',
+    'Pelle sintetica, whisky di fabbrica e una vista panoramica che costa più dell’affitto medio del quartiere. La scrivania è quasi vuota, fatta eccezione per un terminale blindato e un portafotografie rivolto verso il muro.',
+    'Un ufficio arredato con gusto aziendale aggressivo. Mobili scuri, illuminazione indiretta e una parete interamente occupata da premi e certificazioni. Un piccolo pulsante rosso è nascosto sotto la scrivania.',
+    'La stanza appartiene a qualcuno che non lavora più qui. La scrivania è stata svuotata, ma nell’armadio sono rimasti abiti costosi, documenti bruciacchiati e una valigia chiusa con un lucchetto elettronico.',
+    'Un ambiente isolato acusticamente, con vetri intelligenti e accesso controllato. Il terminale principale è spento, ma un piccolo monitor secondario mostra ancora una conversazione privata tra due dirigenti.'
+  ],
+
+  'Archivio': [
+    'Scaffali metallici stipati di vecchi server, fascicoli sigillati e supporti di memoria obsoleti. Le etichette sono quasi tutte illeggibili. Un terminale di consultazione richiede credenziali che non vengono più riconosciute.',
+    'Corridoi stretti tra armadi metallici, ciascuno contrassegnato da un codice a barre. Alcuni cassetti sono stati forzati e il loro contenuto sparso sul pavimento. Una luce di emergenza illumina una sola sezione.',
+    'L’archivio contiene documentazione cartacea risalente a prima della digitalizzazione aziendale. Le scatole sono numerate e ordinate cronologicamente. Una di esse è stata isolata con nastro rosso e reca la dicitura ACCESSO NEGATO.',
+    'Un locale climatizzato dove vecchi supporti dati vengono conservati in contenitori ignifughi. L’umidità è sotto controllo, ma il sistema di sicurezza segnala continui accessi non autorizzati.',
+    'Scaffali di datashard, microfilm e fascicoli personali. Alcuni documenti sono stati triturati e ricomposti alla meglio. Tra i fogli si intravedono fotografie di persone sottoposte a procedure mediche.'
+  ],
+
+  'Sala server': [
+    'Rack di server allineati in file regolari, ventole ad alta velocità e aria gelida che rende difficile respirare. Un LED rosso lampeggia su un’unità isolata. Il pannello di controllo segnala un processo attivo senza proprietario.',
+    'Cavi a grappolo attraversano il pavimento sopraelevato. Le ventole girano al massimo e l’odore di plastica calda è persistente. Alcuni rack sono stati aperti e i componenti interni rimossi con strumenti professionali.',
+    'Una sala server di vecchia generazione, con macchine rumorose e cablaggio disordinato. Un terminale mostra una serie di connessioni remote provenienti da indirizzi inesistenti. Il sistema continua a rifiutare ogni tentativo di arresto.',
+    'I rack sono immersi in una luce blu intermittente. Il sistema di raffreddamento funziona male e sul pavimento si accumula condensa. Un pannello laterale è stato rimosso dall’interno.',
+    'Un singolo server occupa una stanza altrimenti vuota. È collegato a una rete di alimentazione indipendente e circondato da telecamere. Sullo schermo compare una richiesta di accesso che riporta il nome di uno degli occupanti.'
+  ],
+
+  'Negozio': [
+    'Scaffali semivuoti, un bancone blindato e un’insegna al neon che tremola sopra l’ingresso. I pochi prodotti rimasti sono chiusi in contenitori trasparenti. Una telecamera finta sorveglia la cassa.',
+    'Merce di dubbia provenienza esposta su banchi di metallo: componenti cybernetici, batterie, vecchie armi e confezioni di stimolanti. I prezzi sono scritti a mano e non sembrano negoziabili.',
+    'Un piccolo esercizio commerciale che vende prodotti di prima necessità a prezzi gonfiati. Il proprietario ha installato sbarre alle finestre e un sistema di chiusura rinforzato. Dietro il bancone si intravede un fucile.',
+    'Il negozio è stato saccheggiato. Gli scaffali sono rovesciati, le vetrine distrutte e il registratore di cassa aperto. Sul muro qualcuno ha lasciato un messaggio rivolto al proprietario.',
+    'Un negozio ancora operativo, illuminato da luci calde e musica commerciale. I prodotti sono perfettamente disposti, ma le etichette riportano codici anziché nomi. Il proprietario non sembra interessato ai clienti.'
+  ],
+
+  'Chiosco': [
+    'Un banchetto stretto con la serranda mezza abbassata. Il proprietario vende sigarette sintetiche, bevande energetiche e piccoli oggetti elettronici recuperati. Un vecchio terminale registra ogni transazione.',
+    'Un chiosco di noodle aperto ventiquattr’ore su ventiquattro. La pentola è ancora calda e il brodo emana un odore intenso di spezie artificiali. Due sgabelli sono occupati da clienti che non parlano.',
+    'Una bancarella improvvisata sotto un’insegna luminosa. Sul bancone ci sono cibo confezionato, chip di intrattenimento e batterie contraffatte. Un cane sintetico dorme accanto alla cassa.',
+    'Un piccolo punto vendita incastrato tra due colonne portanti. La merce è nascosta sotto il bancone e viene mostrata solo dopo aver concordato il prezzo. Il proprietario controlla continuamente la strada.',
+    'Il chiosco è chiuso, ma dietro la serranda si intravede una luce accesa. Sul bancone interno è appoggiato un terminale con una conversazione ancora aperta.'
+  ],
+
+  'Guardiola': [
+    'Una postazione di sorveglianza con monitor delle telecamere, una poltrona reclinabile e un fucile nascosto sotto il bancone. Gli schermi mostrano corridoi vuoti, ma uno di essi presenta un ritardo di diversi secondi.',
+    'Un piccolo posto di guardia con un termos, una radio gracchiante e un registro dei turni. Le pagine più recenti sono state strappate. Sul muro è appesa una lista di persone da non far entrare.',
+    'La guardiola è protetta da vetri rinforzati e una porta blindata. Il sistema di controllo accessi è funzionante, ma il pulsante di apertura manuale è stato rimosso.',
+    'Un locale angusto dove una guardia sembra essersi addormentata. Sul tavolo ci sono una pistola, un pacchetto di sigarette e un terminale ancora collegato alla rete di sorveglianza.',
+    'Una postazione automatizzata. Nessun operatore, solo un sistema di riconoscimento facciale e un altoparlante che chiede ai visitatori di identificarsi. La voce sembra umana, ma non respira mai.'
+  ],
+
+  'Magazzino': [
+    'Casse impilate fino al soffitto, etichette sbiadite e scaffalature piegate dal peso. Alcuni colli sono stati aperti e richiusi con nastro diverso. Il pavimento è segnato da profonde tracce di carrelli.',
+    'Scaffali metallici carichi di scatole senza marchio e contenitori numerati. Una parte della merce è stata nascosta dietro un divisorio mobile. L’inventario sul terminale non corrisponde a quello fisico.',
+    'Un magazzino freddo e scarsamente illuminato. Le casse sono disposte in modo da lasciare un corridoio centrale. Da una scatola proviene un debole rumore ritmico.',
+    'Il locale è quasi vuoto. Restano solo pallet rotti, imballaggi e una gru a soffitto bloccata a metà corsa. Sul pavimento ci sono impronte fresche di scarpe da lavoro.',
+    'Una zona di stoccaggio trasformata in dormitorio clandestino. Dietro le casse sono stati sistemati materassi, fornelli portatili e una piccola antenna. Qualcuno ha cercato di rendere abitabile questo posto.'
+  ],
+
+  'Retrobottega': [
+    'Il retro di un negozio: scatoloni, un frigorifero rumoroso e un ufficio improvvisato ricavato da una vecchia scrivania. Sul muro sono appesi gli orari dei fornitori e una lista di debitori.',
+    'Merce in attesa di essere "ricollocata". Le scatole sono tutte aperte e il contenuto è stato diviso in piccoli lotti. Un terminale registra consegne che ufficialmente non sono mai avvenute.',
+    'Un ambiente stretto, pieno di imballaggi e materiali di consumo. Una porta secondaria conduce a un vicolo di servizio. La serratura è stata sostituita di recente.',
+    'Il retrobottega contiene un frigorifero industriale, un lavandino e una piccola cassaforte. Sul pavimento sono visibili tracce di trascinamento che terminano davanti a una parete apparentemente normale.',
+    'Un ufficio clandestino nascosto dietro il magazzino. Ci sono due terminali, una stampante di badge e un armadio pieno di uniformi aziendali di diverse taglie.'
+  ],
+
+  'Locale personale': [
+    'Armadietti metallici ammaccati, una panca di plastica e un calendario con donne e moto. Alcuni sportelli sono aperti e contengono effetti personali, fotografie e confezioni di stimolanti.',
+    'Uno spogliatoio con tute da lavoro appese, scarpe antinfortunistiche e un odore persistente di sudore. Un armadietto è stato chiuso con una catena anziché con la serratura originale.',
+    'Una piccola sala per il personale con distributore di acqua, sedie pieghevoli e una bacheca di comunicazioni interne. L’ultimo avviso riguarda una riduzione del personale del quaranta per cento.',
+    'Un ambiente trascurato, con armadietti sfondati e vestiti abbandonati. Su una panca è rimasto un terminale personale con una schermata di chiamata persa.',
+    'Lo spogliatoio è diviso in due sezioni: dipendenti ordinari e personale di sicurezza. La seconda è chiusa da un tastierino e sorvegliata da una telecamera.'
+  ],
+
+  'Bar clandestino': [
+    'Un bancone ricavato da un portellone industriale, luci basse e musica sorda che vibra nelle pareti. I clienti siedono in nicchie ricavate da vecchi contenitori di trasporto. Nessuno sembra interessato ai nuovi arrivati.',
+    'Un locale senza insegna: si entra dicendo il nome giusto. Il barista serve distillati fatti in casa e cocktail di sostanze sintetiche. Dietro il bancone sono appesi diversi documenti d’identità.',
+    'Un seminterrato arredato con divani recuperati, tavoli instabili e vecchi schermi. Un olo-jukebox riproduce musica illegale. In fondo alla sala, una porta conduce a una stanza riservata.',
+    'Il locale è affollato da lavoratori fuori turno, piccoli criminali e gente che non vuole essere riconosciuta. Le conversazioni si interrompono ogni volta che qualcuno apre la porta.',
+    'Un bar quasi deserto, illuminato da una sola insegna rossa. Sul bancone ci sono bicchieri sporchi e una pistola smontata. Dietro una tenda, qualcuno sta discutendo animatamente al telefono.'
+  ],
+
+  'Garage': [
+    'Auto parcheggiate tra pilastri di cemento, con una perdita d’olio che disegna arcobaleni sul pavimento. Una berlina ha il cofano aperto e il motore smontato. La rampa d’accesso è sorvegliata da una telecamera.',
+    'Una rampa in cemento, pilastri con vernice gialla scrostata e posti auto vuoti. Diverse targhe sono state rimosse e i numeri degli stalli coperti con vernice nera.',
+    'Il garage è pieno di veicoli cannibalizzati. Portiere, pneumatici e motori sono impilati contro le pareti. Un vecchio robot meccanico continua a spostare pezzi da una parte all’altra.',
+    'Una fila di motociclette modificate occupa il lato destro del locale. Al centro c’è un veicolo coperto da un telo impermeabile. Sul muro sono appese chiavi e targhe senza corrispondenza.',
+    'Un parcheggio sotterraneo apparentemente abbandonato. Le luci di emergenza sono ancora attive e una vettura ha il motore acceso. I fari illuminano una porta di servizio.'
+  ],
+
+  'Locale tecnico': [
+    'Tubi, quadri elettrici e valvole attraversano ogni parete. Tutto vibra leggermente, come se l’edificio fosse un enorme macchinario in funzione. Un pannello di controllo segnala tre guasti che nessuno ha mai riparato.',
+    'Un groviglio di condutture e cavi industriali. Un manometro segna rosso e una valvola emette un sibilo intermittente. Le istruzioni di sicurezza sono state coperte da adesivi pubblicitari.',
+    'Il locale contiene pompe, filtri e sistemi di ricircolo dell’aria. Una parte dell’impianto è stata modificata con tubazioni non standard. Sul pavimento si accumula una sostanza oleosa.',
+    'Un ambiente angusto, caldo e rumoroso. Un quadro elettrico è aperto e i circuiti sono stati collegati con cavi di colori diversi. Qualcuno ha lasciato un attrezzo ancora inserito tra i contatti.',
+    'Una sala tecnica automatizzata. Un terminale mostra lo stato di tutti gli impianti dell’edificio, ma alcune sezioni risultano disattivate manualmente. Il registro delle modifiche riporta un utente inesistente.'
+  ],
+
+  'Generatori': [
+    'Due generatori diesel occupano quasi interamente la sala. Il calore è insopportabile e il rumore costringe a urlare per comunicare. Taniche di carburante sono accatastate vicino alle prese d’aria.',
+    'File di gruppi elettrogeni collegati a un sistema di distribuzione improvvisato. Alcuni sono spenti, altri funzionano a pieno regime. Un tubo di scarico attraversa il muro e riversa i fumi in un corridoio.',
+    'Un generatore industriale è stato smontato e ricostruito con componenti di recupero. La macchina vibra violentemente e ogni tanto produce una fiammata blu dallo scarico.',
+    'La stanza è illuminata da lampadine alimentate direttamente dai generatori. Il pavimento è coperto di carburante e polvere metallica. Un quadro segnala un sovraccarico imminente.',
+    'Un impianto di emergenza automatizzato, progettato per mantenere attivi i servizi essenziali. Il sistema continua a consumare carburante anche se metà delle utenze risultano scollegate.'
+  ],
+
+  'Deposito merci': [
+    'Pallet e container ancora sigillati con marchi sconosciuti. Le etichette riportano codici di trasporto falsificati e date di consegna future. Un carrello elevatore è parcheggiato davanti a un container aperto.',
+    'Un deposito senza orari: la merce arriva di notte e sparisce prima dell’alba. Le casse sono tutte numerate, ma nessun inventario ufficiale risulta disponibile. Una piccola telecamera registra l’ingresso.',
+    'Container impilati su più livelli e corridoi stretti tra le scaffalature. Alcuni sigilli sono stati tagliati e sostituiti con copie contraffatte. Da uno dei container proviene un debole rumore meccanico.',
+    'Un magazzino di transito utilizzato per merci illegali. Armi, componenti medici e dispositivi di rete sono nascosti dietro imballaggi di prodotti alimentari.',
+    'Un enorme spazio industriale quasi vuoto. Al centro c’è un solo pallet avvolto in plastica nera, circondato da segni di trascinamento e impronte di scarponi.'
+  ],
+
+  'Cella di sicurezza': [
+    'Una cella spoglia con una branda inchiodata al pavimento, un lavandino in acciaio e una lampada protetta da una griglia. La porta non ha una maniglia interna. Sul muro qualcuno ha inciso una serie di date.',
+    'Sbarre, un secchio e graffi profondi sulle pareti che contano i giorni. Il materasso è stato strappato e il suo interno utilizzato per nascondere piccoli oggetti.',
+    'Una cella di contenimento con pareti imbottite e una telecamera nel soffitto. Il pannello di controllo è esterno e presenta segni di manomissione. Sul pavimento ci sono tracce di sangue ormai secco.',
+    'Una stanza di detenzione temporanea. La porta è aperta, ma il sistema continua a segnalare un occupante presente. Un altoparlante ripete istruzioni di sicurezza a intervalli regolari.',
+    'La cella è stata occupata da qualcuno che ha cercato di evadere. Le sbarre sono piegate, il lavandino è stato strappato dal muro e una grata di ventilazione è stata rimossa.'
+  ],
+
+  'Cella frigorifera': [
+    'Il freddo ti prende alla gola appena entri. Scaffali metallici contengono carne confezionata, scatole anonime e contenitori medici. Alcuni pacchi sono coperti da etichette che indicano materiale biologico.',
+    'Ganci appesi al soffitto, brina sul pavimento e una porta che non si apre dall’interno. Il compressore produce un rumore irregolare. In un angolo, una scatola è stata lasciata aperta.',
+    'Una cella frigorifera industriale con file di scaffali e contenitori sigillati. Il sistema di monitoraggio registra una temperatura diversa da quella indicata sul display.',
+    'Il pavimento è coperto da uno strato sottile di ghiaccio. Le pareti sono macchiate da segni scuri e il sistema di drenaggio è ostruito. Qualcuno ha trascinato qualcosa di pesante verso il fondo.',
+    'Un deposito refrigerato apparentemente normale. Le etichette delle confezioni riportano nomi di prodotti alimentari, ma i codici di lotto corrispondono a forniture ospedaliere.'
+  ],
+
+  'Laboratorio clandestino': [
+    'Banchi da lavoro pieni di cyberware smontato, saldatori, fiale e strumenti chirurgici di fortuna. Un braccio meccanico è fissato al soffitto e un terminale mostra schemi anatomici sovrapposti a circuiti elettronici.',
+    'Un laboratorio improvvisato dall’odore pungente di solventi e ozono. Le pareti sono rivestite con pannelli isolanti e il pavimento è coperto da teli monouso. Una vasca contiene liquido refrigerante.',
+    'Componenti cybernetici, organi sintetici e strumenti di precisione sono disposti su banchi metallici. Alcune parti sono etichettate con nomi e numeri identificativi. Un vecchio frigorifero medico è collegato a un generatore indipendente.',
+    'Un ambiente sporco ma sorprendentemente attrezzato. Il chirurgo lavora su una poltrona operatoria modificata, circondata da monitor e contenitori per rifiuti biologici. Sul muro è appesa una lista di prezzi.',
+    'Un laboratorio che sembra essere stato abbandonato durante un intervento. Gli strumenti sono ancora disposti sul tavolo e una macchina diagnostica continua a monitorare un corpo che non è più presente.'
+  ],
+
+  'Cisterna': [
+    'Una vasca allagata occupa quasi tutto il locale. L’acqua è scura, immobile e ricoperta da una pellicola oleosa. Una passerella metallica conduce a una valvola sul lato opposto.',
+    'Pareti gocciolanti, passerelle arrugginite e un gorgoglio profondo proveniente dalle tubature. La luce delle lampade si riflette sulla superficie dell’acqua, ma qualcosa interrompe periodicamente il riflesso.',
+    'Una cisterna di raccolta con scale verticali e condotti di scarico. Il livello dell’acqua è insolitamente alto e sul bordo sono rimasti segni di mani sporche.',
+    'Il locale è invaso da acqua contaminata fino alle ginocchia. Galleggiano bottiglie, cavi e pezzi di plastica. Una pompa funziona ancora, ma sembra aspirare qualcosa dal fondo.',
+    'Una grande vasca di cemento quasi vuota. Sul fondo si sono depositati fanghi industriali e detriti metallici. Un portello di manutenzione è parzialmente sommerso.'
+  ],
+
+  'Camera blindata': [
+    'Una porta spessa con serratura multipla protegge scaffali di cassette di sicurezza e contenitori ignifughi. L’interno è completamente insonorizzato. Una luce di emergenza illumina una sola cassetta lasciata aperta.',
+    'Una piccola sala corazzata: chi la usa non vuole essere trovato. Le pareti sono rivestite da pannelli antintrusione e un sistema di sorveglianza registra ogni movimento. Gli scaffali sono quasi tutti vuoti.',
+    'Un ambiente climatizzato e privo di finestre. Una cassaforte centrale è collegata a un terminale biometrico. Sul pavimento sono visibili segni di trascinamento, come se un contenitore molto pesante fosse stato spostato.',
+    'La camera blindata è stata aperta con una carica direzionale. Il telaio della porta è deformato e il sistema di sicurezza è fuori uso. All’interno rimangono solo frammenti di imballaggi e una cassetta ancora chiusa.',
+    'Scaffali numerati contengono documenti, crediti fisici e supporti di memoria. Ogni contenitore presenta un sigillo individuale. Un piccolo altoparlante chiede di confermare l’identità del proprietario.'
+  ],
+
+  'Salone panoramico': [
+    'Una vetrata enorme offre una vista spettacolare sulla città. Divani bassi, tavolini in vetro e un olo-camino simulano un lusso che non appartiene a questo edificio. Le luci esterne trasformano il vetro in uno specchio.',
+    'Lusso sintetico: marmo finto, illuminazione calda e un minibar rifornito di bottiglie contraffatte. I divani sono troppo puliti per essere utilizzati. Sul tavolo è rimasto un dispositivo per la privacy.',
+    'Un salone progettato per ricevere ospiti importanti. Le pareti sono rivestite con materiali fonoassorbenti e un sistema audio diffonde musica ambientale. Un pannello trasparente permette di controllare l’opacità delle vetrate.',
+    'La stanza è stata lasciata in disordine dopo una festa privata. Bicchieri rotti, cibo costoso e abiti abbandonati ricoprono il pavimento. Un olo-schermo continua a riprodurre immagini promozionali di una destinazione turistica.',
+    'Un ambiente panoramico quasi vuoto. Un solo divano è rivolto verso la città e accanto c’è un tavolino con un terminale acceso. Sullo schermo scorrono dati finanziari in tempo reale.'
+  ],
+
+  'Suite': [
+    'Un letto enorme, un bagno privato in materiali sintetici e tende elettrocromatiche che oscurano automaticamente le finestre. Il sistema domotico controlla luci, temperatura e accessi, ma non risponde ai comandi vocali.',
+    'Una camera di lusso con una cassaforte nascosta dietro lo specchio. Il letto è intatto e gli asciugamani sono ancora piegati. Sul minibar sono esposte bevande costose che nessuno ha mai aperto.',
+    'La suite è arredata con mobili minimalisti, superfici lucide e illuminazione regolabile. Un terminale personale è collegato alla rete privata dell’edificio. Sul comodino c’è un documento d’identità intestato a un’altra persona.',
+    'Una camera elegante che sembra essere stata preparata per un ospite importante. Il bagno è illuminato da pannelli color ambra e la vasca è già piena. Una valigia aperta contiene abiti, crediti e un’arma smontata.',
+    'Il lusso è ostentato in ogni dettaglio: letto king-size, sistema audio integrato e pareti rivestite in materiale fonoisolante. Una porta secondaria conduce a un piccolo ambiente senza finestre.'
+  ],
+
+  'Studio': [
+    'Una scrivania ingombra di datashard, appunti cartacei e dispositivi elettronici aperti. Una libreria di carta, ormai rarissima, occupa un’intera parete. Sul tavolo c’è una tazza con il fondo annerito.',
+    'Un angolo di lavoro con tre monitor, una sedia ergonomica e un divano letto. Gli schermi mostrano finestre di codice, messaggi privati e una serie di avvisi di sicurezza non letti.',
+    'Lo studio è organizzato in modo maniacale. Ogni cavo è etichettato, ogni dispositivo ha un posto preciso e gli appunti sono archiviati per data. Un piccolo scanner è nascosto sotto la scrivania.',
+    'Una stanza di lavoro improvvisata. La scrivania è stata ricavata da una porta appoggiata su due casse e i monitor sono di modelli diversi. Una parete è interamente coperta di diagrammi e fotografie.',
+    'Un ambiente silenzioso, con tende oscuranti e un sistema di isolamento acustico. Il terminale principale è spento, ma un dispositivo portatile continua a ricevere messaggi cifrati.'
+  ],
+
+  'Stanza segreta': [
+    'Nascosta dietro un finto muro, la stanza contiene scaffali, casse sigillate e vecchi dispositivi elettronici. L’aria è ferma e sa di polvere. Sul pavimento ci sono impronte che non sembrano appartenere a chi ha costruito il nascondiglio.',
+    'Un rifugio dimenticato con materasso, taniche d’acqua e una piccola riserva di cibo. Qualcuno è passato di recente: una coperta è ancora piegata male e un mozzicone non si è completamente raffreddato.',
+    'Una camera clandestina ricavata tra due intercapedini. Le pareti sono rivestite con materiale fonoassorbente e un piccolo ventilatore scarica l’aria in un condotto secondario. Su uno scaffale ci sono documenti falsi.',
+    'Il nascondiglio è stato costruito con cura. Contiene una radio, un terminale isolato dalla rete, una scorta di crediti e una mappa dell’edificio con alcuni locali evidenziati in rosso.',
+    'Una stanza minuscola, priva di mobili, con pareti coperte da vecchi ritagli e fotografie. Al centro è stato sistemato un terminale collegato a una batteria indipendente. Sullo schermo compare una sola parola: ASPETTA.',
+    'Un vano murato e riaperto più volte. Gli strati di cemento mostrano diverse riparazioni e una piccola griglia permette di osservare il corridoio esterno. Da qui qualcuno ha monitorato gli occupanti dell’edificio.'
+  ]
 };
-const DESC_DEF = {basement:'Un locale grezzo, cemento nudo e cavi a vista.',ground:'Uno spazio commerciale anonimo.',residential:'Una stanza di un alloggio sovraffollato.',office:'Uno spazio d\'ufficio impersonale.',penthouse:'Una stanza di lusso fin troppo pulita.'};
-const MON = ['Gang locale (2-4)','Droni di guardia','Squatter armati','Rottamai','Guardia SecCorp','Cyberpsicotico','Ratti mutanti','Sicari in attesa'];
-const LOOT = ['Cassaforte nascosta','Cyberware rubato','Datashard criptato','Crediti in un barattolo','Scorta di stim','Armi in una cassa'];
-const TRAP = ['Mina a filo','Torretta nascosta','Scarica elettrica','Allarme silenzioso','Gas soporifero'];
+
+const DESC_DEF = {
+  basement: 'Un locale grezzo e senza pretese, ricavato sotto il livello stradale. Cemento nudo, tubazioni a vista e cablaggi improvvisati attraversano pareti che trasudano umidità. La manutenzione sembra essere stata abbandonata da anni.',
+  ground: 'Uno spazio commerciale anonimo, progettato per massimizzare il passaggio di clienti e ridurre al minimo i costi. Insegne economiche, materiali sintetici e illuminazione artificiale cercano di nascondere il degrado accumulato.',
+  residential: 'Una stanza appartenente a un alloggio sovraffollato, dove privacy e spazio personale sono diventati beni di lusso. Mobili recuperati, elettrodomestici malfunzionanti e oggetti di uso quotidiano raccontano una vita vissuta sempre al limite.',
+  office: 'Uno spazio d’ufficio impersonale, costruito attorno a produttività, controllo e riduzione dei costi. Arredi modulari, illuminazione fredda e tecnologia aziendale obsoleta dominano l’ambiente.',
+  penthouse: 'Una stanza di lusso fin troppo pulita, isolata dal rumore e dal degrado della città. Materiali costosi, automazione domestica e arredi di design creano un ambiente artificiale, dove ogni dettaglio comunica status e potere.'
+};
+
+const MON = [
+  'Gang locale (2-4)','Droni di guardia','Squatter armati','Rottamai',
+  'Guardia SecCorp','Cyberpsicotico','Ratti mutanti','Sicari in attesa'
+];
+
+const LOOT = [
+  'Cassaforte nascosta','Cyberware rubato','Datashard criptato',
+  'Crediti in un barattolo','Scorta di stim','Armi in una cassa'
+];
+
+const TRAP = [
+  'Mina a filo','Torretta nascosta','Scarica elettrica',
+  'Allarme silenzioso','Gas soporifero'
+];
 
 const TYPE_COLOR = {'Soggiorno/cucina':'#3a2c2a','Camera da letto':'#33283a','Bagno':'#1f3a3a','Ripostiglio':'#2e2a22','Lavanderia comune':'#22343a','Locale spazzatura':'#2a2e22',
   'Open space':'#242a3a','Sala riunioni':'#2a2f42','Reception':'#3a3a2a','Pausa caffè':'#3a3522','Ufficio dirigenziale':'#3a2a3a','Archivio':'#33302a','Sala server':'#1f3340',
