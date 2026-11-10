@@ -162,6 +162,15 @@ const fpCells = poly.map(([x,y]) => [(x-minX)/CS+1, (maxY-y)/CS+1]);
 let NEIGH = [];
 try { NEIGH = JSON.parse(localStorage.getItem('cydg-nb:' + SEED_STR) || '[]') || []; } catch(e) {}
 NEIGH = NEIGH.filter(n => n && Array.isArray(n.p) && n.p.length>=3).map(n => ({h:n.h, c:n.p.map(([dx,dy]) => [(dx-minX)/CS+1, (maxY-dy)/CS+1])}));
+// strade vicine e nomi (salvati da index.html)
+let ROADS = [], RLAB = [];
+try {
+  const j = JSON.parse(localStorage.getItem('cydg-rd:' + SEED_STR) || 'null');
+  if (j) {
+    ROADS = (j.r||[]).map(r => ({c:r.c, pts:r.p.map(([dx,dy]) => [(dx-minX)/CS+1, (maxY-dy)/CS+1])}));
+    RLAB  = (j.l||[]).map(l => ({n:l.n, t:l.t, x:(l.x-minX)/CS+1, y:(maxY-l.y)/CS+1}));
+  }
+} catch(e) {}
 
 /* ---------- nucleo scale/ascensore (stessa posizione a ogni piano) ---------- */
 const CORE = (function(){
@@ -835,6 +844,17 @@ function draw3D(){
   const cx=CORE.x+CORE.s/2, cy=CORE.y+CORE.s/2;
   // sagome degli edifici intorno: pianta a terra + tetto + spigoli, molto tenui
   const z0=NB*GAP3;
+  // strade: fascia tenue + linea centrale (ciano le principali, rosa le minori, come in mappa)
+  const RW={motorway:10,trunk:9,primary:8,secondary:7,tertiary:6,minor:5,service:3,track:2.5};
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  ROADS.forEach(r => {
+    const major=['motorway','trunk','primary','secondary','tertiary'].includes(r.c);
+    const pp=r.pts.map(([x,y])=>P(x,y,z0));
+    ctx.beginPath(); pp.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
+    ctx.strokeStyle='rgba(242,237,228,0.06)'; ctx.lineWidth=Math.max(2,(RW[r.c]||4)/CS*v3.zoom*(0.4+0.6*Math.sin(v3.pitch))); ctx.stroke();
+    ctx.strokeStyle=major?'rgba(0,255,242,0.40)':'rgba(255,140,241,0.32)'; ctx.lineWidth=1;
+    ctx.setLineDash(r.c==='service'||r.c==='track'?[3,4]:[]); ctx.stroke(); ctx.setLineDash([]);
+  });
   NEIGH.forEach(n => {
     const zt=z0+Math.min(n.h/FLOOR_H, 400)*GAP3;
     const gp=n.c.map(([x,y])=>P(x,y,z0)), rp=n.c.map(([x,y])=>P(x,y,zt));
@@ -874,6 +894,13 @@ function draw3D(){
   const a=P(cx,cy,0), b=P(cx,cy,(NL-1)*GAP3);
   ctx.strokeStyle='rgba(232,201,58,0.8)'; ctx.setLineDash([3,3]); ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); ctx.setLineDash([]);
+  // nomi delle strade più vicine
+  ctx.font='10px "Courier New",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  RLAB.forEach(l => {
+    const p=P(l.x,l.y,z0);
+    ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(l.n,p[0],p[1]);
+    ctx.fillStyle=l.t==='major'?'#00fff2':'#ff8cf1'; ctx.fillText(l.n,p[0],p[1]);
+  });
 }
 
 function draw(){

@@ -2917,6 +2917,45 @@ function storeDungeonNeighbors(lat, lng) {
       });
     }));
     out.sort((a, b) => a.d - b.d);
+    // strade vicine (linee) + nomi cyberpunk delle più vicine, per la vista 3D del dungeon
+    try {
+      const R2 = 200, roads = [], seenR = new Set();
+      const CLS = ['motorway','trunk','primary','secondary','tertiary','minor','service','track'];
+      const linesOf = g => !g ? [] : g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+      map.querySourceFeatures('openmaptiles', { sourceLayer: 'transportation' }).forEach(f => {
+        const cls = f.properties && f.properties.class;
+        if (!CLS.includes(cls)) return;
+        linesOf(f.geometry).forEach(line => {
+          let run = [];
+          const flush = () => {
+            if (run.length >= 2) {
+              const key = cls + JSON.stringify(run[0]) + JSON.stringify(run[run.length - 1]);
+              if (!seenR.has(key)) { seenR.add(key); roads.push({ c: cls, p: run }); }
+            }
+            run = [];
+          };
+          line.forEach(([x, y]) => {
+            const dx = (x - lng) * kx, dy = (y - lat) * ky;
+            if (Math.hypot(dx, dy) <= R2) run.push([Math.round(dx * 10) / 10, Math.round(dy * 10) / 10]); else flush();
+          });
+          flush();
+        });
+      });
+      const nm = new Map();
+      map.querySourceFeatures('openmaptiles', { sourceLayer: 'transportation_name' }).forEach(f => {
+        if (f.id === undefined || f.id === null) return;
+        const type = classToStreetType(f.properties && f.properties.class);
+        const name = cyberHash(f.id, type);
+        let best = null;
+        linesOf(f.geometry).forEach(line => line.forEach(([x, y]) => {
+          const dx = (x - lng) * kx, dy = (y - lat) * ky, d = Math.hypot(dx, dy);
+          if (d <= R2 && (!best || d < best.d)) best = { d, x: Math.round(dx * 10) / 10, y: Math.round(dy * 10) / 10 };
+        }));
+        if (best && (!nm.has(name) || nm.get(name).d > best.d)) nm.set(name, { n: name, t: type, x: best.x, y: best.y, d: best.d });
+      });
+      const labels = Array.from(nm.values()).sort((a, b) => a.d - b.d).slice(0, 10).map(({ n, t, x, y }) => ({ n, t, x, y }));
+      localStorage.setItem('cydg-rd:' + lat.toFixed(6) + ',' + lng.toFixed(6), JSON.stringify({ r: roads.slice(0, 300), l: labels }));
+    } catch (e) { /* senza strade: il dungeon si apre comunque */ }
     localStorage.setItem('cydg-nb:' + lat.toFixed(6) + ',' + lng.toFixed(6),
       JSON.stringify(out.slice(0, 80).map(({ h, p }) => ({ h, p }))));
   } catch (e) { /* storage non disponibile: il dungeon si apre senza sagome intorno */ }
