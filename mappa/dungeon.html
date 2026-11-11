@@ -41,7 +41,7 @@
 <canvas id="cv"></canvas>
 <div id="title" class="box"><h1><span>C</span>Y // DUNGEON</h1><div class="meta" id="meta"></div></div>
 <div id="side" class="box"><h3 id="side-h">CHIAVE</h3><div id="side-list"></div>
-  <div class="k"><span style="color:#f2ede4">●</span> gruppo: clicca una cella esplorata per muoverti &nbsp; ▲▼ scale &nbsp; E ascensore &nbsp; <span style="color:#e8c93a">▮</span> porta &nbsp; <span style="color:#ff5a5a">▮</span> chiusa a chiave &nbsp; ⌒ arco<br>
+  <div class="k"><span style="color:#f2ede4">●</span> gruppo: clicca una cella esplorata per muoverti &nbsp; ▲▼ scale &nbsp; E ascensore &nbsp; <span style="color:#e8c93a">▮</span> porta &nbsp; <span style="color:#ff5a5a">▮</span> chiusa a chiave &nbsp; ⌒ arco &nbsp; <span style="color:#ffb36b">●</span> passanti<br>
   <span class="gmk" style="display:none"><span style="color:#ff2ee6">S</span> porta segreta &nbsp; <span style="color:#ff5a5a">M</span> ostile &nbsp; <span style="color:#e8c93a">$</span> bottino &nbsp; <span style="color:#ff2ee6">!</span> trappola</span></div></div>
 <div id="bar" class="box">
   <button id="b-down" title="Piano inferiore (↓)">▼</button>
@@ -52,6 +52,7 @@
   <button id="b-gm" title="Mostra tutto: segreti, mostri, trappole, niente nebbia (M)">MASTER</button>
   <button id="b-plan" title="Planimetria: tutta la pianta, senza arredi, incontri né porte e stanze segrete (P)">PLANIMETRIA</button>
   <button id="b-props" style="display:none" title="Mostra/nascondi gli arredi">ARREDI</button>
+  <button id="b-anim" class="on" title="Animazioni: luci, passanti, acqua">ANIM</button>
   <button id="b-fog" title="Azzera la nebbia di guerra" style="display:none">RESET NEBBIA</button>
   <button id="b-zout">−</button><button id="b-zin">+</button><button id="b-fit" title="Ricentra">⌖</button>
 </div>
@@ -148,7 +149,7 @@ if (!poly) {
 }
 let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
 poly.forEach(([x,y]) => { minX=Math.min(minX,x); maxX=Math.max(maxX,x); minY=Math.min(minY,y); maxY=Math.max(maxY,y); });
-const CS = Math.max(1, Math.max(maxX-minX, maxY-minY) / 56);   // metri per cella
+const CS = Math.max(0.8, Math.max(maxX-minX, maxY-minY) / 72);   // metri per cella
 const GW = Math.ceil((maxX-minX)/CS) + 2, GD = Math.ceil((maxY-minY)/CS) + 2;
 function pointInPoly(px, py, pl) {
   let inside = false;
@@ -210,7 +211,7 @@ const SKEL = (function(){
   const xy = (u,v) => horiz ? [u,v] : [v,u];
   const corr = new Uint8Array(GW*GD);
   const put = (u,v) => { const [x,y]=xy(u,v); if (x>0&&y>0&&x<GW-1&&y<GD-1&&mask[y*GW+x]) corr[y*GW+x]=1; };
-  const cw = Math.min(GW,GD) >= 30 ? 2 : 1;
+  const cw = Math.min(GW,GD)*CS >= 16 ? Math.max(1,Math.min(3,Math.round(1.8/CS))) : 1;
   const v0 = horiz?CORE.y:CORE.x, u0 = horiz?CORE.x:CORE.y;
   const sv = v0 + ((CORE.s - cw) >> 1);
   // corridoio principale (passa dal nucleo)
@@ -220,8 +221,8 @@ const SKEL = (function(){
     if (a>=0) { ends.push(xy(a,sv)); if (b!==a) ends.push(xy(b,sv)); } }
   // corridoi trasversali (edifici lunghi)
   const cross = [];
-  if (V >= 16) {
-    const n = Math.floor((U-2)/22);
+  if (V >= 20) {
+    const n = Math.floor((U-2)/28);
     for (let k=1;k<=n;k++) {
       const u = 1 + Math.round((U-2)*k/(n+1)) + Math.floor((rng()-.5)*4);
       if (Math.abs(u-(u0+(CORE.s>>1))) <= 4) continue;
@@ -235,7 +236,7 @@ const SKEL = (function(){
   const out = [];
   while (bands.length) {
     const [va,vb] = bands.pop();
-    if (vb-va+1 >= 19) {
+    if (vb-va+1 >= 24) {
       const vc = va + ((vb-va)>>1);
       for (let u=1;u<U-1;u++) put(u,vc);
       bands.push([va,vc-2],[vc+2,vb]);
@@ -541,6 +542,24 @@ const DESC = {
     'Un ambiente silenzioso, con tende oscuranti e un sistema di isolamento acustico. Il terminale principale è spento, ma un dispositivo portatile continua a ricevere messaggi cifrati.'
   ],
 
+  'Serra idroponica': [
+    'File di vasche luminose con piante dalle foglie troppo lucide. Pompe e timer sibilano sotto i banchi, e l’aria umida sa di fertilizzante e ozono. Qualcuno ha etichettato alcune piante con nomi di persone.',
+    'Un orto verticale illuminato da lampade viola. Le piante sono rigogliose, ma le radici affondano in una poltiglia grigia che non è terra. Un cartello avverte di non raccogliere nulla senza permesso.',
+    'Una serra improvvisata in un ex appartamento: tubi di plastica, bacinelle e un impianto di irrigazione rubato al piano di sopra. Tra le foglie si nasconde una sacca sigillata.'
+  ],
+
+  'Officina': [
+    'Un banco da lavoro massiccio coperto di utensili, saldatori e pezzi di motore. L’aria è satura di fumo di saldatura e olio bruciato. Una radio sputa musica distorta tra una scintilla e l’altra.',
+    'Una piccola officina di riparazioni, tra pezzi cannibalizzati e un sollevatore idraulico gemente. Sulla parete sono appesi tariffari scritti a mano: il prezzo cambia se non fai domande.',
+    'Attrezzi in ordine maniacale, un compressore che pompa a intervalli e una lavagna con elenco di lavori. Un ex-veicolo smontato occupa il centro del locale.'
+  ],
+
+  'Mensa': [
+    'Lunghi tavoli di plastica, vassoi impilati e un bancone da cui esce vapore dall’odore dubbio. Il menu olografico offre tre piatti, tutti “proteico-neutri”. Il vociare è costante e opprimente.',
+    'Una mensa aziendale al limite della capienza. Le code serpeggiano tra i tavoli, i distributori di bevande sono presi d’assalto e un altoparlante ricorda i tempi massimi di pausa.',
+    'Un refettorio improvvisato, con pentoloni su fornelli da campo e sedie spaiate. Le scodelle sono già pagate: i crediti sono scalati direttamente dal polso, senza chiedere.'
+  ],
+
   'Stanza segreta': [
     'Nascosta dietro un finto muro, la stanza contiene scaffali, casse sigillate e vecchi dispositivi elettronici. L’aria è ferma e sa di polvere. Sul pavimento ci sono impronte che non sembrano appartenere a chi ha costruito il nascondiglio.',
     'Un rifugio dimenticato con materasso, taniche d’acqua e una piccola riserva di cibo. Qualcuno è passato di recente: una coperta è ancora piegata male e un mozzicone non si è completamente raffreddato.',
@@ -578,7 +597,31 @@ const TYPE_COLOR = {'Soggiorno/cucina':'#3a2c2a','Camera da letto':'#33283a','Ba
   'Open space':'#242a3a','Sala riunioni':'#2a2f42','Reception':'#3a3a2a','Pausa caffè':'#3a3522','Ufficio dirigenziale':'#3a2a3a','Archivio':'#33302a','Sala server':'#1f3340',
   'Negozio':'#3a3522','Chiosco':'#3a3022','Guardiola':'#2a3a2a','Magazzino':'#2e2a22','Retrobottega':'#2c2822','Locale personale':'#2a2a33','Bar clandestino':'#3a2238',
   'Garage':'#262626','Locale tecnico':'#2b2b33','Generatori':'#38281e','Deposito merci':'#332a22','Cella di sicurezza':'#2a2a2a','Cella frigorifera':'#1e3038',
-  'Laboratorio clandestino':'#2d3a1f','Cisterna':'#1d2a38','Camera blindata':'#33302a','Salone panoramico':'#40283a','Suite':'#38283e','Studio':'#2a3340','Stanza segreta':'#3a2030'};
+  'Laboratorio clandestino':'#2d3a1f','Cisterna':'#1d2a38','Camera blindata':'#33302a','Salone panoramico':'#40283a','Suite':'#38283e','Studio':'#2a3340','Stanza segreta':'#3a2030','Serra idroponica':'#1f3a24','Officina':'#3a2e1f','Mensa':'#3a2a26'};
+
+/* ambiente: luci per tipo [colore rgb, intensità, modo], decori per tema, PNG per tipo [min,max], rumori */
+const LIGHT_BY_TYPE = {'Bar clandestino':['255,46,230',.16,'pulse'],'Sala server':['0,255,242',.12,'pulse'],'Laboratorio clandestino':['120,255,60',.12,'flicker'],
+  'Suite':['255,190,110',.10,'steady'],'Salone panoramico':['255,170,120',.10,'steady'],'Generatori':['255,140,40',.13,'flicker'],'Cella frigorifera':['120,190,255',.12,'steady'],
+  'Negozio':['232,201,58',.08,'flicker'],'Chiosco':['255,46,230',.10,'flicker'],'Serra idroponica':['150,255,120',.12,'pulse'],'Officina':['255,150,50',.09,'flicker'],
+  'Mensa':['255,220,160',.08,'steady'],'Camera blindata':['255,60,60',.08,'pulse'],'Cella di sicurezza':['255,60,60',.06,'flicker']};
+const DECOR = {
+  residential:[['plant','w',.5],['tv','w',.35],['rug','r',.4],['locker','w',.1]],
+  office:[['plant','w',.55],['terminal','w',.35],['vend','w',.15],['rug','r',.15]],
+  ground:[['barrel','w',.3],['vend','w',.2],['terminal','w',.15],['plant','w',.15]],
+  basement:[['barrel','w',.55],['crate','w',.3],['locker','w',.15]],
+  penthouse:[['plant','w',.9],['rug','r',.8],['tv','w',.5]]
+};
+const SKIP_DECOR = new Set(['Bagno','Cisterna','Cella frigorifera','Camera blindata','Ripostiglio','Locale spazzatura','Cella di sicurezza','Stanza segreta']);
+const NPC_N = {'Soggiorno/cucina':[0,2],'Camera da letto':[0,1],'Open space':[1,4],'Sala riunioni':[0,3],'Reception':[0,1],'Pausa caffè':[0,2],'Negozio':[1,1],'Chiosco':[1,1],
+  'Guardiola':[1,1],'Bar clandestino':[3,6],'Mensa':[3,6],'Laboratorio clandestino':[1,2],'Magazzino':[0,2],'Garage':[0,2],'Officina':[1,2],'Serra idroponica':[0,2],
+  'Salone panoramico':[0,3],'Studio':[0,1],'Suite':[0,1],'Locale personale':[0,1],'Lavanderia comune':[0,2]};
+const AMB = {
+  basement:['Gocciolio costante da qualche parte nel buio.','Un rombo sordo di tubature sotto i piedi.','Squittii di ratti dietro le pareti.','Silenzio innaturale, rotto a tratti da un click metallico.'],
+  ground:['Il brusio della strada filtra dalle vetrate, con clacson e sirene lontane.','Voci concitate in un dialetto che non riconosci.','Un jingle pubblicitario ripetuto in loop da un altoparlante.','Passi veloci sul pavimento, avanti e indietro.'],
+  residential:['Una coppia litiga dietro la parete, in una lingua metà inglese metà slang.','Un neonato piange da qualche appartamento vicino.','Musica distorta dal vicino di sopra; il soffitto vibra a ritmo.','Odore di noodle sintetici e disinfettante.'],
+  office:['Un click di tastiere, instancabile come pioggia.','Una voce sintetica annuncia la fine del turno a nessuno in particolare.','Il ronzio freddo dei neon, a tratti una sezione si spegne.','Una stampante lontana sputa fogli senza sosta.'],
+  penthouse:['Il silenzio costoso di un ambiente insonorizzato.','Musica d’ambiente a volume quasi inudibile.','Un climatizzatore sussurra, poi tace del tutto.','Una voce d’IA domestica sembra rispondere a una domanda mai fatta.']
+};
 
 /* arredi: [tipo, dove, quantità]  dove: w=lungo i muri, i=interno, g=griglia (probabilità), r=casuale (probabilità) */
 const FURN = {
@@ -612,7 +655,10 @@ const FURN = {
   'Lavanderia comune':[['machine','w',3]],
   'Locale spazzatura':[['crate','r',.3]],
   'Locale personale':[['shelf','w',2],['table','i',1]],
-  'Stanza segreta':[['crate','w',2],['shelf','w',1]]
+  'Stanza segreta':[['crate','w',2],['shelf','w',1]],
+  'Serra idroponica':[['plant','g',.5],['table','i',1]],
+  'Officina':[['machine','w',2],['table','i',1],['crate','r',.1],['locker','w',1]],
+  'Mensa':[['table','g',.45],['counter','w',2],['vend','w',1]]
 };
 
 /* collegamenti ingresso → strada più vicina (piano terra): per ogni ingresso, il punto della strada più
@@ -644,21 +690,22 @@ function pick(a, rng){ return a[Math.floor(rng()*a.length)]; }
 function typeFor(theme, depth, areaM, rng, level){
   switch (theme) {
     case 'residential':
-      if (depth <= 1) return areaM >= 12 ? 'Soggiorno/cucina' : pick(['Ripostiglio','Lavanderia comune','Locale spazzatura'], rng);
+      if (depth <= 1) { if (areaM >= 24 && rng() < .12) return 'Serra idroponica'; return areaM >= 12 ? 'Soggiorno/cucina' : pick(['Ripostiglio','Lavanderia comune','Locale spazzatura'], rng); }
       return areaM <= 12 ? 'Bagno' : 'Camera da letto';
     case 'penthouse':
       if (depth <= 1) return areaM >= 60 ? 'Salone panoramico' : 'Studio';
       return areaM <= 14 ? 'Bagno' : 'Suite';
     case 'office':
+      if (depth <= 1 && areaM >= 35 && rng() < .12) return 'Mensa';
       if (depth <= 1) return areaM < 24 ? pick(['Reception','Pausa caffè'], rng) : (rng() < (areaM >= 45 ? .75 : .35) ? 'Open space' : 'Sala riunioni');
       return areaM <= 9 ? 'Bagno' : pick(['Ufficio dirigenziale','Archivio','Sala server'], rng);
     case 'ground':
       if (depth <= 1) return rng()<.12 ? 'Bar clandestino' : areaM >= 18 ? 'Negozio' : pick(['Chiosco','Guardiola'], rng);
-      return areaM <= 9 ? 'Bagno' : pick(['Magazzino','Retrobottega','Locale personale'], rng);
+      return areaM <= 9 ? 'Bagno' : pick(areaM >= 16 ? ['Magazzino','Retrobottega','Locale personale','Officina'] : ['Magazzino','Retrobottega','Locale personale'], rng);
     default:
       if (level === -1) { if (depth <= 1) return areaM >= 40 ? 'Garage' : 'Magazzino'; return pick(['Locale tecnico','Magazzino','Cella di sicurezza'], rng); }
       if (depth <= 1) return pick(['Locale tecnico','Generatori','Deposito merci'], rng);
-      return pick(['Laboratorio clandestino','Cisterna','Camera blindata','Cella frigorifera'], rng);
+      return pick(['Laboratorio clandestino','Cisterna','Camera blindata','Cella frigorifera','Officina'], rng);
   }
 }
 
@@ -773,7 +820,7 @@ function genFloor(i) {
   for (let a=0;a<NN;a++) adj[a].forEach((c,b) => {
     if (b<=a || !visited.has(a) || !visited.has(b) || hasDoor.has(dkey(a,b))) return;
     const ra=roomOf(a), rb=roomOf(b); let p;
-    if (ra && rb) p=.14; else if (!ra && !rb) p=.5; else p = (ra||rb).pub ? .5 : .25;
+    if (ra && rb) p=.2; else if (!ra && !rb) p=.5; else p = (ra||rb).pub ? .5 : .25;
     if ((ra&&ra.drop)||(rb&&rb.drop)) return;
     if (rng()<p) addDoor(a,b);
   });
@@ -812,6 +859,11 @@ function genFloor(i) {
     if (theme==='ground' && !r.secret && dp<=1 && r.area<=40 && ((r.lx-CORE.x)**2+(r.ly-CORE.y)**2) < 90 && rng()<.5) r.type='Guardiola';
     r.flood = r.type==='Cisterna' || (level<=-2 && rng()<.15);
     r.cells.forEach(k => { rid[k]=n; });
+    r.floorStyle = rng() < .45 ? 1 : (rng() < .5 ? 2 : 0);
+    const LT = LIGHT_BY_TYPE[r.type];
+    if (r.secret) r.light = {c:'255,46,230',a:.10,m:'pulse'};
+    else if (LT) r.light = {c:LT[0],a:LT[1],m:LT[2]};
+    else { const q=rng(); r.light = q<.12 ? {c:'0,0,0',a:.38,m:'off'} : q<.30 ? {c:'255,240,210',a:.07,m:'flicker'} : q<.45 ? {c:pick(['0,255,242','255,46,230','232,201,58'],rng),a:.08,m:'pulse'} : null; }
   });
 
   let pc=0; kept.forEach(r => { if (!r.secret) r.pid=++pc; });   // numerazione senza buchi per la planimetria
@@ -846,6 +898,30 @@ function genFloor(i) {
   });
 
   // descrizioni e incontri
+  // decorazioni e dettagli d'ambiente
+  const decals = [];
+  kept.forEach(r => {
+    if (r.flood || r.type==='Garage') return;
+    const free = r.cells.filter(k => !noProp.has(k) && !occ.has(k));
+    const wallC = shuf(free.filter(isWall)), innerC = shuf(free.filter(k => !isWall(k)));
+    if (!SKIP_DECOR.has(r.type) && r.area >= 10) (DECOR[theme]||[]).forEach(([kind,where,pr]) => {
+      if (rng() >= pr) return;
+      if (where==='r') {
+        for (const k of innerC) {
+          if (occ.has(k)) continue;
+          if ([1,GW,GW+1].every(o => r.cells.includes(k+o) && !occ.has(k+o) && !noProp.has(k+o))) { props.push({x:X(k),y:Y(k),k:'rug',w:2,h:2,v:Math.floor(rng()*3)}); break; }
+        }
+        return;
+      }
+      const list = where==='w' ? wallC : innerC.concat(wallC);
+      const k = list.find(c => !occ.has(c)); if (k!==undefined) put(kind,k);
+    });
+    const nd = Math.floor(rng()*(theme==='basement'?4:3));
+    const spare = r.cells.filter(k => !noProp.has(k));
+    for (let t=0;t<nd && spare.length;t++) { const k = spare[Math.floor(rng()*spare.length)]; decals.push({x:X(k)+rng(), y:Y(k)+rng(), k:pick(theme==='basement'?['oil','blood','scorch','puddle','puddle']:['stain','oil','graffiti','scorch','blood'],rng), r:rng()*3.14, z:.35+rng()*.6}); }
+  });
+  { const cc0=[]; for (let k=0;k<N;k++) if (g[k]===2) cc0.push(k);
+    for (let t=0;t<Math.min(6,Math.floor(cc0.length/60));t++) { const k=cc0[Math.floor(rng()*cc0.length)]; decals.push({x:X(k)+rng(), y:Y(k)+rng(), k:pick(['stain','oil','graffiti','puddle'],rng), r:rng()*3.14, z:.35+rng()*.5}); } }
   const feats = [];
   kept.forEach(r => {
     r.desc = pick(DESC[r.type] || [DESC_DEF[theme]], rng) + ' ' + pick(COND, rng) + (r.flood ? ' Il pavimento è sommerso da acqua scura.' : '');
@@ -858,6 +934,28 @@ function genFloor(i) {
     if (rng() < .25) place('$', pick(LOOT,rng));
     if (rng() < (bd?.2:.1)) place('!', pick(TRAP,rng));
   });
+  // rumori d'ambiente e PNG che si muovono (passanti e occupanti)
+  kept.forEach(r => { r.amb = (!r.secret && rng()<.7) ? pick(AMB[theme]||AMB.basement, rng) : null; });
+  const npcs = [];
+  kept.forEach(r => {
+    if (r.secret || r.flood) return;
+    const T0 = NPC_N[r.type]; if (!T0) return;
+    const cnt = T0[0] + Math.floor(rng()*(T0[1]-T0[0]+1));
+    const spots = r.cells.filter(k => !occ.has(k));
+    if (!cnt || spots.length < 2) return;
+    for (let t=0;t<cnt;t++) {
+      const a = spots[Math.floor(rng()*spots.length)], b = spots[Math.floor(rng()*spots.length)];
+      npcs.push({ax:X(a)+.5, ay:Y(a)+.5, bx:X(b)+.5, by:Y(b)+.5, sp:.2+rng()*.3, ph:rng()*6.28});
+    }
+    r.notes.push('PNG presenti: '+cnt);
+  });
+  { const cc=[]; for (let k=0;k<N;k++) if (g[k]===2) cc.push(k);
+    const nWalk = cc.length ? (theme==='ground' ? 3 : theme==='basement' ? 0 : 1+Math.floor(rng()*2)) : 0;
+    for (let t=0;t<nWalk;t++) {
+      const a=cc[Math.floor(rng()*cc.length)]; let b=a; const [dx,dy]=D4[Math.floor(rng()*4)];
+      for (let st=1;st<=8;st++) { const nk=a+dx*st+dy*st*GW; if (g[nk]!==2) break; b=nk; }
+      if (b!==a) npcs.push({ax:X(a)+.5,ay:Y(a)+.5,bx:X(b)+.5,by:Y(b)+.5,sp:.25+rng()*.2,ph:rng()*6.28});
+    } }
   doors.forEach(d => { if (g[d.c]===7) { /* porta chiusa a chiave: già marcata */ } });
 
   const wallsOf = arr => {
@@ -875,7 +973,7 @@ function genFloor(i) {
   kept.forEach(r => { if (r.secret) r.cells.forEach(k => { pg[k]=0; }); });
   for (let k=0;k<N;k++) if (pg[k]===6) pg[k]=0;
   const W1=wallsOf(g), W2=wallsOf(pg);
-  return {g, pg, rid, rooms:kept, core:coreRoom, feats, props, wallCells:W1.cells, wm:W1.wmk, pwall:W2.cells, pwm:W2.wmk, level, theme, top, bottom};
+  return {g, pg, rid, rooms:kept, core:coreRoom, feats, props, decals, npcs, wallCells:W1.cells, wm:W1.wmk, pwall:W2.cells, pwm:W2.wmk, level, theme, top, bottom};
 }
 
 /* ---------- stato / viste ---------- */
@@ -959,6 +1057,7 @@ function drawFog(f,s){
     else if (!v[k]) { ctx.fillStyle='rgba(10,9,8,0.55)'; ctx.fillRect(x*s,y*s,s+.5,s+.5); }
   }
 }
+let T=0, ANIM=true;
 let toastT=null;
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toastT); toastT=setTimeout(()=>{t.style.display='none';},2800); }
 function roomSeen(f,r){
@@ -1013,14 +1112,42 @@ function drawProp(p,s){
     case 'bed': ctx.fillStyle='#4c3d62'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.fillStyle='#cfc8e0'; ctx.fillRect(x+m*1.6,y+m*1.6,w-3.2*m,h*.22); break;
     case 'shelf': ctx.fillStyle='#5e4d36'; ctx.fillRect(x+m,y+m*1.4,w-2*m,h-2.8*m); ctx.strokeStyle='#2a2216'; ctx.lineWidth=1; ctx.strokeRect(x+m,y+m*1.4,w-2*m,h-2.8*m); break;
     case 'counter': ctx.fillStyle='#56626d'; ctx.fillRect(x+m*.4,y+m*.4,w-.8*m,h-.8*m); break;
-    case 'rack': ctx.fillStyle='#10181c'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.fillStyle='#00fff2'; ctx.fillRect(x+w*.3,y+h*.3,s*.1,s*.1); ctx.fillRect(x+w*.6,y+h*.55,s*.1,s*.1); break;
+    case 'rack': ctx.fillStyle='#10181c'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.fillStyle=(Math.sin(T*6+p.x*2.3)>0)?'#00fff2':'#0a5a58'; ctx.fillRect(x+w*.3,y+h*.3,s*.1,s*.1); ctx.fillStyle=(Math.sin(T*4+p.y*3.1)>0)?'#ff2ee6':'#5a1a52'; ctx.fillRect(x+w*.6,y+h*.55,s*.1,s*.1); break;
     case 'crate': ctx.fillStyle='#6b5a3a'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.strokeStyle='#2c2412'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x+m,y+m); ctx.lineTo(x+w-m,y+h-m); ctx.moveTo(x+w-m,y+m); ctx.lineTo(x+m,y+h-m); ctx.stroke(); break;
-    case 'machine': ctx.fillStyle='#3e4b4e'; ctx.beginPath(); ctx.arc(x+w/2,y+h/2,s*.38,0,7); ctx.fill(); ctx.strokeStyle='#9fb3b8'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x+w*.3,y+h/2); ctx.lineTo(x+w*.7,y+h/2); ctx.moveTo(x+w/2,y+h*.3); ctx.lineTo(x+w/2,y+h*.7); ctx.stroke(); break;
+    case 'machine': ctx.fillStyle='#3e4b4e'; ctx.beginPath(); ctx.arc(x+w/2,y+h/2,s*.38,0,7); ctx.fill(); ctx.strokeStyle='#9fb3b8'; ctx.lineWidth=1; ctx.beginPath(); { const a=T*1.5, c0=x+w/2, d0=y+h/2, r0=s*.22; ctx.moveTo(c0-Math.cos(a)*r0,d0-Math.sin(a)*r0); ctx.lineTo(c0+Math.cos(a)*r0,d0+Math.sin(a)*r0); ctx.moveTo(c0-Math.sin(a)*r0,d0+Math.cos(a)*r0); ctx.lineTo(c0+Math.sin(a)*r0,d0-Math.cos(a)*r0); ctx.stroke(); } break;
     case 'wc': ctx.fillStyle='#c9d3d8'; ctx.fillRect(x+w*.3,y+m,w*.4,h*.3); ctx.beginPath(); ctx.ellipse(x+w/2,y+h*.62,w*.22,h*.26,0,0,7); ctx.fill(); break;
     case 'sink': ctx.fillStyle='#c9d3d8'; ctx.beginPath(); ctx.arc(x+w/2,y+h/2,s*.26,0,7); ctx.fill(); break;
     case 'pillar': ctx.fillStyle='#8a8680'; ctx.beginPath(); ctx.arc(x+w/2,y+h/2,s*.34,0,7); ctx.fill(); break;
+    case 'plant': { ctx.fillStyle='#3b2a1c'; ctx.beginPath(); ctx.arc(x+w/2,y+h/2,s*.22,0,7); ctx.fill(); ctx.fillStyle='#2f9e4a';
+      for (let a=0;a<5;a++) { ctx.beginPath(); ctx.arc(x+w/2+Math.cos(a*1.26+1)*s*.2,y+h/2+Math.sin(a*1.26+1)*s*.2,s*.15,0,7); ctx.fill(); } } break;
+    case 'tv': ctx.fillStyle='#15181b'; ctx.fillRect(x+m,y+h*.35,w-2*m,h*.3); ctx.fillStyle='rgba(0,255,242,'+(0.5+0.4*Math.sin(T*3+p.x*1.7+p.y)).toFixed(2)+')'; ctx.fillRect(x+m*1.6,y+h*.4,w-3.2*m,h*.2); break;
+    case 'locker': ctx.fillStyle='#4a5560'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.strokeStyle='#222'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x+w/2,y+m); ctx.lineTo(x+w/2,y+h-m); ctx.stroke(); break;
+    case 'barrel': ctx.fillStyle='#7a3b22'; ctx.beginPath(); ctx.arc(x+w/2,y+h/2,s*.34,0,7); ctx.fill(); ctx.strokeStyle='#2c140a'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(x+w/2,y+h/2,s*.22,0,7); ctx.stroke(); break;
+    case 'terminal': ctx.fillStyle='#1a2226'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.fillStyle='rgba(0,255,242,'+(0.45+0.4*Math.sin(T*5+p.x+p.y*2)).toFixed(2)+')'; ctx.fillRect(x+w*.25,y+h*.25,w*.5,h*.3); break;
+    case 'vend': ctx.fillStyle='#262d48'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.fillStyle=(Math.sin(T*3+p.x)>-.3)?'#ff2ee6':'#4a1a44'; ctx.fillRect(x+w*.3,y+h*.2,w*.4,h*.5); break;
+    case 'rug': ctx.fillStyle=['rgba(160,40,60,.35)','rgba(40,90,160,.35)','rgba(60,140,80,.30)'][p.v||0]; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.strokeStyle='rgba(242,237,228,.25)'; ctx.lineWidth=1; ctx.strokeRect(x+m*2.5,y+m*2.5,w-5*m,h-5*m); break;
     case 'car': ctx.fillStyle='#44525c'; ctx.fillRect(x+m,y+m*1.4,w-2*m,h-2.8*m); ctx.fillStyle='#8fb0c0'; ctx.fillRect(x+w*.62,y+h*.28,w*.18,h*.44); break;
   }
+}
+
+function lightLevel(r){
+  const m=r.light.m;
+  if (m==='pulse') return .6+.4*Math.sin(T*2+r.id);
+  if (m==='flicker') { const n=Math.sin(Math.floor(T*9)*12.9898+r.id*78.233)*43758.5453, q=n-Math.floor(n); return q<.2?.1:q<.35?.55:1; }
+  return 1;
+}
+function drawDecal(d,s){
+  const z=d.z*s; ctx.save(); ctx.translate(d.x*s,d.y*s); ctx.rotate(d.r);
+  switch (d.k) {
+    case 'blood': ctx.fillStyle='rgba(130,12,22,.55)'; ctx.beginPath(); ctx.ellipse(0,0,z*.7,z*.45,0,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(z*.9,z*.2,z*.14,0,7); ctx.arc(-z*.8,-z*.3,z*.1,0,7); ctx.fill(); break;
+    case 'oil': ctx.fillStyle='rgba(5,5,12,.6)'; ctx.beginPath(); ctx.ellipse(0,0,z*.8,z*.5,0,0,7); ctx.fill(); ctx.strokeStyle='rgba(120,90,255,.25)'; ctx.lineWidth=1; ctx.beginPath(); ctx.ellipse(-z*.1,0,z*.45,z*.25,0,0,7); ctx.stroke(); break;
+    case 'scorch': ctx.fillStyle='rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(0,0,z*.7,0,7); ctx.fill(); break;
+    case 'stain': ctx.fillStyle='rgba(120,100,60,.25)'; ctx.beginPath(); ctx.ellipse(0,0,z*.8,z*.55,0,0,7); ctx.fill(); break;
+    case 'puddle': { ctx.fillStyle='rgba(40,110,200,.30)'; ctx.beginPath(); ctx.ellipse(0,0,z*.8,z*.5,0,0,7); ctx.fill();
+      const q=(T*.6+d.x)%1; ctx.strokeStyle='rgba(160,210,255,'+(0.4*(1-q)).toFixed(2)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.ellipse(0,0,z*.8*q,z*.5*q,0,0,7); ctx.stroke(); } break;
+    case 'graffiti': ctx.strokeStyle=((d.x*7)|0)%2?'#ff2ee6':'#e8c93a'; ctx.lineWidth=Math.max(1,s*.12); ctx.beginPath(); ctx.moveTo(-z*.7,0); ctx.lineTo(-z*.2,-z*.5); ctx.lineTo(z*.2,z*.1); ctx.lineTo(z*.7,-z*.4); ctx.stroke(); break;
+  }
+  ctx.restore();
 }
 
 function drawDoor(t,x,y,s,f){
@@ -1080,13 +1207,31 @@ function draw2D(){
     ctx.fillStyle=col; ctx.fillRect(x*s,y*s,s+.5,s+.5);
   }
   // stanze allagate
-  f.rooms.forEach(r => { if (!r.flood || (PLAN && r.secret)) return; ctx.fillStyle='rgba(40,110,200,0.45)'; r.cells.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5)); });
+  f.rooms.forEach(r => {
+    if (PLAN && r.secret) return;
+    const fc = k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5);
+    if (r.floorStyle===1) { ctx.fillStyle='rgba(255,255,255,0.045)'; r.cells.forEach(k => { if (((k%GW)+((k/GW)|0))&1) fc(k); }); }
+    else if (r.floorStyle===2) { ctx.fillStyle='rgba(0,0,0,0.16)'; r.cells.forEach(k => { if (((k/GW)|0)&1) fc(k); }); }
+    if (!PLAN && r.light) { const L=r.light; ctx.fillStyle = L.m==='off' ? 'rgba(0,0,0,'+L.a+')' : 'rgba('+L.c+','+(L.a*lightLevel(r)).toFixed(3)+')'; r.cells.forEach(fc); }
+    if (r.flood) r.cells.forEach(k => { const x=k%GW, y=(k/GW)|0; ctx.fillStyle='rgba(40,110,200,'+(0.40+0.08*Math.sin(T*1.6+x*.8+y*.6)).toFixed(3)+')'; fc(k); });
+  });
+  // lampade nei corridoi
+  if (!PLAN) for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
+    if (g[y*GW+x]!==2 || (x+y*2)%7!==0) continue;
+    const n=Math.sin(Math.floor(T*7)*12.9898+(x*7+y*13)*78.233)*43758.5453, q=n-Math.floor(n), on=((x*31+y*17)%5===0) ? (q>.3?1:.15) : 1;
+    ctx.fillStyle='rgba(255,240,200,'+(0.07*on).toFixed(3)+')'; ctx.beginPath(); ctx.arc((x+.5)*s,(y+.5)*s,s*1.4,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,240,200,'+(0.7*on).toFixed(2)+')'; ctx.beginPath(); ctx.arc((x+.5)*s,(y+.5)*s,Math.max(1,s*.12),0,7); ctx.fill();
+  }
   // griglia
   ctx.strokeStyle='rgba(242,237,228,0.05)'; ctx.lineWidth=1; ctx.beginPath();
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) { const t=g[y*GW+x]; if (t && !(t>=6&&t<=9) && t!==3) ctx.rect(x*s,y*s,s,s); }
   ctx.stroke();
   // arredi
-  if (!PLAN || SHOWPROPS) f.props.forEach(p => { if (!PLAN || g[p.y*GW+p.x]) drawProp(p,s); });
+  if (!PLAN || SHOWPROPS) {
+    f.decals.forEach(d => { if (!PLAN || g[(d.y|0)*GW+(d.x|0)]) drawDecal(d,s); });
+    f.props.forEach(p => { if (p.k==='rug' && (!PLAN || g[p.y*GW+p.x])) drawProp(p,s); });
+    f.props.forEach(p => { if (p.k!=='rug' && (!PLAN || g[p.y*GW+p.x])) drawProp(p,s); });
+  }
   // contorno dei muri
   ctx.strokeStyle=acc; ctx.lineWidth=Math.max(1.5,s*0.13); ctx.lineCap='square'; ctx.shadowColor=acc; ctx.shadowBlur=4;
   ctx.beginPath();
@@ -1142,6 +1287,14 @@ function draw2D(){
     ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(lbl,cx,cy);
     ctx.fillStyle = idx===sel ? '#00fff2' : 'rgba(242,237,228,0.95)'; ctx.fillText(lbl,cx,cy);
   });
+  if (!PLAN) {
+    const vv = (fog.tok && fog.tok.f===cur) ? fog.vis : null;
+    f.npcs.forEach(n => {
+      const u=(Math.sin(T*n.sp*2+n.ph)+1)/2, nx=n.ax+(n.bx-n.ax)*u, ny=n.ay+(n.by-n.ay)*u;
+      if (!GM && !(vv && vv[(ny|0)*GW+(nx|0)])) return;
+      ctx.shadowColor='#ffb36b'; ctx.shadowBlur=6; ctx.fillStyle='#ffb36b'; ctx.beginPath(); ctx.arc(nx*s,ny*s,Math.max(2.5,s*.26),0,7); ctx.fill(); ctx.shadowBlur=0;
+    });
+  }
   if (!GM && !PLAN) drawFog(f,s);
   if (f.level===0) entranceLinks().forEach(l => {
     if (!GM && !PLAN && !(fog.exp[cur] && fog.exp[cur][l.k])) return;     // si vede solo se l'ingresso è stato visto
@@ -1154,7 +1307,7 @@ function draw2D(){
   if (!PLAN && fog.tok && fog.tok.f===cur) {
     const tx=(fog.tok.x+.5)*s, ty=(fog.tok.y+.5)*s;
     ctx.shadowColor=acc; ctx.shadowBlur=10; ctx.fillStyle='#f2ede4'; ctx.strokeStyle=acc; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(tx,ty,Math.max(4,s*.36),0,7); ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.arc(tx,ty,Math.max(4,s*.36)*(1+.08*Math.sin(T*4)),0,7); ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
   }
   // scala
   const sc=10/CS*s; ctx.strokeStyle='#f2ede4'; ctx.fillStyle='#f2ede4'; ctx.lineWidth=2; ctx.textAlign='left'; ctx.font='11px "Courier New",monospace';
@@ -1281,6 +1434,7 @@ function updateHud(){
     list.appendChild(d);
     if (sel===si) {
       const e=document.createElement('div'); e.className='desc'; e.textContent=r.desc;
+      if (r.amb) { const a=document.createElement('span'); a.className='n'; a.textContent='♪ '+r.amb; e.appendChild(a); }
       if (GM && r.notes && r.notes.length) { const m=document.createElement('span'); m.className='gm'; m.textContent='▸ '+r.notes.join(' · '); e.appendChild(m); }
       if (GM && r.secret) { const m=document.createElement('span'); m.className='gm'; m.textContent='▸ accessibile solo da una porta segreta'; e.appendChild(m); }
       list.appendChild(e);
@@ -1358,6 +1512,9 @@ cv.addEventListener('pointerup',e=>{
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomBy(e.deltaY<0?1.12:1/1.12,e.clientX,e.clientY); },{passive:false});
 window.addEventListener('resize',resize);
+document.getElementById('b-anim').onclick=()=>{ ANIM=!ANIM; document.getElementById('b-anim').classList.toggle('on',ANIM); draw(); };
+let lastAnim=0;
+(function loop(ts){ requestAnimationFrame(loop); if (!ANIM||document.hidden||mode!=='2d'||drag||ts-lastAnim<70) return; lastAnim=ts; T=ts/1000; draw(); })(0);
 
 if (fogLoad()) fogReveal(); else fogStart();
 if (!GM && !PLAN) cur = fog.tok.f;
