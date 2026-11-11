@@ -41,7 +41,7 @@
 <canvas id="cv"></canvas>
 <div id="title" class="box"><h1><span>C</span>Y // DUNGEON</h1><div class="meta" id="meta"></div></div>
 <div id="side" class="box"><h3 id="side-h">CHIAVE</h3><div id="side-list"></div>
-  <div class="k"><span style="color:#f2ede4">●</span> gruppo: clicca una cella esplorata per muoverti &nbsp; ▲▼ scale &nbsp; E ascensore &nbsp; <span style="color:#e8c93a">▮</span> porta &nbsp; <span style="color:#ff5a5a">▮</span> chiusa a chiave &nbsp; ⌒ arco &nbsp; <span style="color:#ffb36b">●</span> passanti<br>
+  <div class="k"><span style="color:#f2ede4">●</span> gruppo: clicca una cella esplorata per muoverti &nbsp; ▲▼ scale &nbsp; E ascensore &nbsp; <span style="color:#e8c93a">▮</span> porta &nbsp; <span style="color:#ff5a5a">▮</span> chiusa a chiave &nbsp; ⌒ arco &nbsp; <span style="color:#ffb36b">●</span> passanti &nbsp; <span style="color:#ff3b3b">◀</span> telecamera: clic = visuale<br>
   <span class="gmk" style="display:none"><span style="color:#ff2ee6">S</span> porta segreta &nbsp; <span style="color:#ff5a5a">M</span> ostile &nbsp; <span style="color:#e8c93a">$</span> bottino &nbsp; <span style="color:#ff2ee6">!</span> trappola</span></div></div>
 <div id="bar" class="box">
   <button id="b-down" title="Piano inferiore (↓)">▼</button>
@@ -53,6 +53,7 @@
   <button id="b-plan" title="Planimetria: tutta la pianta, senza arredi, incontri né porte e stanze segrete (P)">PLANIMETRIA</button>
   <button id="b-props" style="display:none" title="Mostra/nascondi gli arredi">ARREDI</button>
   <button id="b-npc" class="on" title="Mostra/nascondi i passanti (PNG)">PNG</button>
+  <button id="b-cam" title="Mostra/nascondi le visuali di tutte le telecamere scoperte (piano corrente)">CAM</button>
   <button id="b-anim" class="on" title="Animazioni: luci, passanti, acqua">ANIM</button>
   <button id="b-fog" title="Azzera la nebbia di guerra" style="display:none">RESET NEBBIA</button>
   <button id="b-zout">−</button><button id="b-zin">+</button><button id="b-fit" title="Ricentra">⌖</button>
@@ -959,6 +960,21 @@ function genFloor(i) {
     } }
   doors.forEach(d => { if (g[d.c]===7) { /* porta chiusa a chiave: già marcata */ } });
 
+  // telecamere di sorveglianza: posizioni casuali (deterministiche) su pareti di corridoi e stanze
+  const cams = [];
+  { const cand=[];
+    for (let y=1;y<GD-1;y++) for (let x=1;x<GW-1;x++) {
+      const k=y*GW+x, t=g[k]; if ((t!==1&&t!==2)||noProp.has(k)||occ.has(k)||inZone(x,y)) continue;
+      const rr=rid[k]; if (rr>=0 && (kept[rr].secret || kept[rr].type==='Bagno' || kept[rr].flood)) continue;
+      for (const [dx,dy] of D4) { const o=g[k+dx+dy*GW]; if (g[k-dx-dy*GW]===0 && (o===1||o===2)) { cand.push({x,y,dx,dy,rr}); break; } }
+    }
+    const want = theme==='ground' ? 4+Math.floor(rng()*3) : theme==='office' ? 2+Math.floor(rng()*3) : theme==='penthouse' ? 2 : theme==='basement' ? 1+Math.floor(rng()*2) : (rng()<.4?1:0);
+    for (const c of shuf(cand)) {
+      if (cams.length>=want) break;
+      if (cams.some(o => Math.hypot(o.x-c.x,o.y-c.y)<7)) continue;
+      cams.push({x:c.x,y:c.y,ang:Math.atan2(c.dy,c.dx),fov:Math.PI*(0.5+rng()*0.2),range:Math.max(8,Math.min(22,Math.round(16/CS))),id:cams.length+1,where:c.rr>=0?kept[c.rr].type:'Corridoio'});
+    }
+  }
   const wallsOf = arr => {
     const cells=[], wmk=new Uint8Array(N);
     for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
@@ -974,7 +990,7 @@ function genFloor(i) {
   kept.forEach(r => { if (r.secret) r.cells.forEach(k => { pg[k]=0; }); });
   for (let k=0;k<N;k++) if (pg[k]===6) pg[k]=0;
   const W1=wallsOf(g), W2=wallsOf(pg);
-  return {g, pg, rid, rooms:kept, core:coreRoom, feats, props, decals, npcs, wallCells:W1.cells, wm:W1.wmk, pwall:W2.cells, pwm:W2.wmk, level, theme, top, bottom};
+  return {g, pg, rid, rooms:kept, core:coreRoom, feats, props, decals, npcs, cams, wallCells:W1.cells, wm:W1.wmk, pwall:W2.cells, pwm:W2.wmk, level, theme, top, bottom};
 }
 
 /* ---------- stato / viste ---------- */
@@ -997,11 +1013,12 @@ const v3 = {yaw:-0.6, pitch:0.9, zoom:6, px:0, py:0};
 const FOG_KEY = 'cydg-fog:' + SEED_HEX;
 const fog = {tok:null, exp:{}, vis:null};
 const VIS_R = Math.max(6, Math.min(22, Math.round(20/CS)));
-function computeVis(f, tx, ty){
-  const vis = new Uint8Array(GW*GD), g = f.g, R = VIS_R;
+function computeVis(f, tx, ty, R=VIS_R, cone=null){
+  const vis = new Uint8Array(GW*GD), g = f.g;
   const blocks = k => { const t=g[k]; return t===0||t===3||t===6||t===7||t===9; };
   for (let y=Math.max(0,ty-R); y<=Math.min(GD-1,ty+R); y++) for (let x=Math.max(0,tx-R); x<=Math.min(GW-1,tx+R); x++) {
     if ((x-tx)**2+(y-ty)**2 > R*R) continue;
+    if (cone && !(x===tx && y===ty)) { let a=Math.atan2(y-ty,x-tx)-cone.ang; a=Math.atan2(Math.sin(a),Math.cos(a)); if (Math.abs(a)>cone.half) continue; }
     let x0=tx, y0=ty, ok=true;
     const dx=Math.abs(x-x0), dy=Math.abs(y-y0), sx=x0<x?1:-1, sy=y0<y?1:-1; let err=dx-dy;
     while (!(x0===x && y0===y)) {
@@ -1048,17 +1065,25 @@ function fogStart(){
   fog.tok = {f:gi, x:sx, y:sy};
   fogReveal();
 }
-function drawFog(f,s){
+function drawFog(f,s,camc){
   const e = fog.exp[cur] || new Uint8Array(GW*GD);
   const v = (fog.tok && fog.tok.f===cur && fog.vis) ? fog.vis : new Uint8Array(GW*GD);
   for (let k=0;k<GW*GD;k++) {
     if (!f.g[k] && !f.wm[k]) continue;
+    if (camc && camc[k]) continue;
     const x=k%GW, y=(k/GW)|0;
     if (!e[k]) { ctx.fillStyle='#0a0908'; ctx.fillRect(x*s-.5,y*s-.5,s+1.5,s+1.5); }
     else if (!v[k]) { ctx.fillStyle='rgba(10,9,8,0.55)'; ctx.fillRect(x*s,y*s,s+.5,s+.5); }
   }
 }
 let T=0, ANIM=true, SHOWNPC=true;
+const camOn = new Set();   // visuali telecamere attive, chiave 'piano:indice'
+function toggleCam(fl,i){ const k=fl+':'+i; if (camOn.has(k)) camOn.delete(k); else camOn.add(k); }
+function camSeen(f,c){ return GM || !!(fog.exp[cur] && fog.exp[cur][c.y*GW+c.x]); }
+function camCone(f,c){
+  if (!c.cone) { c.cone=computeVis(f,c.x,c.y,c.range,{ang:c.ang,half:c.fov/2}); c.list=[]; for (let k=0;k<c.cone.length;k++) if (c.cone[k]) c.list.push(k); }
+  return c.cone;
+}
 let toastT=null;
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toastT); toastT=setTimeout(()=>{t.style.display='none';},2800); }
 function roomSeen(f,r){
@@ -1149,6 +1174,16 @@ function drawDecal(d,s){
     case 'graffiti': ctx.strokeStyle=((d.x*7)|0)%2?'#ff2ee6':'#e8c93a'; ctx.lineWidth=Math.max(1,s*.12); ctx.beginPath(); ctx.moveTo(-z*.7,0); ctx.lineTo(-z*.2,-z*.5); ctx.lineTo(z*.2,z*.1); ctx.lineTo(z*.7,-z*.4); ctx.stroke(); break;
   }
   ctx.restore();
+}
+
+function drawCam(c,s,on){
+  const cx=(c.x+.5)*s, cy=(c.y+.5)*s;
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(c.ang);
+  ctx.fillStyle='#1b1f24'; ctx.strokeStyle=on?'#00fff2':'#9a968f'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(-s*.3,-s*.3); ctx.lineTo(s*.38,0); ctx.lineTo(-s*.3,s*.3); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = Math.sin(T*5+c.x)>0 ? (on?'#00fff2':'#ff3b3b') : '#3a1010';
+  ctx.beginPath(); ctx.arc(cx,cy,Math.max(1.5,s*.1),0,7); ctx.fill();
 }
 
 function drawDoor(t,x,y,s,f){
@@ -1288,15 +1323,31 @@ function draw2D(){
     ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(lbl,cx,cy);
     ctx.fillStyle = idx===sel ? '#00fff2' : 'rgba(242,237,228,0.95)'; ctx.fillText(lbl,cx,cy);
   });
+  let camc = null;
+  if (!PLAN) {
+    f.cams.forEach((c,i) => {
+      if (!camSeen(f,c)) return;
+      const on = camOn.has(cur+':'+i); camCone(f,c);
+      if (on) { camc = camc || new Uint8Array(GW*GD); c.list.forEach(k => { camc[k]=1; }); }
+      else if (GM) { ctx.fillStyle='rgba(255,60,60,0.05)'; c.list.forEach(k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5)); }
+    });
+    if (camc) {
+      ctx.fillStyle='rgba(0,255,242,'+(0.09+0.025*Math.sin(T*8)).toFixed(3)+')';
+      for (let k=0;k<camc.length;k++) if (camc[k]) ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5);
+      ctx.fillStyle='rgba(0,0,0,0.10)';                                  // righe di scansione
+      for (let k=0;k<camc.length;k++) if (camc[k] && (((k/GW)|0)&1)) ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s*.5);
+    }
+    f.cams.forEach((c,i) => { if (camSeen(f,c)) drawCam(c,s,camOn.has(cur+':'+i)); });
+  }
   if (!PLAN && SHOWNPC) {
     const vv = (fog.tok && fog.tok.f===cur) ? fog.vis : null;
     f.npcs.forEach(n => {
       const u=(Math.sin(T*n.sp*2+n.ph)+1)/2, nx=n.ax+(n.bx-n.ax)*u, ny=n.ay+(n.by-n.ay)*u;
-      if (!GM && !(vv && vv[(ny|0)*GW+(nx|0)])) return;
+      const ni=(ny|0)*GW+(nx|0); if (!GM && !((vv && vv[ni]) || (camc && camc[ni]))) return;
       ctx.shadowColor='#ffb36b'; ctx.shadowBlur=6; ctx.fillStyle='#ffb36b'; ctx.beginPath(); ctx.arc(nx*s,ny*s,Math.max(2.5,s*.26),0,7); ctx.fill(); ctx.shadowBlur=0;
     });
   }
-  if (!GM && !PLAN) drawFog(f,s);
+  if (!GM && !PLAN) drawFog(f,s,camc);
   if (f.level===0) entranceLinks().forEach(l => {
     if (!GM && !PLAN && !(fog.exp[cur] && fog.exp[cur][l.k])) return;     // si vede solo se l'ingresso è stato visto
     ctx.strokeStyle='rgba(232,201,58,0.85)'; ctx.lineWidth=1; ctx.setLineDash([s*.5,s*.4]);
@@ -1441,6 +1492,14 @@ function updateHud(){
       list.appendChild(e);
     }
   });
+  f.cams.forEach((c,i) => {
+    if (!camSeen(f,c) || PLAN) return;
+    const on=camOn.has(cur+':'+i), d=document.createElement('div'); d.className='r';
+    const b=document.createElement('b'); b.textContent='📹';
+    const t=document.createElement('span'); t.textContent='CAM-'+String(c.id).padStart(2,'0')+' · '+c.where;
+    const ii=document.createElement('i'); ii.textContent=on?'● LIVE':'○ off'; ii.style.color=on?'#00fff2':'';
+    d.append(b,t,ii); d.onclick=()=>{ toggleCam(cur,i); updateHud(); draw(); }; list.appendChild(d);
+  });
 }
 function setFloor(i){ cur=Math.max(0,Math.min(NL-1,i)); sel=-1; updateHud(); draw(); }
 function setMode(m){ mode=m; document.getElementById('b-view').textContent = m==='2d'?'VISTA 3D':'VISTA 2D'; draw(); }
@@ -1500,6 +1559,8 @@ cv.addEventListener('pointerup',e=>{
       if (x>=0&&y>=0&&x<GW&&y<GD) {
         const f=getFloor(cur), k=y*GW+x, ex=fog.exp[cur];
         const seen = GM || PLAN || (ex && ex[k]);
+        const ci = PLAN ? -1 : f.cams.findIndex(c => c.x===x && c.y===y);
+        if (ci>=0 && seen) { toggleCam(cur,ci); sel=-1; updateHud(); draw(); drag=null; cv.classList.remove('drag'); return; }
         const inCore = x>=CORE.x&&x<CORE.x+CORE.s&&y>=CORE.y&&y<CORE.y+CORE.s;
         const rr = f.rid[k];
         sel = !seen ? -1 : (rr>=0 && !(PLAN && f.rooms[rr].secret)) ? rr : (inCore ? -2 : -1);
@@ -1513,6 +1574,13 @@ cv.addEventListener('pointerup',e=>{
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomBy(e.deltaY<0?1.12:1/1.12,e.clientX,e.clientY); },{passive:false});
 window.addEventListener('resize',resize);
+document.getElementById('b-cam').onclick=()=>{
+  const f=getFloor(cur), idx=f.cams.map((c,i)=>i).filter(i=>camSeen(f,f.cams[i]));
+  const allOn=idx.length>0 && idx.every(i=>camOn.has(cur+':'+i));
+  idx.forEach(i => { if (allOn) camOn.delete(cur+':'+i); else camOn.add(cur+':'+i); });
+  if (!idx.length) toast('Nessuna telecamera scoperta su questo piano.');
+  updateHud(); draw();
+};
 document.getElementById('b-npc').onclick=()=>{ SHOWNPC=!SHOWNPC; document.getElementById('b-npc').classList.toggle('on',SHOWNPC); draw(); };
 document.getElementById('b-anim').onclick=()=>{ ANIM=!ANIM; document.getElementById('b-anim').classList.toggle('on',ANIM); draw(); };
 let lastAnim=0;
