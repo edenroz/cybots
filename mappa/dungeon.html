@@ -52,6 +52,7 @@
   <button id="b-gm" title="Mostra tutto: segreti, mostri, trappole, niente nebbia (M)">MASTER</button>
   <button id="b-plan" title="Planimetria: tutta la pianta, senza arredi, incontri né porte e stanze segrete (P)">PLANIMETRIA</button>
   <button id="b-props" style="display:none" title="Mostra/nascondi gli arredi">ARREDI</button>
+  <button id="b-npc" class="on" title="Mostra/nascondi i passanti (PNG)">PNG</button>
   <button id="b-anim" class="on" title="Animazioni: luci, passanti, acqua">ANIM</button>
   <button id="b-fog" title="Azzera la nebbia di guerra" style="display:none">RESET NEBBIA</button>
   <button id="b-zout">−</button><button id="b-zin">+</button><button id="b-fit" title="Ricentra">⌖</button>
@@ -1057,7 +1058,7 @@ function drawFog(f,s){
     else if (!v[k]) { ctx.fillStyle='rgba(10,9,8,0.55)'; ctx.fillRect(x*s,y*s,s+.5,s+.5); }
   }
 }
-let T=0, ANIM=true;
+let T=0, ANIM=true, SHOWNPC=true;
 let toastT=null;
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toastT); toastT=setTimeout(()=>{t.style.display='none';},2800); }
 function roomSeen(f,r){
@@ -1287,7 +1288,7 @@ function draw2D(){
     ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(lbl,cx,cy);
     ctx.fillStyle = idx===sel ? '#00fff2' : 'rgba(242,237,228,0.95)'; ctx.fillText(lbl,cx,cy);
   });
-  if (!PLAN) {
+  if (!PLAN && SHOWNPC) {
     const vv = (fog.tok && fog.tok.f===cur) ? fog.vis : null;
     f.npcs.forEach(n => {
       const u=(Math.sin(T*n.sp*2+n.ph)+1)/2, nx=n.ax+(n.bx-n.ax)*u, ny=n.ay+(n.by-n.ay)*u;
@@ -1512,6 +1513,7 @@ cv.addEventListener('pointerup',e=>{
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomBy(e.deltaY<0?1.12:1/1.12,e.clientX,e.clientY); },{passive:false});
 window.addEventListener('resize',resize);
+document.getElementById('b-npc').onclick=()=>{ SHOWNPC=!SHOWNPC; document.getElementById('b-npc').classList.toggle('on',SHOWNPC); draw(); };
 document.getElementById('b-anim').onclick=()=>{ ANIM=!ANIM; document.getElementById('b-anim').classList.toggle('on',ANIM); draw(); };
 let lastAnim=0;
 (function loop(ts){ requestAnimationFrame(loop); if (!ANIM||document.hidden||mode!=='2d'||drag||ts-lastAnim<70) return; lastAnim=ts; T=ts/1000; draw(); })(0);
