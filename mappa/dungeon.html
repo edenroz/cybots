@@ -15,7 +15,12 @@
   #title h1{font-family:Impact,'Arial Narrow',sans-serif;font-size:22px;margin:0 0 4px;letter-spacing:1px;}
   #title h1 span{color:var(--red);}
   #title .meta{font-size:10.5px;letter-spacing:.5px;color:var(--grey);line-height:1.6;}
-  #side{position:fixed;top:calc(14px + env(safe-area-inset-top));right:14px;width:300px;max-height:calc(100vh - 110px);overflow-y:auto;padding:10px 12px;font-size:11px;}
+  #side{position:fixed;top:calc(14px + env(safe-area-inset-top));right:14px;width:300px;max-height:calc(100vh - 110px);overflow:hidden;display:flex;flex-direction:column;padding:10px 12px;font-size:11px;}
+  #side-list{overflow-y:auto;min-height:0;flex:1 1 auto;}
+  #side .k{flex:none;}
+  #side.collapsed #side-list{display:none;}
+  #side h3{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+  #side-tog{background:none;border:1px solid rgba(242,237,228,.3);color:var(--grey);font-family:inherit;font-size:11px;padding:0 7px;cursor:pointer;}
   #side h3{font-family:Impact,sans-serif;font-size:14px;margin:0 0 6px;letter-spacing:1px;color:var(--cyan);}
   #side .r{display:flex;gap:6px;padding:4px 2px;border-bottom:1px solid rgba(242,237,228,.1);cursor:pointer;}
   #side .r:hover{background:rgba(0,255,242,.08);}
@@ -49,7 +54,7 @@
 <canvas id="cv"></canvas>
 <div id="camwall" class="box"><div id="camwall-top"><h3 id="camwall-h">SORVEGLIANZA</h3><button id="camwall-close">✕</button></div><div id="camgrid"></div></div>
 <div id="title" class="box"><h1><span>C</span>Y // DUNGEON</h1><div class="meta" id="meta"></div></div>
-<div id="side" class="box"><h3 id="side-h">CHIAVE</h3><div id="side-list"></div>
+<div id="side" class="box"><h3 id="side-t" title="Comprimi/espandi le descrizioni"><span id="side-h">CHIAVE</span><button id="side-tog">▾</button></h3><div id="side-list"></div>
   <div class="k"><span style="color:#f2ede4">●</span> gruppo: clicca una cella esplorata per muoverti &nbsp; ▲▼ scale &nbsp; E ascensore &nbsp; <span style="color:#e8c93a">▮</span> porta &nbsp; <span style="color:#ff5a5a">▮</span> chiusa a chiave &nbsp; ⌒ arco &nbsp; <span style="color:#ffb36b">●</span> passanti &nbsp; <span style="color:#ff3b3b">◀</span> telecamera: clic = visuale<br>
   <span class="gmk" style="display:none"><span style="color:#ff2ee6">S</span> porta segreta &nbsp; <span style="color:#ff5a5a">M</span> ostile &nbsp; <span style="color:#e8c93a">$</span> bottino &nbsp; <span style="color:#ff2ee6">!</span> trappola</span></div></div>
 <div id="bar" class="box">
@@ -1647,6 +1652,10 @@ function drawCamFeed(f,c){
   ctx.fillStyle='#ff3b3b'; ctx.fillText('REC',CW-44,8);
   ctx.fillStyle='rgba(0,255,242,0.7)'; ctx.fillText(new Date(Date.now()).toTimeString().slice(0,8),8,CH-20);
 }
+document.getElementById('side-t').onclick=()=>{
+  const sd=document.getElementById('side'), c=sd.classList.toggle('collapsed');
+  document.getElementById('side-tog').textContent = c ? '▸' : '▾';
+};
 document.getElementById('b-cam').onclick=()=>toggleCamWall();
 document.getElementById('camwall-close').onclick=()=>toggleCamWall(false);
 let lastAnim=0;
