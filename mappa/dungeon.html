@@ -882,7 +882,11 @@ function genFloor(i) {
     else { const q=rng(); r.light = q<.12 ? {c:'0,0,0',a:.38,m:'off'} : q<.30 ? {c:'255,240,210',a:.07,m:'flicker'} : q<.45 ? {c:pick(['0,255,242','255,46,230','232,201,58'],rng),a:.08,m:'pulse'} : null; }
   });
 
-  let pc=0; kept.forEach(r => { if (!r.secret) r.pid=++pc; });   // numerazione senza buchi per la planimetria
+  // numerazione: le stanze segrete vengono inserite in posizioni casuali della sequenza (non in coda)
+  { const order = kept.filter(r => !r.secret);
+    kept.filter(r => r.secret).forEach(r => order.splice(Math.floor(rng()*(order.length+1)), 0, r));
+    order.forEach((r,i) => { r.id = i+1; }); }
+  let pc=0; kept.slice().sort((a,b) => a.id-b.id).forEach(r => { if (!r.secret) r.pid=++pc; });   // numerazione senza buchi per la planimetria
 
   // arredi
   const noProp = new Set();
@@ -1488,10 +1492,10 @@ function updateHud(){
   document.getElementById('b-props').classList.toggle('on', SHOWPROPS);
   document.getElementById('b-fog').style.display = GM ? '' : 'none';
   const list=document.getElementById('side-list'); list.innerHTML='';
-  [f.core,...f.rooms].forEach((r,idx) => {
+  [f.core,...f.rooms.slice().sort((a,b) => a.id-b.id)].forEach((r,idx) => {
     if (!GM && !PLAN && !roomSeen(f,r)) return;
     if (PLAN && r.secret) return;
-    const si = idx===0 ? -2 : idx-1;
+    const si = idx===0 ? -2 : f.rooms.indexOf(r);
     const d=document.createElement('div'); d.className='r'+(sel===si?' sel':'');
     const b=document.createElement('b'); b.textContent=(PLAN && r.pid) ? r.pid : r.id;
     const t=document.createElement('span'); t.textContent = (GM && r.secret) ? r.type+' ✱' : r.type;
