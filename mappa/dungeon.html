@@ -885,7 +885,8 @@ function genFloor(i) {
   // numerazione: le stanze segrete vengono inserite in posizioni casuali della sequenza (non in coda)
   { const order = kept.filter(r => !r.secret);
     kept.filter(r => r.secret).forEach(r => order.splice(Math.floor(rng()*(order.length+1)), 0, r));
-    order.forEach((r,i) => { r.id = i+1; }); }
+    // salti casuali nella numerazione su OGNI piano (anche senza stanze segrete): un numero mancante in planimetria non rivela nulla
+    let nn=0; order.forEach(r => { if (rng() < .12) nn++; r.id = ++nn; }); }
   let pc=0; kept.slice().sort((a,b) => a.id-b.id).forEach(r => { if (!r.secret) r.pid=++pc; });   // numerazione senza buchi per la planimetria
 
   // arredi
@@ -1337,7 +1338,7 @@ function draw2D(){
   ctx.font=`bold ${Math.max(10,s*1.1)}px "Courier New",monospace`;
   f.rooms.forEach((r,idx) => {
     if (PLAN && r.secret) return;
-    const lbl = String(PLAN ? r.pid : r.id), cx=(r.lx+.5)*s, cy=(r.ly+.5)*s;
+    const lbl = String(r.id), cx=(r.lx+.5)*s, cy=(r.ly+.5)*s;
     ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(lbl,cx,cy);
     ctx.fillStyle = idx===sel ? '#00fff2' : 'rgba(242,237,228,0.95)'; ctx.fillText(lbl,cx,cy);
   });
@@ -1497,7 +1498,7 @@ function updateHud(){
     if (PLAN && r.secret) return;
     const si = idx===0 ? -2 : f.rooms.indexOf(r);
     const d=document.createElement('div'); d.className='r'+(sel===si?' sel':'');
-    const b=document.createElement('b'); b.textContent=(PLAN && r.pid) ? r.pid : r.id;
+    const b=document.createElement('b'); b.textContent=r.id;
     const t=document.createElement('span'); t.textContent = (GM && r.secret) ? r.type+' ✱' : r.type;
     const i=document.createElement('i'); i.textContent=`${Math.round(r.area)} m²`;
     d.append(b,t,i); d.onclick=()=>{ sel = sel===si ? -1 : si; updateHud(); draw(); };
