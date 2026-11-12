@@ -734,11 +734,61 @@ function entranceLinks(){
   return _EL;
 }
 
-/* NICKNAME PNG: @parola_parola_0000 (nomi / aggettivi / sostantivi mescolati). Usa un rng separato
-   (seed + piano + indice), così non altera la generazione del dungeon. */
-const NICK_WORDS = ['neo','kira','jax','mox','zed','nyx','viff','fl4s','rex','vex','sly','dex','ono','lux','tek',
-  'rusty','glitch','ghost','static','cold','mad','dead','lazy','dirty','blind','toxic','neon','chrome','cheap','sad','lucky','loud','slick',
-  'wolf','rat','blade','wire','crow','moth','pixel','spark','cat','snake','fox','noodle','junk','scrap','hex','byte','sprout','jackal'];
+/* NICKNAME PNG: @parola_parola_0000 (nomi / aggettivi / sostantivi mescolati).
+   Usa un rng separato (seed + piano + indice), così non altera la generazione del dungeon. */
+const NICK_WORDS = [
+  // Nomi, handle e slang
+  'neo','kira','jax','mox','zed','nyx','viff','fl4s','rex','vex','sly','dex','ono','lux','tek',
+  'zero','six','seven','ace','ash','grim','razor','zero','zero_cool','crash','burn','fang',
+  'spike','slash','drip','skull','bones','brick','knox','mako','riko','vito','nix','hex',
+  'echo','riot','havoc','chaos','fuzz','buzz','zip','flip','trip','dizzy','crank','knack',
+
+  // Aggettivi
+  'rusty','glitch','ghost','static','cold','mad','dead','lazy','dirty','blind','toxic','neon',
+  'chrome','cheap','sad','lucky','loud','slick','broken','hollow','feral','wired','burnt',
+  'sick','lost','wired','numb','bitter','rabid','cracked','shady','shallow','nasty','grim',
+  'crooked','shaky','sleepy','greasy','frozen','acid','bloody','nuclear','radioactive',
+  'synthetic','illegal','unholy','nameless','faceless','pointless','reckless','hopeless',
+  'obsolete','defective','corrupt','hostile','unstable','expired','infected','hungry',
+
+  // Animali e creature
+  'wolf','rat','blade','wire','crow','moth','pixel','spark','cat','snake','fox','noodle',
+  'junk','scrap','hex','byte','sprout','jackal','roach','spider','viper','cobra','shark',
+  'dog','hound','pig','boar','bat','raven','raccoon','ferret','weasel','hyena','scorpion',
+  'mosquito','leech','worm','slug','fly','wasp','beetle','gecko','lizard','pigeon','owl',
+  'vulture','buzzard','crab','eel','ratking','hellcat','cyberdog','murdercrow',
+
+  // Tecnologia e cybersprawl
+  'daemon','kernel','rootkit','backdoor','firewall','proxy','router','modem','socket',
+  'packet','buffer','cache','cookie','cipher','virus','malware','trojan','ransom','payload',
+  'firmware','hardware','software','mainframe','terminal','console','driver','script',
+  'syntax','binary','bitrate','bandwidth','checksum','overflow','blackbox','datastream',
+  'deadlink','404','403','503','404ghost','zeroday','botnet','darknet','deepweb','localhost',
+  'root','admin','sudo','nobody','null','void','undefined','overflow','segfault','killproc',
+
+  // Sprawl, rottami e criminalità
+  'junkie','dealer','runner','drifter','hobo','scav','scavenger','scrapper','fixer',
+  'ratboy','streetkid','nightowl','chopshop','dumpster','backalley','underpass','sewer',
+  'dumpsterfire','roadkill','blackmarket','deadbeat','freeloader','parasite','pickpocket',
+  'smuggler','grifter','cutthroat','fence','bounty','headhunter','bodybag','corpse',
+  'bloodbag','meatpuppet','meathead','gutter','garbage','landfill','rustbucket','junkyard',
+  'trashfire','wasteland','burnout','outcast','runaway','vagabond','nobody',
+
+  // Oggetti, armi e sostanze
+  'blade','razor','shiv','shank','pistol','shotgun','bullet','shell','magnum','trigger',
+  'monoblade','chainsaw','grenade','bomb','detonator','shrapnel','brass','lead','copper',
+  'syringe','needle','stitch','stimulant','speed','dust','smoke','acid','crystal','powder',
+  'moonshine','cheapshot','blacktar','redpill','bluepill','painkiller','overdose',
+
+  // Cyberpunk sporco / nomi evocativi
+  'neonrat','chromehead','meatboy','wirehead','ghostline','deadpixel','blackice',
+  'redshift','nightshift','coldboot','hardreset','softkill','bloodcode','darkmatter',
+  'badsector','deadchannel','lostsignal','blindspot','blackout','whiteNoise',
+  'staticboy','acidrain','nightmare','graveyard','lastcall','finalnotice','badkarma',
+  'lowlife','highvoltage','shortcircuit','fusebox','burner','ghostwire','deadwire',
+  'meatgrinder','bonecrusher','skullfuck','trashpanda','ratbastard','shitstorm'
+];
+
 function makeNick(fl, n){
   const rr = mulberry32(hashStr(SEED_STR+'#'+fl+'nick'+n));
   const a = NICK_WORDS[Math.floor(rr()*NICK_WORDS.length)];
