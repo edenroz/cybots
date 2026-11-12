@@ -9,6 +9,7 @@
 const CITY_LIFE = {
   // --- visibilità / prestazioni ---------------------------------------
   minZoom: 17,          // sotto questo zoom (con una piccola dissolvenza) la vita sparisce e la simulazione si ferma
+  hotkeys: { pause: 'KeyP', hide: 'KeyH' },   // P = ferma/riprendi, H = nascondi/mostra (codici di KeyboardEvent.code)
   fps: 30,              // aggiornamenti al secondo della geometria 3D (più alto = più fluido, più pesante)
   netRadius: 800,       // metri attorno al centro schermo di cui si legge la rete stradale
   view: { min: 140, max: 520, factor: 0.9 },   // raggio (m) in cui vivono le entità: ~ metà schermo, limitato tra min e max

@@ -361,6 +361,13 @@
   .life-nick.car{color:#7ff9f1;}
   .life-nick.drone{color:#ff6a6a;}
   .life-nick.heli{color:#e8c93a;font-weight:bold;font-size:11px;}
+  .life-toast{
+    position:fixed;left:50%;bottom:56px;transform:translateX(-50%);z-index:12;pointer-events:none;
+    background:rgba(10,9,8,0.88);border:1px solid rgba(242,237,228,0.3);color:var(--cy-white);
+    font:11px 'Courier New',monospace;letter-spacing:1px;padding:6px 12px;white-space:nowrap;
+    opacity:0;transition:opacity 0.2s;
+  }
+  .life-toast.show{opacity:1;}
 
   /* Mobile: make popup panels touch-friendly, full width, and easy to dismiss */
   @media (max-width: 640px){
@@ -3743,7 +3750,8 @@ const life = {
   cfg: null, on: false, lines: [], nodes: new Map(), sets: null, netCenter: null, netBuiltAt: 0,
   cars: [], peds: [], drones: [], helis: [], nextHeli: 0, lastTick: 0, lastMaintain: 0, lastIdle: 0, startedAt: 0,
   busy: false, busyAt: 0, serial: 0, noRings: [], noCircles: [], labelEls: [], labelBox: null,
-  carKm: 0, pedKm: 0, R: 200, fresh: true, occ: null, tick: 0, lastCam: null, forceCull: false
+  carKm: 0, pedKm: 0, R: 200, fresh: true, occ: null, tick: 0, lastCam: null, forceCull: false,
+  paused: false, hidden: false, simT: 0, dirty: false, toastEl: null, toastT: 0
 };
 const _lp = { x: 0, y: 0, ux: 0, uy: 0 };
 
@@ -3796,7 +3804,38 @@ function addCityLife() {
   // dell'ultimo per poter lanciare io i refresh che dipendono da lui (vedi lifeMaintain)
   map.on('idle', () => { life.lastIdle = performance.now(); });
 
+  // tasti rapidi (nessun pulsante a schermo): P = pausa/riprendi, H = nascondi/mostra
+  const HK = C.hotkeys || { pause: 'KeyP', hide: 'KeyH' };
+  life.toastEl = document.createElement('div');
+  life.toastEl.className = 'life-toast';
+  document.body.appendChild(life.toastEl);
+  window.addEventListener('keydown', e => {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (typeof isTypingTarget === 'function' && isTypingTarget(e.target)) return;
+    if (e.code === HK.pause) { e.preventDefault(); lifeTogglePause(); }
+    else if (e.code === HK.hide) { e.preventDefault(); lifeToggleHide(); }
+  });
+
   requestAnimationFrame(lifeTick);
+}
+
+function lifeToast(msg) {
+  const el = life.toastEl; if (!el) return;
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(life.toastT); life.toastT = setTimeout(() => el.classList.remove('show'), 1600);
+}
+// P: ferma/riprendi l'animazione (le entità restano dove sono, la camera si muove e l'occlusione continua a funzionare)
+function lifeTogglePause() {
+  if (life.hidden) { lifeToast('ANIMAZIONE NASCOSTA — H per mostrarla'); return; }
+  life.paused = !life.paused;
+  if (life.paused) life.dirty = true;
+  lifeToast(life.paused ? 'ANIMAZIONE IN PAUSA — P per riprendere' : 'ANIMAZIONE RIPRESA');
+}
+// H: nasconde/mostra tutto (entità, nickname, elicotteri); da nascosta la simulazione non gira e non pesa
+function lifeToggleHide() {
+  life.hidden = !life.hidden;
+  if (life.hidden) { life.paused = false; if (life.on) lifeStop(); }
+  lifeToast(life.hidden ? 'ANIMAZIONE NASCOSTA — H per mostrarla' : 'ANIMAZIONE VISIBILE');
 }
 
 /* ---------- ciclo principale ---------- */
@@ -3804,7 +3843,7 @@ function lifeTick(ts) {
   requestAnimationFrame(lifeTick);
   const C = life.cfg; if (!C) return;
   const z = map.getZoom();
-  if (z < C.minZoom - 0.45 || document.hidden) { if (life.on) lifeStop(); return; }
+  if (life.hidden || z < C.minZoom - 0.45 || document.hidden) { if (life.on) lifeStop(); return; }
   if (!life.on) lifeStart();
   const interval = 1000 / C.fps;
   if (ts - life.lastTick < interval) return;
@@ -3813,13 +3852,15 @@ function lifeTick(ts) {
   const now = performance.now();
   if (now - life.lastMaintain > 1000) { life.lastMaintain = now; lifeMaintain(now); }
   const push = !life.busy || (now - life.busyAt > 300);
-  lifeStep(dt, now, ts / 1000, push);
+  if (!life.paused) life.simT += dt;                                // in pausa il tempo della simulazione non avanza (luci, rotori e passi restano fermi)
+  lifeStep(dt, now, life.simT, push, life.paused);
 }
 
 function lifeStart() {
   const now = performance.now();
   life.on = true; life.cars = []; life.peds = []; life.drones = []; life.helis = [];
   life.lines = []; life.nodes = new Map(); life.sets = null; life.netCenter = null; life.netBuiltAt = 0; life.occ = null;
+  life.paused = false; life.simT = 0; life.dirty = false;
   life.lastMaintain = 0; life.lastTick = 0; life.fresh = true; life.startedAt = now; life.lastIdle = now; life.busy = false;
   life.nextHeli = now + lifeRand(2500, 7000);
 }
@@ -4117,18 +4158,22 @@ function lifeEvalVisibility(a, cam, o) {
 
 function lifeCull() {
   const o = life.occ, cam = o ? lifeCamera() : null, tick = ++life.tick;
-  if (!cam) { [life.cars, life.peds, life.drones, life.helis].forEach(l => l.forEach(a => { a.occ = false; a.occL = false; })); return; }
+  if (!cam) { [life.cars, life.peds, life.drones, life.helis].forEach(l => l.forEach(a => { a.occ = false; a.occL = false; })); return false; }
   const lc = life.lastCam;
   const moved = !lc || Math.abs(cam.x - lc.x) + Math.abs(cam.y - lc.y) + Math.abs(cam.z - lc.z) > 0.3;
   life.lastCam = cam;
   const full = moved || life.forceCull; life.forceCull = false;
+  let changed = false;
   [life.cars, life.peds, life.drones, life.helis].forEach(list => {
     for (let i = 0; i < list.length; i++) {
       const a = list[i];
       if (!full && a.occ !== undefined && ((i + tick) % 3)) continue;
+      const po = a.occ, pl = a.occL;
       lifeEvalVisibility(a, cam, o);
+      if (po !== a.occ || pl !== a.occL) changed = true;
     }
   });
+  return changed;
 }
 
 /* ---------- agenti ---------- */
@@ -4352,10 +4397,10 @@ function lifeBuildFeatures(T) {
 }
 
 /* ---------- un passo di simulazione ---------- */
-function lifeStep(dt, now, T, push) {
+function lifeStep(dt, now, T, push, paused) {
   const C = life.cfg, ctr = map.getCenter(), cx = ctr.lng, cy = ctr.lat, R = life.R;
   const mob = (typeof isMobile !== 'undefined' && isMobile) ? 0.5 : 1;
-  if (life.lines.length && life.sets) {
+  if (!paused && life.lines.length && life.sets) {
     lifeCarFollow(dt);
     lifeUpdateAgents(life.cars, dt, cx, cy, R);
     lifeUpdateAgents(life.peds, dt, cx, cy, R);
@@ -4369,9 +4414,11 @@ function lifeStep(dt, now, T, push) {
     for (let n = 0; n < budget && life.peds.length < tPeds; n++) lifeSpawnPed(cx, cy, R);
     for (let n = 0; n < Math.min(budget, 3) && life.drones.length < tDrones; n++) lifeSpawnDrone(cx, cy, R);
   }
-  lifeUpdateHelis(dt, now, cx, cy, R);
-  lifeCull();
-  if (push) {
+  if (!paused) lifeUpdateHelis(dt, now, cx, cy, R);
+  const changed = lifeCull();                                         // la camera si muove anche in pausa: l'occlusione va aggiornata
+  if (!push) life.dirty = true;                                       // aggiornamento saltato (sorgente occupata): da rifare
+  if (push && (!paused || changed || life.dirty)) {                   // in pausa la geometria si rimanda solo se è cambiata
+    life.dirty = false;
     const src = map.getSource('cy-life');
     if (src) { life.busy = true; life.busyAt = now; src.setData({ type: 'FeatureCollection', features: lifeBuildFeatures(T) }); }
   }
