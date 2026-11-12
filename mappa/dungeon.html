@@ -1138,6 +1138,7 @@ function drawFog(f,s,camc){
   }
 }
 let T=0, ANIM=true, SHOWNPC=true;
+const NPC_SPEED = 0.35;   // velocità dei PNG: 1 = originale, più basso = più lenti (vale per mappa e telecamere)
 const camOn = new Set();   // visuali telecamere attive, chiave 'piano:indice'
 function toggleCam(fl,i){ const k=fl+':'+i, was=camOn.has(k); camOn.clear(); if (!was) camOn.add(k); }   // una sola visuale attiva alla volta
 function camSeen(f,c){ return GM || !!(fog.exp[cur] && fog.exp[cur][c.y*GW+c.x]); }
@@ -1412,7 +1413,7 @@ function draw2D(){
   if (!PLAN && SHOWNPC) {
     const vv = (fog.tok && fog.tok.f===cur) ? fog.vis : null;
     f.npcs.forEach(n => {
-      const u=(Math.sin(T*n.sp*2+n.ph)+1)/2, nx=n.ax+(n.bx-n.ax)*u, ny=n.ay+(n.by-n.ay)*u;
+      const u=(Math.sin(T*n.sp*NPC_SPEED*2+n.ph)+1)/2, nx=n.ax+(n.bx-n.ax)*u, ny=n.ay+(n.by-n.ay)*u;
       const ni=(ny|0)*GW+(nx|0); if (!GM && !((vv && vv[ni]) || (camc && camc[ni]))) return;
       drawNpcDot(n,nx,ny,s);
     });
@@ -1693,7 +1694,7 @@ function drawCamFeed(f,c){
   f.props.forEach(p => { if (p.k==='rug' && cone[p.y*GW+p.x]) drawProp(p,s); });
   f.props.forEach(p => { if (p.k!=='rug' && cone[p.y*GW+p.x]) drawProp(p,s); });
   if (SHOWNPC) f.npcs.forEach(n => {
-    const u=(Math.sin(T*n.sp*2+n.ph)+1)/2, nx=n.ax+(n.bx-n.ax)*u, ny=n.ay+(n.by-n.ay)*u;
+    const u=(Math.sin(T*n.sp*NPC_SPEED*2+n.ph)+1)/2, nx=n.ax+(n.bx-n.ax)*u, ny=n.ay+(n.by-n.ay)*u;
     if (!cone[(ny|0)*GW+(nx|0)]) return;
     drawNpcDot(n,nx,ny,s);
   });
