@@ -32,13 +32,19 @@ const CITY_LIFE = {
   labels: { minZoom: 17.4, max: 36, radiusM: 170 },  // solo le entità più vicine al centro, entro radiusM metri
 
   // --- dimensioni (le altezze dei palazzi sono già moltiplicate x4: ingrandiamo un po' anche le entità) ---
-  sizeXY: 0.5,
-  sizeZ: 0.5,
+  sizeXY: 1.6,
+  sizeZ: 1.9,
   sidewalk: 1.8,        // distanza (m) del marciapiede dal bordo della carreggiata
 
   // --- dove NON c'è vita (zone di quarantena, ecc.) -------------------
-  // noLifeWalls: ['MURO NORTH CENTRAL / EDGES'],   // nomi in WALL_DEFS: l'area racchiusa dal muro è vuota (G0)
+  noLifeKinds: ['car'],                           // cosa NON può stare nelle zone qui sotto: 'car' (auto/furgoni/bus), 'ped' (pedoni), 'drone'. Ora G0 è vietato solo alle auto
+  noLifeWalls: ['MURO NORTH CENTRAL / EDGES'],   // nomi in WALL_DEFS: l'area racchiusa dal muro è vuota (G0)
+  noLifeMarginM: 200,                             // fascia di rispetto (m) anche FUORI dal muro, per i tipi in noLifeKinds (copre anche CY_SANITAZION HQ)
   noLifeCircles: [],                              // es. { lng:18.0663, lat:59.2652, r:1500 }
+  noPedCircles: [{ lng: 18.04103, lat: 59.33949, r: 700 }],   // i pedoni non entrano nel cratere/lago di G0 (valgono sempre, a prescindere da noLifeKinds)
+
+  // zone dove lo stile rimuove i palazzi (blast del cratere di G0): lì non contano come ostacoli per l'occlusione
+  ignoreBuildingsCircles: [{ lng: 18.04103, lat: 59.33949, r: 600 }],
 
   // --- strade ------------------------------------------------------------
   allClasses: ['motorway','trunk','primary','secondary','tertiary','minor','service','path'],
