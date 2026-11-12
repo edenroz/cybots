@@ -32,8 +32,8 @@ const CITY_LIFE = {
   labels: { minZoom: 17.4, max: 36, radiusM: 170 },  // solo le entità più vicine al centro, entro radiusM metri
 
   // --- dimensioni (le altezze dei palazzi sono già moltiplicate x4: ingrandiamo un po' anche le entità) ---
-  sizeXY: 1.6,
-  sizeZ: 1.9,
+  sizeXY: 0.5,
+  sizeZ: 0.5,
   sidewalk: 1.8,        // distanza (m) del marciapiede dal bordo della carreggiata
 
   // --- dove NON c'è vita (zone di quarantena, ecc.) -------------------
