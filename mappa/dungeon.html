@@ -35,8 +35,10 @@
   #bar button{background:rgba(242,237,228,.08);border:1px solid rgba(242,237,228,.4);color:var(--white);font-family:inherit;font-size:12px;padding:6px 10px;cursor:pointer;}
   #bar button:hover{border-color:var(--cyan);color:var(--cyan);}
   #bar button.on{border-color:var(--mag);color:var(--mag);}
+  #bar #b-net.on{border-color:var(--cyan);color:var(--cyan);}
   #bar input[type=range]{width:min(220px,36vw);accent-color:#00fff2;}
   #flabel{min-width:190px;text-align:center;font-size:12px;letter-spacing:1px;}
+  #nettip{position:fixed;display:none;z-index:30;pointer-events:none;padding:6px 10px;font-size:11px;line-height:1.5;max-width:230px;}
   #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));padding:8px 14px;display:none;font-size:12px;color:var(--yellow);max-width:90vw;text-align:center;}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--grey);}
   #camwall{position:fixed;left:14px;right:334px;top:100px;bottom:84px;display:none;flex-direction:column;padding:10px 12px;overflow:hidden;}
@@ -56,7 +58,8 @@
 <div id="title" class="box"><h1><span>C</span>Y // DUNGEON</h1><div class="meta" id="meta"></div></div>
 <div id="side" class="box"><h3 id="side-t" title="Comprimi/espandi le descrizioni"><span id="side-h">CHIAVE</span><button id="side-tog">▾</button></h3><div id="side-list"></div>
   <div class="k"><span style="color:#f2ede4">●</span> gruppo: clicca una cella esplorata per muoverti &nbsp; ▲▼ scale &nbsp; E ascensore &nbsp; <span style="color:#e8c93a">▮</span> porta &nbsp; <span style="color:#ff5a5a">▮</span> chiusa a chiave &nbsp; ⌒ arco &nbsp; <span style="color:#ffb36b">●</span> passanti &nbsp; <span style="color:#ff3b3b">◀</span> telecamera: clic = visuale<br>
-  <span class="gmk" style="display:none"><span style="color:#ff2ee6">S</span> porta segreta &nbsp; <span style="color:#ff5a5a">M</span> ostile &nbsp; <span style="color:#e8c93a">$</span> bottino &nbsp; <span style="color:#ff2ee6">!</span> trappola</span></div></div>
+  <span class="gmk" style="display:none"><span style="color:#ff2ee6">S</span> porta segreta &nbsp; <span style="color:#ff5a5a">M</span> ostile &nbsp; <span style="color:#e8c93a">$</span> bottino &nbsp; <span style="color:#ff2ee6">!</span> trappola</span>
+  <span class="netk" style="display:none"></span></div></div>
 <div id="bar" class="box">
   <button id="b-down" title="Piano inferiore (↓)">▼</button>
   <input id="slider" type="range" min="0" max="0" value="0">
@@ -68,11 +71,13 @@
   <button id="b-props" style="display:none" title="Mostra/nascondi gli arredi">ARREDI</button>
   <button id="b-npc" class="on" title="Mostra/nascondi i passanti (PNG)">PNG</button>
   <button id="b-cam" title="Vista di tutte le telecamere del piano (C)">CAM</button>
+  <button id="b-net" title="Vista netrunning: tutti i dispositivi elettronici del piano (N)">NETRUNNING</button>
   <button id="b-anim" class="on" title="Animazioni: luci, passanti, acqua">ANIM</button>
   <button id="b-fog" title="Azzera la nebbia di guerra" style="display:none">RESET NEBBIA</button>
   <button id="b-zout">−</button><button id="b-zin">+</button><button id="b-fit" title="Ricentra">⌖</button>
 </div>
 <div id="toast" class="box"></div>
+<div id="nettip" class="box"></div>
 <div id="err">Coordinate mancanti.<br>Apri questa pagina dal pulsante "APRI DUNGEON" nel pannello di un edificio (parametri lat / lng / h / name / poly).</div>
 
 <script>
@@ -1138,7 +1143,7 @@ function drawFog(f,s,camc){
   }
 }
 let T=0, ANIM=true, SHOWNPC=true;
-const NPC_SPEED = 0.35;   // velocità dei PNG: 1 = originale, più basso = più lenti (vale per mappa e telecamere)
+const NPC_SPEED = 0.45;   // velocità dei PNG: 1 = originale, più basso = più lenti (vale per mappa e telecamere)
 const camOn = new Set();   // visuali telecamere attive, chiave 'piano:indice'
 function toggleCam(fl,i){ const k=fl+':'+i, was=camOn.has(k); camOn.clear(); if (!was) camOn.add(k); }   // una sola visuale attiva alla volta
 function camSeen(f,c){ return GM || !!(fog.exp[cur] && fog.exp[cur][c.y*GW+c.x]); }
@@ -1163,7 +1168,7 @@ function tryFloor(i){
   if (t!==4 && t!==5) { toast('Per cambiare piano raggiungi le scale (▲▼) o l\'ascensore (E).'); updateHud(); return; }
   if (t===4 && Math.abs(i-from)!==1) { toast('Le scale portano solo al piano adiacente: serve l\'ascensore (E).'); updateHud(); return; }
   fog.tok = {f:i, x:fog.tok.x, y:fog.tok.y};
-  cur = i; sel = -1; fogReveal(); fogSave(); updateHud(); draw();
+  cur = i; sel = -1; netSel = null; fogReveal(); fogSave(); updateHud(); draw();
 }
 
 const GAP3 = Math.max(0.2, Math.min(Math.max(2.5, Math.min(6, Math.max(GW,GD)*0.1)), Math.max(GW,GD)*5/NL));
@@ -1287,6 +1292,186 @@ function drawDoor(t,x,y,s,f){
     else { ctx.fillRect(cx-gap/2-p/2,cy-p/2,p,p); ctx.fillRect(cx+gap/2-p/2,cy-p/2,p,p); }
   }
 }
+
+/* =========================================================================
+   VISTA NETRUNNING (tasto N / pulsante NETRUNNING)
+   Sul piano corrente la pianta si tinge di ciano e si vedono TUTTI i dispositivi elettronici,
+   anche nelle zone ancora coperte dalla nebbia di guerra (un netrunner li vede in rete):
+     SRV server (rack) · TRM terminali · WRK postazioni (scrivanie) · TV olo-schermi ·
+     VND distributori · MCH macchinari/impianti · VEH veicoli smart · CAM telecamere ·
+     LCK serrature elettroniche · ACC controllo accessi dell'ingresso · ELV ascensori ·
+     LGT illuminazione smart · COM commlink dei PNG (col loro nickname, si muovono con loro) ·
+     SEC serrature delle porte segrete (solo in modalità MASTER, come le stanze segrete).
+   I dispositivi sono collegati in una rete: ognuno al server più vicino del piano (se non ci sono
+   server, ai controlli degli ascensori). Passa il mouse su un dispositivo per i dettagli, cliccalo per
+   evidenziarlo e vedere i suoi collegamenti; l'elenco a destra riporta tutti i dispositivi del piano
+   con livello di ICE e cosa si può fare hackerandoli. ID, ICE e posizioni sono deterministici (come
+   il resto del dungeon) e usano un generatore separato: non alterano la generazione del palazzo.
+   ========================================================================= */
+const NET_INFO = {
+  srv: {p:'SRV', n:'Server',                       c:'#00fff2', o:0,  ice:[3,5], f:'Dati dell\'edificio; controlla telecamere e serrature del piano.'},
+  trm: {p:'TRM', n:'Terminale',                    c:'#7cff4a', o:1,  ice:[1,3], f:'File, email e credenziali locali.'},
+  wrk: {p:'WRK', n:'Postazione di lavoro',         c:'#4ac8ff', o:2,  ice:[1,2], f:'Documenti, cronologia e accessi dell\'utente.'},
+  tv:  {p:'TV',  n:'Olo-schermo',                  c:'#b58cff', o:3,  ice:[0,1], f:'Può trasmettere immagini e audio; spesso sulla rete domestica.'},
+  vnd: {p:'VND', n:'Distributore automatico',      c:'#ff8cf1', o:4,  ice:[1,2], f:'Crediti, inventario e registro degli acquisti.'},
+  mch: {p:'MCH', n:'Macchinario',                  c:'#ff9a3a', o:5,  ice:[1,3], f:'Impianto controllabile: spegnimento, sovraccarico o sabotaggio.'},
+  veh: {p:'VEH', n:'Veicolo smart',                c:'#ffb36b', o:6,  ice:[2,3], f:'Accensione, GPS e telecamere di bordo.'},
+  cam: {p:'CAM', n:'Telecamera',                   c:'#ff4a4a', o:7,  ice:[2,4], f:'Feed video: si può accecare, mettere in loop o riavvolgere.'},
+  lck: {p:'LCK', n:'Serratura elettronica',        c:'#e8c93a', o:8,  ice:[2,4], f:'Apre o blocca la porta; registra gli accessi.'},
+  acc: {p:'ACC', n:'Controllo accessi (ingresso)', c:'#ffffff', o:9,  ice:[3,5], f:'Scanner biometrico, badge e registro dell\'ingresso.'},
+  elv: {p:'ELV', n:'Controllo ascensore',          c:'#ffd27a', o:10, ice:[2,4], f:'Chiamata, blocco e registro passeggeri dell\'ascensore.'},
+  lgt: {p:'LGT', n:'Illuminazione smart',          c:'#fff3b0', o:11, ice:[0,1], f:'Luci e sensori di presenza della stanza.'},
+  sec: {p:'SEC', n:'Serratura nascosta',           c:'#ff2ee6', o:12, ice:[4,5], f:'Apre la porta segreta: non compare in nessuna planimetria.'},
+  com: {p:'COM', n:'Commlink / impianti',          c:'#ff2ee6', o:13, ice:[1,4], f:'Comunicazioni e cyberware del PNG.'}
+};
+const NET_PROP = {rack:'srv', terminal:'trm', desk:'wrk', tv:'tv', vend:'vnd', machine:'mch', car:'veh'};
+const NET_MACHINE = {'Lavanderia comune':'Lavatrice','Generatori':'Generatore','Laboratorio clandestino':'Apparecchiatura da laboratorio','Officina':'Macchina utensile','Locale tecnico':'Impianto tecnico'};
+const netCache = [];
+let NET = false, netSel = null, netHoverId = null;
+const netName = d => d.name || NET_INFO[d.kind].n;
+
+function getNetDevices(i){
+  if (netCache[i]) return netCache[i];
+  const f=getFloor(i), g=f.g, devs=[], cnt={}, rng=mulberry32(hashStr(SEED_STR+'#'+i+'net'));
+  const roomAt=(x,y)=>{ const r=f.rid[(y|0)*GW+(x|0)]; return r>=0 ? f.rooms[r] : null; };
+  const add=(kind,x,y,o)=>{
+    o=o||{}; cnt[kind]=(cnt[kind]||0)+1;
+    const room=roomAt(x,y), inf=NET_INFO[kind], t=g[(y|0)*GW+(x|0)];
+    devs.push(Object.assign({kind,x,y,
+      id: NET_INFO[kind].p+'-'+String(cnt[kind]).padStart(2,'0'),
+      roomName: room ? room.type : (t===2 ? 'Corridoio' : (t===4||t===5) ? 'Nucleo scale/ascensore' : 'Porta / ingresso'),
+      secret: !!(room && room.secret),
+      ice: inf.ice[0]+Math.floor(rng()*(inf.ice[1]-inf.ice[0]+1))}, o));
+  };
+  f.props.forEach(p => {
+    const m=NET_PROP[p.k]; if (!m) return;
+    const x=p.x+(p.w||1)/2, y=p.y+(p.h||1)/2, room=roomAt(x,y);
+    add(m,x,y, m==='mch' ? {name:NET_MACHINE[room&&room.type]||'Macchinario'} : null);
+  });
+  f.cams.forEach(c => add('cam',c.x+.5,c.y+.5,{id:'CAM-'+String(c.id).padStart(2,'0'), ang:c.ang}));
+  for (let k=0;k<GW*GD;k++) {
+    const t=g[k], x=(k%GW)+.5, y=((k/GW)|0)+.5;
+    if (t===7) add('lck',x,y); else if (t===9) add('acc',x,y); else if (t===5) add('elv',x,y); else if (t===6) add('sec',x,y,{secret:true});
+  }
+  f.rooms.forEach(r => { if (r.light && r.light.m!=='off' && !r.flood) add('lgt',r.lx+.5,r.ly+.5); });
+  // rete: ogni dispositivo al server più vicino (senza server: ai controlli ascensore); i server tra loro
+  let hubs=devs.filter(d => d.kind==='srv'); const hubKind = hubs.length ? 'srv' : 'elv';
+  if (!hubs.length) hubs=devs.filter(d => d.kind==='elv');
+  const links=[], dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const nearest=(d,list)=>{ let b=null,bd=1e9; list.forEach(h => { if (h===d) return; const q=dist(d,h); if (q<bd){bd=q;b=h;} }); return b; };
+  if (hubs.length) devs.forEach(d => {
+    if (d.kind===hubKind || d.kind==='veh') return;
+    if (hubKind==='srv' && d.kind==='elv') return;
+    const h=nearest(d,hubs); if (h) links.push([d,h]);
+  });
+  hubs.forEach((h,n) => { if (n) { const o=nearest(h,hubs.slice(0,n)); if (o) links.push([h,o]); } });
+  if (hubKind==='srv') { const els=devs.filter(d => d.kind==='elv'); hubs.forEach(h => { const e=nearest(h,els); if (e) links.push([h,e]); }); els.forEach(e => { if (!links.some(l => l[0]===e||l[1]===e)) { const h=nearest(e,hubs); if (h) links.push([e,h]); } }); }
+  return (netCache[i]={devs,links});
+}
+
+// dispositivi visibili ora: quelli fissi del piano + i commlink dei PNG nella loro posizione attuale
+function netLive(f,i){
+  const out=getNetDevices(i).devs.filter(d => GM || !d.secret);
+  if (!SHOWNPC) return out;
+  f.npcs.forEach(n => {
+    const u=(Math.sin(T*n.sp*NPC_SPEED*2+n.ph)+1)/2, x=n.ax+(n.bx-n.ax)*u, y=n.ay+(n.by-n.ay)*u;
+    const r=f.rid[(y|0)*GW+(x|0)], room=r>=0 ? f.rooms[r] : null;
+    if (room && room.secret && !GM) return;
+    out.push({kind:'com', id:n.nick, x, y, roomName: room ? room.type : 'Corridoio', ice: 1+hashStr(n.nick)%4});
+  });
+  return out;
+}
+
+function netIcon(d,X,Y,s,col){
+  const r=Math.max(3.5,s*.5);
+  ctx.fillStyle=col; ctx.strokeStyle=col; ctx.lineWidth=Math.max(1,s*.1);
+  switch (d.kind) {
+    case 'srv': for (let k=-1;k<=1;k++) ctx.fillRect(X-r,Y+k*r*.62-r*.2,r*2,r*.4); break;
+    case 'trm': ctx.strokeRect(X-r,Y-r*.8,r*2,r*1.6); ctx.fillRect(X-r*.6,Y,r*.55,r*.25); break;
+    case 'wrk': ctx.strokeRect(X-r*.75,Y-r*.6,r*1.5,r*1.2); ctx.fillRect(X-r*.2,Y-r*.2,r*.4,r*.4); break;
+    case 'tv':  ctx.strokeRect(X-r*1.1,Y-r*.6,r*2.2,r*1.2); ctx.globalAlpha=.35; ctx.fillRect(X-r*1.1,Y-r*.6,r*2.2,r*1.2); ctx.globalAlpha=1; break;
+    case 'vnd': ctx.strokeRect(X-r*.6,Y-r,r*1.2,r*2); ctx.fillRect(X-r*.6,Y-r,r*1.2,r*.8); break;
+    case 'cam': ctx.save(); ctx.translate(X,Y); ctx.rotate(d.ang||0); ctx.beginPath(); ctx.moveTo(-r*.8,-r*.8); ctx.lineTo(r*1.1,0); ctx.lineTo(-r*.8,r*.8); ctx.closePath(); ctx.fill(); ctx.restore(); break;
+    case 'lck': case 'sec': ctx.fillRect(X-r*.7,Y-r*.1,r*1.4,r*.95); ctx.beginPath(); ctx.arc(X,Y-r*.1,r*.5,Math.PI,0); ctx.stroke(); break;
+    case 'acc': ctx.beginPath(); ctx.moveTo(X,Y-r*1.1); ctx.lineTo(X+r*1.1,Y); ctx.lineTo(X,Y+r*1.1); ctx.lineTo(X-r*1.1,Y); ctx.closePath(); ctx.fill(); break;
+    case 'elv': ctx.strokeRect(X-r,Y-r,r*2,r*2); ctx.font=`bold ${Math.max(8,r*1.4)}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('E',X,Y+.5); break;
+    case 'lgt': ctx.beginPath(); ctx.arc(X,Y,r*.45,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(X,Y,r*.9,0,7); ctx.stroke(); break;
+    case 'mch': case 'veh': ctx.beginPath(); ctx.arc(X,Y,r*.7,0,7); ctx.stroke(); for (let k=0;k<6;k++) { const a=k*1.047+T*.5; ctx.beginPath(); ctx.moveTo(X+Math.cos(a)*r*.7,Y+Math.sin(a)*r*.7); ctx.lineTo(X+Math.cos(a)*r*1.05,Y+Math.sin(a)*r*1.05); ctx.stroke(); } break;
+    default: ctx.beginPath(); ctx.arc(X,Y,r*.8,0,7); ctx.stroke(); ctx.beginPath(); ctx.arc(X,Y,r*.3,0,7); ctx.fill();   // com
+  }
+}
+
+function drawNet(f,s){
+  const live=netLive(f,cur), pack=getNetDevices(cur), W2=GW*s, H2=GD*s;
+  ctx.save();
+  // tinta ciano + velo scuro + riga di scansione che scorre
+  ctx.globalCompositeOperation='multiply'; ctx.fillStyle='rgb(70,170,175)'; ctx.fillRect(0,0,W2,H2);
+  ctx.globalCompositeOperation='source-over'; ctx.fillStyle='rgba(0,10,14,0.38)'; ctx.fillRect(0,0,W2,H2);
+  const sy=((T*0.18)%1)*H2, bh=H2*0.06, gr=ctx.createLinearGradient(0,sy-bh,0,sy+bh);
+  gr.addColorStop(0,'rgba(0,255,242,0)'); gr.addColorStop(.5,'rgba(0,255,242,0.10)'); gr.addColorStop(1,'rgba(0,255,242,0)');
+  ctx.fillStyle=gr; ctx.fillRect(0,sy-bh,W2,bh*2);
+  // collegamenti di rete (tratteggio che scorre)
+  const vis=d => GM || !d.secret;
+  ctx.setLineDash([s*.45,s*.4]); ctx.lineDashOffset=-T*s*2;
+  pack.links.forEach(([a,b]) => {
+    if (!vis(a)||!vis(b)) return;
+    const hot=(a.id===netSel||b.id===netSel);
+    ctx.strokeStyle=hot?'rgba(255,255,255,0.95)':'rgba(0,255,242,0.30)'; ctx.lineWidth=hot?2:1;
+    ctx.beginPath(); ctx.moveTo(a.x*s,a.y*s); ctx.lineTo(b.x*s,b.y*s); ctx.stroke();
+  });
+  ctx.setLineDash([]); ctx.lineDashOffset=0;
+  // dispositivi
+  const showLbl=s>=8;
+  live.forEach(d => {
+    const col=NET_INFO[d.kind].c, X=d.x*s, Y=d.y*s, r=Math.max(3.5,s*.5);
+    if (s>=3) { const ph=(T*0.7+d.x*.37+d.y*.21)%1; ctx.strokeStyle=col; ctx.globalAlpha=.35*(1-ph); ctx.lineWidth=1; ctx.beginPath(); ctx.arc(X,Y,r*(1+ph*1.8),0,7); ctx.stroke(); ctx.globalAlpha=1; }
+    ctx.shadowColor=col; ctx.shadowBlur=6; netIcon(d,X,Y,s,col); ctx.shadowBlur=0;
+    const hot=(d.id===netSel||d.id===netHoverId);
+    if (hot) { ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,r*1.7,0,7); ctx.stroke(); }
+    if (showLbl || hot) {
+      ctx.font=`${Math.max(8,Math.min(10,s*.8))}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(d.id,X,Y+r+2); ctx.fillStyle=col; ctx.fillText(d.id,X,Y+r+2);
+    }
+  });
+  ctx.restore();
+}
+
+// dispositivo sotto il puntatore (coordinate schermo), o null
+function netPick(cx,cy){
+  const f=getFloor(cur), R=Math.max(9,v2.s*.7); let best=null, bd=1e9;
+  netLive(f,cur).forEach(d => { const q=Math.hypot(v2.ox+d.x*v2.s-cx, v2.oy+d.y*v2.s-cy); if (q<R && q<bd) { bd=q; best=d; } });
+  return best;
+}
+
+function renderNetList(list,f){
+  const live=netLive(f,cur).slice().sort((a,b) => NET_INFO[a.kind].o-NET_INFO[b.kind].o || (a.id<b.id?-1:a.id>b.id?1:0));
+  const counts={}; live.forEach(d => { counts[d.kind]=(counts[d.kind]||0)+1; });
+  const head=document.createElement('div'); head.className='desc'; head.style.paddingLeft='6px';
+  head.textContent = live.length+' dispositivi — '+Object.keys(counts).sort((a,b) => NET_INFO[a].o-NET_INFO[b].o).map(k => counts[k]+' '+NET_INFO[k].p).join(' · ');
+  list.appendChild(head);
+  live.forEach(d => {
+    const inf=NET_INFO[d.kind], row=document.createElement('div'); row.className='r'+(netSel===d.id?' sel':'');
+    const b=document.createElement('b'); b.textContent='■'; b.style.color=inf.c;
+    const t=document.createElement('span'); t.textContent=d.id+' · '+netName(d)+((GM&&d.secret)?' ✱':'');
+    const i=document.createElement('i'); i.textContent='ICE '+d.ice;
+    row.append(b,t,i); row.onclick=()=>{ netSel = netSel===d.id ? null : d.id; updateHud(); draw(); };
+    list.appendChild(row);
+    if (netSel===d.id) {
+      const e=document.createElement('div'); e.className='desc'; e.textContent=d.roomName+' — '+inf.f;
+      const n=document.createElement('span'); n.className='n'; n.textContent='ICE livello '+d.ice+(d.kind==='com'?' · si muove con il PNG':''); e.appendChild(n);
+      list.appendChild(e);
+    }
+  });
+}
+
+function showNetTip(d,cx,cy){
+  const el=document.getElementById('nettip');
+  el.innerHTML='<b style="color:'+NET_INFO[d.kind].c+'">'+d.id+'</b> '+netName(d)+'<br>'+d.roomName+' · ICE '+d.ice;
+  el.style.left=Math.min(innerWidth-230,cx+14)+'px'; el.style.top=(cy+14)+'px'; el.style.display='block';
+}
+function hideNetTip(){ document.getElementById('nettip').style.display='none'; }
+function setNet(v){ NET=v; if (v) PLAN=false; netSel=null; netHoverId=null; hideNetTip(); updateHud(); draw(); }
+document.querySelector('.netk').innerHTML = Object.values(NET_INFO).filter(x => x.p!=='SEC').map(x => '<span style="color:'+x.c+'">■</span> '+x.p).join(' &nbsp;');
 
 function draw2D(){
   const f=getFloor(cur), g=PLAN?f.pg:f.g, s=v2.s, acc=accent(f);
@@ -1432,6 +1617,7 @@ function draw2D(){
     ctx.shadowColor=acc; ctx.shadowBlur=10; ctx.fillStyle='#f2ede4'; ctx.strokeStyle=acc; ctx.lineWidth=2;
     ctx.beginPath(); ctx.arc(tx,ty,Math.max(4,s*.36)*(1+.08*Math.sin(T*4)),0,7); ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
   }
+  if (NET && !PLAN) drawNet(f,s);
   // scala
   const sc=10/CS*s; ctx.strokeStyle='#f2ede4'; ctx.fillStyle='#f2ede4'; ctx.lineWidth=2; ctx.textAlign='left'; ctx.font='11px "Courier New",monospace';
   ctx.beginPath(); ctx.moveTo(0,GD*s+14); ctx.lineTo(sc,GD*s+14); ctx.stroke(); ctx.fillText('10 m',sc+6,GD*s+14);
@@ -1499,6 +1685,7 @@ function draw3D(){
         if (!groups.has(c)) groups.set(c,[]); groups.get(c).push(k);
       }
       groups.forEach((ks,c) => { ctx.beginPath(); ks.forEach(k => quad(k%GW,(k/GW)|0,1,1,z)); ctx.fillStyle=c; ctx.fill(); });
+      if (NET && !PLAN) getNetDevices(i).devs.forEach(d => { if (d.secret && !GM) return; const q=P(d.x,d.y,z); ctx.fillStyle=NET_INFO[d.kind].c; ctx.beginPath(); ctx.arc(q[0],q[1],3,0,7); ctx.fill(); });
       ctx.fillStyle=`rgb(${col})`; ctx.font='bold 13px "Courier New",monospace'; ctx.textAlign='left';
       const lp=P(GW,GD/2,z); ctx.fillText(labelOf(i),lp[0]+14,lp[1]);
       if (!PLAN && fog.tok && fog.tok.f===i) { const tp=P(fog.tok.x+.5,fog.tok.y+.5,z); ctx.fillStyle='#f2ede4'; ctx.beginPath(); ctx.arc(tp[0],tp[1],4,0,7); ctx.fill(); }
@@ -1542,10 +1729,13 @@ function updateHud(){
   document.querySelector('.gmk').style.display = GM ? 'inline' : 'none';
   document.getElementById('b-gm').classList.toggle('on', GM);
   document.getElementById('b-plan').classList.toggle('on', PLAN);
+  document.getElementById('b-net').classList.toggle('on', NET && !PLAN);
+  document.querySelector('.netk').style.display = (NET && !PLAN) ? 'inline' : 'none';
   document.getElementById('b-props').style.display = 'none';
   document.getElementById('b-props').classList.toggle('on', SHOWPROPS);
   document.getElementById('b-fog').style.display = GM ? '' : 'none';
   const list=document.getElementById('side-list'); list.innerHTML='';
+  if (NET && !PLAN) { document.getElementById('side-h').textContent='NETRUNNING // '+labelOf(cur); renderNetList(list,f); return; }
   [f.core,...f.rooms.slice().sort((a,b) => a.id-b.id)].forEach((r,idx) => {
     if (!GM && !PLAN && !roomSeen(f,r)) return;
     if (PLAN && r.secret) return;
@@ -1573,11 +1763,11 @@ function updateHud(){
     d.append(b,t,ii); d.onclick=()=>{ toggleCam(cur,i); updateHud(); draw(); }; list.appendChild(d);
   });
 }
-function setFloor(i){ cur=Math.max(0,Math.min(NL-1,i)); sel=-1; updateHud(); draw(); }
+function setFloor(i){ cur=Math.max(0,Math.min(NL-1,i)); sel=-1; netSel=null; updateHud(); draw(); }
 function setMode(m){ mode=m; document.getElementById('b-view').textContent = m==='2d'?'VISTA 3D':'VISTA 2D'; draw(); }
 function viewChanged(){ sel=-1; if (!GM && !PLAN && fog.tok) cur=fog.tok.f; updateHud(); draw(); }
 function setGM(v){ GM=v; if (v) PLAN=false; viewChanged(); }
-function setPlan(v){ PLAN=v; if (v) GM=false; viewChanged(); }
+function setPlan(v){ PLAN=v; if (v) { GM=false; NET=false; } viewChanged(); }
 function zoomBy(k,cx=W/2,cy=HH/2){
   if (mode==='2d') { const wx=(cx-v2.ox)/v2.s, wy=(cy-v2.oy)/v2.s; v2.s=Math.max(2,Math.min(80,v2.s*k)); v2.ox=cx-wx*v2.s; v2.oy=cy-wy*v2.s; }
   else v3.zoom=Math.max(1,Math.min(80,v3.zoom*k));
@@ -1590,6 +1780,7 @@ document.getElementById('b-fog').onclick=()=>{ if (confirm('Azzerare la nebbia d
 document.getElementById('b-view').onclick=()=>setMode(mode==='2d'?'3d':'2d');
 document.getElementById('b-gm').onclick=()=>setGM(!GM);
 document.getElementById('b-plan').onclick=()=>setPlan(!PLAN);
+document.getElementById('b-net').onclick=()=>setNet(!NET);
 document.getElementById('b-props').onclick=()=>{ SHOWPROPS=!SHOWPROPS; updateHud(); draw(); };
 document.getElementById('b-zin').onclick=()=>zoomBy(1.25);
 document.getElementById('b-zout').onclick=()=>zoomBy(0.8);
@@ -1603,6 +1794,7 @@ window.addEventListener('keydown',e=>{
   else if (e.key==='m'||e.key==='M') setGM(!GM);
   else if (e.key==='p'||e.key==='P') setPlan(!PLAN);
   else if (e.key==='c'||e.key==='C') toggleCamWall();
+  else if (e.key==='n'||e.key==='N') setNet(!NET);
   else if (e.key==='Escape' && CAMWALL) toggleCamWall(false);
   else if (e.key==='+'||e.key==='=') zoomBy(1.25);
   else if (e.key==='-') zoomBy(0.8);
@@ -1629,6 +1821,7 @@ cv.addEventListener('pointerup',e=>{
       for (let i=0;i<NL;i++) { const p=P(GW/2,GD/2,i*GAP3); const d=Math.hypot(p[0]-e.clientX,p[1]-e.clientY); if(d<bd){bd=d;best=i;} }
       if (best>=0) tryFloor(best);
     } else {
+      if (NET && !PLAN) { const nd=netPick(e.clientX,e.clientY); if (nd) { netSel = netSel===nd.id ? null : nd.id; updateHud(); draw(); drag=null; cv.classList.remove('drag'); return; } }
       const x=Math.floor((e.clientX-v2.ox)/v2.s), y=Math.floor((e.clientY-v2.oy)/v2.s);
       if (x>=0&&y>=0&&x<GW&&y<GD) {
         const f=getFloor(cur), k=y*GW+x, ex=fog.exp[cur];
@@ -1644,6 +1837,12 @@ cv.addEventListener('pointerup',e=>{
     }
   }
   drag=null; cv.classList.remove('drag');
+});
+cv.addEventListener('pointermove',e=>{                    // vista netrunning: tooltip del dispositivo sotto il mouse
+  if (!NET || PLAN || mode!=='2d' || drag) { if (netHoverId) { netHoverId=null; hideNetTip(); draw(); } return; }
+  const d=netPick(e.clientX,e.clientY), id=d?d.id:null;
+  if (d) showNetTip(d,e.clientX,e.clientY); else hideNetTip();
+  if (id!==netHoverId) { netHoverId=id; draw(); }
 });
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomBy(e.deltaY<0?1.12:1/1.12,e.clientX,e.clientY); },{passive:false});
