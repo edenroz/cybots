@@ -3740,7 +3740,7 @@ const life = {
   cfg: null, on: false, lines: [], nodes: new Map(), sets: null, netCenter: null, netBuiltAt: 0,
   cars: [], peds: [], drones: [], helis: [], nextHeli: 0, lastTick: 0, lastMaintain: 0, lastIdle: 0, startedAt: 0,
   busy: false, busyAt: 0, serial: 0, noRings: [], noCircles: [], labelEls: [], labelBox: null,
-  carKm: 0, pedKm: 0, R: 200, fresh: true
+  carKm: 0, pedKm: 0, R: 200, fresh: true, occ: null, tick: 0
 };
 const _lp = { x: 0, y: 0, ux: 0, uy: 0 };
 
@@ -3816,14 +3816,14 @@ function lifeTick(ts) {
 function lifeStart() {
   const now = performance.now();
   life.on = true; life.cars = []; life.peds = []; life.drones = []; life.helis = [];
-  life.lines = []; life.nodes = new Map(); life.sets = null; life.netCenter = null; life.netBuiltAt = 0;
+  life.lines = []; life.nodes = new Map(); life.sets = null; life.netCenter = null; life.netBuiltAt = 0; life.occ = null;
   life.lastMaintain = 0; life.lastTick = 0; life.fresh = true; life.startedAt = now; life.lastIdle = now; life.busy = false;
   life.nextHeli = now + lifeRand(2500, 7000);
 }
 
 function lifeStop() {
   life.on = false; life.cars = []; life.peds = []; life.drones = []; life.helis = [];
-  life.lines = []; life.nodes = new Map(); life.sets = null; life.busy = false;
+  life.lines = []; life.nodes = new Map(); life.sets = null; life.busy = false; life.occ = null;
   const src = map.getSource('cy-life');
   if (src) src.setData({ type: 'FeatureCollection', features: [] });
   life.labelEls.forEach(e => { e.style.display = 'none'; e._vis = false; });
@@ -3843,6 +3843,12 @@ function lifeMaintain(now) {
     ? Math.hypot((ctr.lng - life.netCenter[0]) * LIFE_KX, (ctr.lat - life.netCenter[1]) * LIFE_KY) : Infinity;
   if (moved > C.netRadius * 0.25 || (!life.lines.length && now - life.netBuiltAt > 1200)) {
     lifeBuildNetwork(ctr.lng, ctr.lat); life.netBuiltAt = now;
+  }
+  const o = life.occ;
+  if ((!o && now - life.startedAt > 800) ||
+      (o && (Math.hypot((ctr.lng - o.cx) * LIFE_KX, (ctr.lat - o.cy) * LIFE_KY) > o.half * 0.3 ||
+             life.R * 1.3 > o.half - 30 || (o.count === 0 && now - o.t > 1500)))) {
+    lifeBuildOcclusion(ctr.lng, ctr.lat);
   }
   let ck = 0, pk = 0; const R2 = life.R * life.R;
   for (const l of life.lines) {
@@ -3940,6 +3946,112 @@ function lifeInNoLife(x, y) {
   return false;
 }
 
+/* ---------- OCCLUSIONE: niente entità (né nickname) dietro ai palazzi ----------
+   Le scatole 3D sono già nascoste dal depth buffer della GPU, ma le etichette HTML no, e le
+   persone chiuse dentro un palazzo restavano "vive". Quindi: una mappa delle altezze degli edifici
+   attorno al centro (celle da 2 m: palazzi OSM x BUILDING_HEIGHT_MULTIPLIER + landmark) e, per ogni
+   entità, un raggio fino alla camera; se attraversa un palazzo (2 campioni di fila, per tollerare
+   gli sfioramenti) l'entità è "occlusa": non viene disegnata e non ha etichetta. Ogni entità si
+   ricontrolla ogni 4 tick, con un po' di isteresi per evitare lampeggi.            ---------- */
+const LIFE_OCC_RC = 2;
+function lifeBuildOcclusion(cx, cy) {
+  const half = Math.max(160, Math.min(760, life.R * 1.4 + 60)), RC = LIFE_OCC_RC, N = Math.ceil(half * 2 / RC);
+  const hm = new Uint16Array(N * N); let maxH = 0, count = 0;
+  const fillRings = (rings, h) => {
+    if (!(h > 0)) return;
+    const hv = Math.min(65535, Math.round(h)), rs = []; let vmin = 1e9, vmax = -1e9, umin = 1e9, umax = -1e9;
+    for (const ring of rings) {
+      const r = ring.map(p => [((p[0] - cx) * LIFE_KX + half) / RC, ((p[1] - cy) * LIFE_KY + half) / RC]);
+      r.forEach(p => { if (p[0] < umin) umin = p[0]; if (p[0] > umax) umax = p[0]; if (p[1] < vmin) vmin = p[1]; if (p[1] > vmax) vmax = p[1]; });
+      rs.push(r);
+    }
+    if (umax < 0 || vmax < 0 || umin > N || vmin > N) return;
+    count++; if (hv > maxH) maxH = hv;
+    const j0 = Math.max(0, Math.floor(vmin)), j1 = Math.min(N - 1, Math.ceil(vmax));
+    for (let j = j0; j <= j1; j++) {
+      const yc = j + 0.5, xs = [];
+      for (const r of rs) for (let k = 0, m = r.length - 1; k < r.length; m = k++) {
+        const a = r[m], b = r[k];
+        if ((a[1] > yc) !== (b[1] > yc)) xs.push(a[0] + (yc - a[1]) * (b[0] - a[0]) / (b[1] - a[1]));
+      }
+      xs.sort((p, q) => p - q);
+      for (let t = 0; t + 1 < xs.length; t += 2) {
+        const i0 = Math.max(0, Math.ceil(xs[t] - 0.5)), i1 = Math.min(N - 1, Math.floor(xs[t + 1] - 0.5));
+        for (let i = i0; i <= i1; i++) { const idx = j * N + i; if (hm[idx] < hv) hm[idx] = hv; }
+      }
+    }
+  };
+  const near = p => p && Math.abs((p[0] - cx) * LIFE_KX) <= half + 300 && Math.abs((p[1] - cy) * LIFE_KY) <= half + 300;
+  let feats = [];
+  try { feats = map.querySourceFeatures('openmaptiles', { sourceLayer: 'building' }); } catch (e) {}
+  const mult = (typeof BUILDING_HEIGHT_MULTIPLIER !== 'undefined') ? BUILDING_HEIGHT_MULTIPLIER : 4;
+  feats.forEach(raw => {
+    const rh = Number(raw.properties && raw.properties.render_height), g = raw.geometry;
+    if (!(rh > 0) || !g) return;
+    const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+    polys.forEach(rings => { if (rings[0] && near(rings[0][0])) fillRings(rings, rh * mult); });
+  });
+  if (typeof LANDMARK_FEATURES !== 'undefined') LANDMARK_FEATURES.forEach(ft => {
+    const pr = ft.properties || {}, g = ft.geometry;
+    if (!g || g.type !== 'Polygon' || (pr.height || 0) < 3 || (pr.base || 0) > 3) return;   // niente decorazioni piatte né parti sospese
+    if (near(g.coordinates[0][0])) fillRings(g.coordinates, pr.height);
+  });
+  life.occ = { hm, N, half, cx, cy, maxH, count, t: performance.now() };
+}
+
+function lifeCamera() {
+  try {
+    const p = map.getFreeCameraOptions().position, ll = p.toLngLat(), alt = p.toAltitude();
+    if (!isFinite(ll.lng) || !isFinite(ll.lat) || !isFinite(alt)) return null;
+    const o = life.occ;
+    return { x: (ll.lng - o.cx) * LIFE_KX, y: (ll.lat - o.cy) * LIFE_KY, z: alt };
+  } catch (e) { return null; }
+}
+
+function lifeTopZ(a) {
+  const C = life.cfg;
+  if (a.kind === 'ped') return 1.85 * C.sizeZ * 0.95;
+  if (a.kind === 'car') return (a.T.h + a.T.cabH) * C.sizeZ;
+  if (a.kind === 'drone') return a.alt;
+  return a.alt + 3 * C.sizeXY * 0.9;                                  // elicottero
+}
+
+function lifeInBuilding(x, y) {
+  const o = life.occ; if (!o) return false;
+  const i = Math.floor(((x - o.cx) * LIFE_KX + o.half) / LIFE_OCC_RC), j = Math.floor(((y - o.cy) * LIFE_KY + o.half) / LIFE_OCC_RC);
+  return i >= 0 && j >= 0 && i < o.N && j < o.N && o.hm[j * o.N + i] > 0;
+}
+
+// true = la visuale dalla camera all'entità è libera
+function lifeRayClear(a, cam, o) {
+  const ex = (a.x - o.cx) * LIFE_KX, ey = (a.y - o.cy) * LIFE_KY, ez = lifeTopZ(a);
+  const dx = cam.x - ex, dy = cam.y - ey, dz = cam.z - ez, L = Math.hypot(dx, dy, dz);
+  if (L < 6) return true;
+  const step = Math.max(3, L / 450), RC = LIFE_OCC_RC, N = o.N, half = o.half; let hits = 0;
+  for (let s = 2.5; s < L; s += step) {
+    const t = s / L, sz = ez + dz * t;
+    if (sz > o.maxH) break;                                           // ormai sopra il palazzo più alto
+    const i = Math.floor((ex + dx * t + half) / RC), j = Math.floor((ey + dy * t + half) / RC);
+    if (i < 0 || j < 0 || i >= N || j >= N) break;                    // uscito dalla mappa delle altezze
+    if (sz < o.hm[j * N + i] - 0.4) { if (++hits >= 2) return false; } else hits = 0;
+  }
+  return true;
+}
+
+function lifeCull() {
+  const o = life.occ, cam = o ? lifeCamera() : null, tick = ++life.tick;
+  [life.cars, life.peds, life.drones, life.helis].forEach(list => {
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i];
+      if (!cam) { a.occ = false; continue; }
+      if (a.occ !== undefined && ((i + tick) & 3)) continue;
+      if (a.kind === undefined) a.kind = 'heli';
+      if (lifeRayClear(a, cam, o)) { a.occ = false; a.occN = 0; }
+      else { a.occN = (a.occN || 0) + 1; if (a.occ === undefined || a.occN >= 2) a.occ = true; }
+    }
+  });
+}
+
 /* ---------- agenti ---------- */
 function lifeLatOffset(a) {
   const C = life.cfg;
@@ -4014,13 +4126,13 @@ function lifeCarFollow(dt) {
   });
 }
 
-function lifeFindSpot(set, cx, cy, R, tries) {
+function lifeFindSpot(set, cx, cy, R, tries, ground) {
   for (let t = 0; t < tries; t++) {
     const line = lifePickLine(set); if (!line) return null;
     const d = Math.random() * line.len;
     lifeLinePoint(_lp, line, d, {});
     const dx = (_lp.x - cx) * LIFE_KX, dy = (_lp.y - cy) * LIFE_KY;
-    if (dx * dx + dy * dy > R * R || lifeInNoLife(_lp.x, _lp.y)) continue;
+    if (dx * dx + dy * dy > R * R || lifeInNoLife(_lp.x, _lp.y) || (ground && lifeInBuilding(_lp.x, _lp.y))) continue;
     return { line, d };
   }
   return null;
@@ -4035,7 +4147,7 @@ function lifePickVehicle(line) {
 }
 
 function lifeSpawnCar(cx, cy, R) {
-  const C = life.cfg, spot = lifeFindSpot(life.sets.car, cx, cy, R, 8); if (!spot) return;
+  const C = life.cfg, spot = lifeFindSpot(life.sets.car, cx, cy, R, 8, true); if (!spot) return;
   const { line, d } = spot;
   for (const o of life.cars) if (o.line === line && Math.abs(o.d - d) < 9) return;
   const T = lifePickVehicle(line), spd = (C.carSpeed[line.cls] || 8) * lifeRand(0.8, 1.15);
@@ -4048,7 +4160,7 @@ function lifeSpawnCar(cx, cy, R) {
 }
 
 function lifeSpawnPed(cx, cy, R) {
-  const C = life.cfg, spot = lifeFindSpot(life.sets.ped, cx, cy, R, 8); if (!spot) return;
+  const C = life.cfg, spot = lifeFindSpot(life.sets.ped, cx, cy, R, 8, true); if (!spot) return;
   const walk = Math.random() < 0.05 ? lifeRand(2.6, 3.4) : lifeRand(1.05, 1.7);
   const ped = {
     kind: 'ped', line: spot.line, d: spot.d, dir: Math.random() < 0.5 ? 1 : -1, seg: 0,
@@ -4060,7 +4172,7 @@ function lifeSpawnPed(cx, cy, R) {
 }
 
 function lifeSpawnDrone(cx, cy, R) {
-  const C = life.cfg, spot = lifeFindSpot(life.sets.any, cx, cy, R, 8); if (!spot) return;
+  const C = life.cfg, spot = lifeFindSpot(life.sets.any, cx, cy, R, 8, false); if (!spot) return;
   const dr = {
     kind: 'drone', line: spot.line, d: spot.d, dir: Math.random() < 0.5 ? 1 : -1, seg: 0,
     v: lifeRand(7, 13), alt: lifeRand(18, 70), ph: Math.random() * 6.28, color: lifePick(C.neon),
@@ -4075,7 +4187,7 @@ function lifeSpawnHeli(cx, cy, R, ang, alongOffset) {
   const f = [Math.cos(ang), Math.sin(ang)], p = [-f[1], f[0]], off = lifeRand(-0.5, 0.5) * R;
   const back = D + (alongOffset || 0), sd = lifeRand(H.speed[0], H.speed[1]);
   return {
-    x: cx + (-f[0] * back + p[0] * off) / LIFE_KX, y: cy + (-f[1] * back + p[1] * off) / LIFE_KY,
+    kind: 'heli', x: cx + (-f[0] * back + p[0] * off) / LIFE_KX, y: cy + (-f[1] * back + p[1] * off) / LIFE_KY,
     fx: f[0], fy: f[1], v: sd, alt: lifeRand(H.altitude[0], H.altitude[1]), trav: 0, total: 2 * D,
     rot: 0, ph: Math.random() * 6.28, body: lifePick(['#16181d', '#2a2e38', '#3b1320', '#102a3a']),
     nick: lifePick(H.callsigns) + '-' + String(Math.floor(Math.random() * 90) + 10)
@@ -4119,6 +4231,7 @@ function lifeDisc(f, x, y, r, base, top, color, glow) {
 function lifeBuildFeatures(T) {
   const C = life.cfg, S = C.sizeXY, Z = C.sizeZ, f = [];
   life.cars.forEach(c => {
+    if (c.occ) return;
     const t = c.T, len = t.len * S, wid = t.wid * S, top = t.h * Z, base = 0.25 * Z;
     lifeBox(f, c.x, c.y, c.hx, c.hy, 0, 0, len, wid, base, top, c.color, 0);
     if (t.cabLen) lifeBox(f, c.x, c.y, c.hx, c.hy, t.cabOff * S, 0, t.cabLen * S, wid * 0.86, top, top + t.cabH * Z, t.cabColor, 0);
@@ -4127,10 +4240,12 @@ function lifeBuildFeatures(T) {
     else lifeBox(f, c.x, c.y, c.hx, c.hy, len / 2 + 3.4 * S, 0, 6.5 * S, wid * 1.1, 0, 0.2, '#fff2b8', 1);                       // fari
   });
   life.peds.forEach(p => {
+    if (p.occ) return;
     lifeBox(f, p.x, p.y, p.hx, p.hy, 0, 0, 0.5 * S, 0.62 * S, 0, 1.45 * Z, p.cloth, 0);
     lifeBox(f, p.x, p.y, p.hx, p.hy, 0, 0, 0.34 * S, 0.34 * S, 1.45 * Z, 1.85 * Z, p.head, 0);
   });
   life.drones.forEach(d => {
+    if (d.occ) return;
     const a = d.alt + Math.sin(T * 2 + d.ph) * 1.0, k = S, on = Math.sin(T * 6 + d.ph) > 0;
     lifeBox(f, d.x, d.y, d.hx, d.hy, 0, 0, 1.6 * k, 1.6 * k, a, a + 0.45 * Z, '#15181d', 0);
     const c45 = Math.SQRT1_2;
@@ -4139,6 +4254,7 @@ function lifeBuildFeatures(T) {
     lifeBox(f, d.x, d.y, d.hx, d.hy, 0, 0, 0.6 * k, 0.6 * k, a + 0.6 * Z, a + 0.95 * Z, on ? d.color : '#2a2d33', 0);
   });
   life.helis.forEach(h => {
+    if (h.occ) return;
     const k = S * 0.9, a = h.alt, ux = h.fx, uy = h.fy;
     lifeBox(f, h.x, h.y, ux, uy, 0, 0, 8 * k, 2.4 * k, a, a + 2.3 * k, h.body, 0);                      // fusoliera
     lifeBox(f, h.x, h.y, ux, uy, 2.6 * k, 0, 3 * k, 2.1 * k, a + 0.4 * k, a + 2.7 * k, '#35e8ff', 0);   // cabina
@@ -4175,6 +4291,7 @@ function lifeStep(dt, now, T, push) {
     for (let n = 0; n < Math.min(budget, 3) && life.drones.length < tDrones; n++) lifeSpawnDrone(cx, cy, R);
   }
   lifeUpdateHelis(dt, now, cx, cy, R);
+  lifeCull();
   if (push) {
     const src = map.getSource('cy-life');
     if (src) { life.busy = true; life.busyAt = now; src.setData({ type: 'FeatureCollection', features: lifeBuildFeatures(T) }); }
@@ -4188,6 +4305,7 @@ function lifeUpdateLabels(cx, cy, z) {
   if (z < LC.minZoom) { els.forEach(e => { if (e._vis) { e.style.display = 'none'; e._vis = false; } }); return; }
   const cand = [], r2 = LC.radiusM * LC.radiusM;
   const add = (e, txt, cls, h, far) => {
+    if (e.occ) return;
     const dx = (e.x - cx) * LIFE_KX, dy = (e.y - cy) * LIFE_KY, d2 = dx * dx + dy * dy;
     if (far) cand.push({ d2: -1, e, txt, cls, h, r: LC.radiusM }); else if (d2 <= r2) cand.push({ d2, e, txt, cls, h, r: LC.radiusM });
   };
