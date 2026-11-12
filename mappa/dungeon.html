@@ -271,23 +271,30 @@ const SKEL = (function(){
   return {corr, blocks, ends, horiz};
 })();
 
-/* SECONDO ASCENSORE: negli edifici abbastanza grandi (pianta >= LIFT2_MIN_AREA m²) si prova a mettere
-   un secondo ascensore, nella stessa cella a ogni piano. Se il nucleo è almeno 3x3 va nell'angolo
-   in alto a destra; altrimenti in una cella del corridoio principale, a circa 60% della distanza
-   massima dal nucleo (lontano dal primo ascensore, ma non sul fondo dove c'è l'ingresso). */
-const LIFT2_MIN_AREA = 500;
-const LIFT2 = (function(){
-  if (maskCount*CS*CS < LIFT2_MIN_AREA) return null;
-  if (CORE.s >= 3) return [CORE.x+CORE.s-1, CORE.y];
+/* SECONDO NUCLEO (scale + ascensore): negli edifici abbastanza grandi (pianta >= CORE2_MIN_AREA m²) si
+   prova a mettere un secondo set di scale e un secondo ascensore, in un punto LONTANO dal nucleo
+   principale (stessa posizione a ogni piano). Sta sul corridoio, a circa il 75% della distanza massima
+   dal nucleo (lontano, ma prima dell'estremità dove c'è l'ingresso): scale in una cella, ascensore
+   nella cella di corridoio adiacente. Se il corridoio è troppo corto (< 14 m dal nucleo), rinuncia. */
+const CORE2_MIN_AREA = 500;
+const CORE2 = (function(){
+  if (maskCount*CS*CS < CORE2_MIN_AREA) return null;
   const cx=CORE.x+CORE.s/2, cy=CORE.y+CORE.s/2, cand=[];
   let maxD=0;
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
     if (!SKEL.corr[y*GW+x] || inZone(x,y)) continue;
     const d=Math.hypot(x+.5-cx,y+.5-cy); cand.push([x,y,d]); if (d>maxD) maxD=d;
   }
-  if (maxD*CS < 8 || !cand.length) return null;     // edificio troppo stretto: niente secondo ascensore
+  if (maxD*CS < 14) return null;
+  const ok = (x,y) => x>0&&y>0&&x<GW-1&&y<GD-1 && SKEL.corr[y*GW+x] && !inZone(x,y);
   let best=null, bd=1e9;
-  cand.forEach(([x,y,d]) => { const e=Math.abs(d-maxD*.6); if (e<bd){bd=e;best=[x,y];} });
+  cand.forEach(([x,y,d]) => {
+    const e=Math.abs(d-maxD*.75); if (e>=bd) return;
+    // cella adiacente per l'ascensore: preferibilmente più lontana dal nucleo
+    let nb=null, nd=-1;
+    for (const [dx,dy] of D4) { const nx=x+dx, ny=y+dy; if (!ok(nx,ny)) continue; const dd=Math.hypot(nx+.5-cx,ny+.5-cy); if (dd>nd){nd=dd;nb=[nx,ny];} }
+    if (nb) { bd=e; best={stairs:[x,y], lift:nb}; }
+  });
   return best;
 })();
 
@@ -788,7 +795,7 @@ function genFloor(i) {
   const coreComp = zid[CORE.y*GW+CORE.x];
   g[CORE.y*GW+CORE.x] = 4;
   if (s >= 2) g[(CORE.y+s-1)*GW+CORE.x+s-1] = 5;
-  if (LIFT2) g[LIFT2[1]*GW+LIFT2[0]] = 5;
+  if (CORE2) { g[CORE2.stairs[1]*GW+CORE2.stairs[0]] = 4; g[CORE2.lift[1]*GW+CORE2.lift[0]] = 5; }
 
   // stanze: BSP dei blocchi con muri di una cella
   const rooms = [];
