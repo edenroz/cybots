@@ -722,6 +722,18 @@ function entranceLinks(){
   return _EL;
 }
 
+/* NICKNAME PNG: @parola_parola_0000 (nomi / aggettivi / sostantivi mescolati). Usa un rng separato
+   (seed + piano + indice), così non altera la generazione del dungeon. */
+const NICK_WORDS = ['neo','kira','jax','mox','zed','nyx','viff','fl4s','rex','vex','sly','dex','ono','lux','tek',
+  'rusty','glitch','ghost','static','cold','mad','dead','lazy','dirty','blind','toxic','neon','chrome','cheap','sad','lucky','loud','slick',
+  'wolf','rat','blade','wire','crow','moth','pixel','spark','cat','snake','fox','noodle','junk','scrap','hex','byte','sprout','jackal'];
+function makeNick(fl, n){
+  const rr = mulberry32(hashStr(SEED_STR+'#'+fl+'nick'+n));
+  const a = NICK_WORDS[Math.floor(rr()*NICK_WORDS.length)];
+  let b = NICK_WORDS[Math.floor(rr()*NICK_WORDS.length)];
+  while (b===a) b = NICK_WORDS[Math.floor(rr()*NICK_WORDS.length)];
+  return '@'+a+'_'+b+'_'+String(Math.floor(rr()*10000)).padStart(4,'0');
+}
 function pick(a, rng){ return a[Math.floor(rng()*a.length)]; }
 function typeFor(theme, depth, areaM, rng, level){
   switch (theme) {
@@ -776,6 +788,7 @@ function genFloor(i) {
   const coreComp = zid[CORE.y*GW+CORE.x];
   g[CORE.y*GW+CORE.x] = 4;
   if (s >= 2) g[(CORE.y+s-1)*GW+CORE.x+s-1] = 5;
+  if (LIFT2) g[LIFT2[1]*GW+LIFT2[0]] = 5;
 
   // stanze: BSP dei blocchi con muri di una cella
   const rooms = [];
@@ -984,18 +997,20 @@ function genFloor(i) {
     const cnt = T0[0] + Math.floor(rng()*(T0[1]-T0[0]+1));
     const spots = r.cells.filter(k => !occ.has(k));
     if (!cnt || spots.length < 2) return;
+    const nicks = [];
     for (let t=0;t<cnt;t++) {
       const a = spots[Math.floor(rng()*spots.length)], b = spots[Math.floor(rng()*spots.length)];
-      npcs.push({ax:X(a)+.5, ay:Y(a)+.5, bx:X(b)+.5, by:Y(b)+.5, sp:.2+rng()*.3, ph:rng()*6.28});
+      const nick = makeNick(i, npcs.length); nicks.push(nick);
+      npcs.push({ax:X(a)+.5, ay:Y(a)+.5, bx:X(b)+.5, by:Y(b)+.5, sp:.2+rng()*.3, ph:rng()*6.28, nick});
     }
-    r.notes.push('PNG presenti: '+cnt);
+    r.notes.push('PNG presenti: '+nicks.join(', '));
   });
   { const cc=[]; for (let k=0;k<N;k++) if (g[k]===2) cc.push(k);
     const nWalk = cc.length ? (theme==='ground' ? 3 : theme==='basement' ? 0 : 1+Math.floor(rng()*2)) : 0;
     for (let t=0;t<nWalk;t++) {
       const a=cc[Math.floor(rng()*cc.length)]; let b=a; const [dx,dy]=D4[Math.floor(rng()*4)];
       for (let st=1;st<=8;st++) { const nk=a+dx*st+dy*st*GW; if (g[nk]!==2) break; b=nk; }
-      if (b!==a) npcs.push({ax:X(a)+.5,ay:Y(a)+.5,bx:X(b)+.5,by:Y(b)+.5,sp:.25+rng()*.2,ph:rng()*6.28});
+      if (b!==a) npcs.push({ax:X(a)+.5,ay:Y(a)+.5,bx:X(b)+.5,by:Y(b)+.5,sp:.25+rng()*.2,ph:rng()*6.28,nick:makeNick(i, npcs.length)});
     } }
   doors.forEach(d => { if (g[d.c]===7) { /* porta chiusa a chiave: già marcata */ } });
 
@@ -1215,6 +1230,16 @@ function drawDecal(d,s){
   ctx.restore();
 }
 
+function drawNpcDot(n,nx,ny,s){
+  const r=Math.max(2.5,s*.26);
+  ctx.shadowColor='#ffb36b'; ctx.shadowBlur=6; ctx.fillStyle='#ffb36b'; ctx.beginPath(); ctx.arc(nx*s,ny*s,r,0,7); ctx.fill(); ctx.shadowBlur=0;
+  if (!n.nick || s<5) return;                       // troppo zoomato fuori: niente etichette
+  ctx.save(); ctx.font=`${Math.max(8,Math.min(11,s*.7))}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='bottom';
+  const tx=nx*s, ty=ny*s-r-2;
+  ctx.lineWidth=3; ctx.lineJoin='round'; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(n.nick,tx,ty);
+  ctx.fillStyle='#ffd7a8'; ctx.fillText(n.nick,tx,ty); ctx.restore();
+}
+
 function drawCam(c,s,on){
   const cx=(c.x+.5)*s, cy=(c.y+.5)*s;
   ctx.save(); ctx.translate(cx,cy); ctx.rotate(c.ang);
@@ -1382,7 +1407,7 @@ function draw2D(){
     f.npcs.forEach(n => {
       const u=(Math.sin(T*n.sp*2+n.ph)+1)/2, nx=n.ax+(n.bx-n.ax)*u, ny=n.ay+(n.by-n.ay)*u;
       const ni=(ny|0)*GW+(nx|0); if (!GM && !((vv && vv[ni]) || (camc && camc[ni]))) return;
-      ctx.shadowColor='#ffb36b'; ctx.shadowBlur=6; ctx.fillStyle='#ffb36b'; ctx.beginPath(); ctx.arc(nx*s,ny*s,Math.max(2.5,s*.26),0,7); ctx.fill(); ctx.shadowBlur=0;
+      drawNpcDot(n,nx,ny,s);
     });
   }
   if (!GM && !PLAN) drawFog(f,s,camc);
@@ -1663,7 +1688,7 @@ function drawCamFeed(f,c){
   if (SHOWNPC) f.npcs.forEach(n => {
     const u=(Math.sin(T*n.sp*2+n.ph)+1)/2, nx=n.ax+(n.bx-n.ax)*u, ny=n.ay+(n.by-n.ay)*u;
     if (!cone[(ny|0)*GW+(nx|0)]) return;
-    ctx.shadowColor='#ffb36b'; ctx.shadowBlur=6; ctx.fillStyle='#ffb36b'; ctx.beginPath(); ctx.arc(nx*s,ny*s,Math.max(2.5,s*.26),0,7); ctx.fill(); ctx.shadowBlur=0;
+    drawNpcDot(n,nx,ny,s);
   });
   drawCam(c,s,true);
   ctx.restore();
