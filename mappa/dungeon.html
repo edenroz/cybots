@@ -271,6 +271,26 @@ const SKEL = (function(){
   return {corr, blocks, ends, horiz};
 })();
 
+/* SECONDO ASCENSORE: negli edifici abbastanza grandi (pianta >= LIFT2_MIN_AREA m²) si prova a mettere
+   un secondo ascensore, nella stessa cella a ogni piano. Se il nucleo è almeno 3x3 va nell'angolo
+   in alto a destra; altrimenti in una cella del corridoio principale, a circa 60% della distanza
+   massima dal nucleo (lontano dal primo ascensore, ma non sul fondo dove c'è l'ingresso). */
+const LIFT2_MIN_AREA = 500;
+const LIFT2 = (function(){
+  if (maskCount*CS*CS < LIFT2_MIN_AREA) return null;
+  if (CORE.s >= 3) return [CORE.x+CORE.s-1, CORE.y];
+  const cx=CORE.x+CORE.s/2, cy=CORE.y+CORE.s/2, cand=[];
+  let maxD=0;
+  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
+    if (!SKEL.corr[y*GW+x] || inZone(x,y)) continue;
+    const d=Math.hypot(x+.5-cx,y+.5-cy); cand.push([x,y,d]); if (d>maxD) maxD=d;
+  }
+  if (maxD*CS < 8 || !cand.length) return null;     // edificio troppo stretto: niente secondo ascensore
+  let best=null, bd=1e9;
+  cand.forEach(([x,y,d]) => { const e=Math.abs(d-maxD*.6); if (e<bd){bd=e;best=[x,y];} });
+  return best;
+})();
+
 /* =========================================================================
    TESTI (modificabili): descrizioni, incontri, arredi
    ========================================================================= */
