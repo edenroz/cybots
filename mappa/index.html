@@ -25,6 +25,7 @@
 <script src="data/cy-data-walls.js"></script>
 <script src="data/cy-data-mask.js"></script>
 <script src="data/cy-data-landmarks.js"></script>
+<script src="data/cy-data-life.js"></script>
 <style>
   :root{
     --cy-black:#0a0908;
@@ -348,6 +349,18 @@
   #route-results .route-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(242,237,228,0.12);}
   #route-results .route-note{margin-top:8px;font-size:10px;color:var(--cy-grey);line-height:1.5;}
   #route-results .route-loading{color:var(--cy-grey);letter-spacing:1px;}
+
+  /* VITA DI CITTÀ: nickname sopra pedoni/auto/droni/elicotteri (etichette HTML posizionate via map.project) */
+  #life-labels{position:fixed;inset:0;pointer-events:none;z-index:5;overflow:hidden;}
+  .life-nick{
+    position:absolute;left:0;top:0;display:none;white-space:nowrap;will-change:transform;
+    font:10px 'Courier New',monospace;letter-spacing:0.3px;
+    text-shadow:0 0 3px #0a0908,0 0 3px #0a0908,1px 1px 0 #0a0908,-1px -1px 0 #0a0908;
+  }
+  .life-nick.ped{color:#ffd7a8;}
+  .life-nick.car{color:#7ff9f1;}
+  .life-nick.drone{color:#ff6a6a;}
+  .life-nick.heli{color:#e8c93a;font-weight:bold;font-size:11px;}
 
   /* Mobile: make popup panels touch-friendly, full width, and easy to dismiss */
   @media (max-width: 640px){
@@ -1293,6 +1306,7 @@ map.on('load', () => {
   addDefaultBuildingHighlightLayer();
   addBuildingClickHandlers();
   buildPoiList();
+  addCityLife();
 
   // Se il link con cui è stata aperta la pagina porta coordinate in
   // query string (?lat=...&lng=...), voliamoci sopra subito.
@@ -3701,6 +3715,504 @@ map.on('click', (e) => {
   if (!selectingPoint) return;
   setRoutePoint(selectingPoint, e.lngLat);
 });
+
+/* =========================================================================
+   VITA DI CITTÀ — pedoni, traffico, droni, elicotteri (solo da zoom ravvicinato)
+   Dati e parametri: data/cy-data-life.js (CITY_LIFE).
+   COME FUNZIONA
+   - Le strade vere (source-layer "transportation") attorno al centro schermo
+     diventano una piccola rete: ogni strada è una polilinea con lunghezza in
+     metri; gli incroci si ricavano dagli estremi che coincidono.
+   - Auto/furgoni/bus guidano a destra sulla loro corsia, seguono chi sta
+     davanti (niente sovrapposizioni) e a ogni incrocio scelgono a caso dove
+     andare; i pedoni camminano sui marciapiedi, alcuni si fermano ogni tanto;
+     i droni volano bassi seguendo le strade; ogni tanto un elicottero
+     attraversa la scena ad alta quota, con riflettore a terra e rotore.
+   - Tutto viene disegnato come scatole 3D (fill-extrusion) di UNA sola
+     sorgente GeoJSON aggiornata ~30 volte al secondo; i nickname sono
+     etichette HTML (non simboli della mappa, che a ogni aggiornamento
+     lampeggerebbero) posizionate con map.project().
+   - Sotto minZoom la simulazione si ferma e la sorgente viene svuotata.
+   ========================================================================= */
+const LIFE_KX = 111320 * Math.cos(59.33 * Math.PI / 180);
+const LIFE_KY = 111320;
+const life = {
+  cfg: null, on: false, lines: [], nodes: new Map(), sets: null, netCenter: null, netBuiltAt: 0,
+  cars: [], peds: [], drones: [], helis: [], nextHeli: 0, lastTick: 0, lastMaintain: 0, lastIdle: 0, startedAt: 0,
+  busy: false, busyAt: 0, serial: 0, noRings: [], noCircles: [], labelEls: [], labelBox: null,
+  carKm: 0, pedKm: 0, R: 200, fresh: true
+};
+const _lp = { x: 0, y: 0, ux: 0, uy: 0 };
+
+function lifeRand(a, b) { return a + Math.random() * (b - a); }
+function lifePick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function lifeNick() {
+  const W = life.cfg.nickWords, a = lifePick(W);
+  let b = lifePick(W); while (b === a) b = lifePick(W);
+  return '@' + a + '_' + b + '_' + String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+}
+
+function addCityLife() {
+  if (typeof CITY_LIFE === 'undefined') { console.warn('[CY] cy-data-life.js non caricato: vita di città saltata.'); return; }
+  const C = life.cfg = CITY_LIFE;
+
+  // zone senza vita (es. G0): anelli dai muri + cerchi opzionali
+  (C.noLifeWalls || []).forEach(name => {
+    const w = (typeof WALL_DEFS !== 'undefined') ? WALL_DEFS.find(x => x.name === name) : null;
+    if (!w) return;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    w.points.forEach(([x, y]) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
+    life.noRings.push({ ring: w.points, bb: [x0, y0, x1, y1] });
+  });
+  life.noCircles = C.noLifeCircles || [];
+
+  map.addSource('cy-life', {
+    type: 'geojson', data: { type: 'FeatureCollection', features: [] },
+    tolerance: 0, buffer: 16, maxzoom: 20
+  });
+  const fade = peak => ['interpolate', ['linear'], ['zoom'], C.minZoom - 0.45, 0, C.minZoom + 0.15, peak];
+  map.addLayer({
+    id: 'cy-life-solid', type: 'fill-extrusion', source: 'cy-life', minzoom: C.minZoom - 0.5,
+    filter: ['==', ['get', 'g'], 0],
+    paint: { 'fill-extrusion-color': ['get', 'c'], 'fill-extrusion-height': ['get', 'h'],
+             'fill-extrusion-base': ['get', 'b'], 'fill-extrusion-opacity': fade(0.96) }
+  });
+  map.addLayer({
+    id: 'cy-life-glow', type: 'fill-extrusion', source: 'cy-life', minzoom: C.minZoom - 0.5,
+    filter: ['==', ['get', 'g'], 1],
+    paint: { 'fill-extrusion-color': ['get', 'c'], 'fill-extrusion-height': ['get', 'h'],
+             'fill-extrusion-base': ['get', 'b'], 'fill-extrusion-opacity': fade(0.34), 'fill-extrusion-vertical-gradient': false }
+  });
+
+  life.labelBox = document.createElement('div');
+  life.labelBox.id = 'life-labels';
+  document.body.appendChild(life.labelBox);
+
+  map.on('sourcedata', e => { if (e.sourceId === 'cy-life' && e.isSourceLoaded) life.busy = false; });
+  // 'idle' può non scattare mai mentre la sorgente si aggiorna di continuo: tengo traccia
+  // dell'ultimo per poter lanciare io i refresh che dipendono da lui (vedi lifeMaintain)
+  map.on('idle', () => { life.lastIdle = performance.now(); });
+
+  requestAnimationFrame(lifeTick);
+}
+
+/* ---------- ciclo principale ---------- */
+function lifeTick(ts) {
+  requestAnimationFrame(lifeTick);
+  const C = life.cfg; if (!C) return;
+  const z = map.getZoom();
+  if (z < C.minZoom - 0.45 || document.hidden) { if (life.on) lifeStop(); return; }
+  if (!life.on) lifeStart();
+  const interval = 1000 / C.fps;
+  if (ts - life.lastTick < interval) return;
+  const dt = Math.min(0.1, life.lastTick ? (ts - life.lastTick) / 1000 : interval / 1000);
+  life.lastTick = ts;
+  const now = performance.now();
+  if (now - life.lastMaintain > 1000) { life.lastMaintain = now; lifeMaintain(now); }
+  const push = !life.busy || (now - life.busyAt > 300);
+  lifeStep(dt, now, ts / 1000, push);
+}
+
+function lifeStart() {
+  const now = performance.now();
+  life.on = true; life.cars = []; life.peds = []; life.drones = []; life.helis = [];
+  life.lines = []; life.nodes = new Map(); life.sets = null; life.netCenter = null; life.netBuiltAt = 0;
+  life.lastMaintain = 0; life.lastTick = 0; life.fresh = true; life.startedAt = now; life.lastIdle = now; life.busy = false;
+  life.nextHeli = now + lifeRand(2500, 7000);
+}
+
+function lifeStop() {
+  life.on = false; life.cars = []; life.peds = []; life.drones = []; life.helis = [];
+  life.lines = []; life.nodes = new Map(); life.sets = null; life.busy = false;
+  const src = map.getSource('cy-life');
+  if (src) src.setData({ type: 'FeatureCollection', features: [] });
+  life.labelEls.forEach(e => { e.style.display = 'none'; e._vis = false; });
+}
+
+function lifeViewRadius() {
+  const C = life.cfg, lat = map.getCenter().lat;
+  const mpp = 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, map.getZoom());
+  const half = Math.hypot(innerWidth, innerHeight) / 2 * mpp;
+  return Math.max(C.view.min, Math.min(C.view.max, half * C.view.factor));
+}
+
+function lifeMaintain(now) {
+  const C = life.cfg, ctr = map.getCenter();
+  life.R = lifeViewRadius();
+  const moved = life.netCenter
+    ? Math.hypot((ctr.lng - life.netCenter[0]) * LIFE_KX, (ctr.lat - life.netCenter[1]) * LIFE_KY) : Infinity;
+  if (moved > C.netRadius * 0.25 || (!life.lines.length && now - life.netBuiltAt > 1200)) {
+    lifeBuildNetwork(ctr.lng, ctr.lat); life.netBuiltAt = now;
+  }
+  let ck = 0, pk = 0; const R2 = life.R * life.R;
+  for (const l of life.lines) {
+    const m = l.pts[l.pts.length >> 1], dx = (m[0] - ctr.lng) * LIFE_KX, dy = (m[1] - ctr.lat) * LIFE_KY;
+    if (dx * dx + dy * dy <= R2) { if (l.car) ck += l.len; if (l.ped) pk += l.len; }
+  }
+  life.carKm = ck / 1000; life.pedKm = pk / 1000;
+  // se 'idle' non scatta (la sorgente della vita si aggiorna di continuo) i refresh che dipendono da lui
+  // (archivio vie, civici degli edifici) li lancio io ogni tanto
+  if (now - life.lastIdle > 3000) {
+    life.lastIdle = now;
+    try { refreshAddressRegistry(); refreshBuildingAddresses(); } catch (e) {}
+  }
+}
+
+/* ---------- rete stradale ---------- */
+function lifeBuildNetwork(cx, cy) {
+  const C = life.cfg;
+  let feats;
+  try {
+    feats = map.querySourceFeatures('openmaptiles', {
+      sourceLayer: 'transportation', filter: ['match', ['get', 'class'], C.allClasses, true, false]
+    });
+  } catch (e) { return; }
+  const R2 = C.netRadius * C.netRadius, lines = [], nodes = new Map(), seen = new Set();
+  const key = p => p[0].toFixed(5) + ',' + p[1].toFixed(5);
+  feats.forEach(f => {
+    const pr = f.properties || {}; if (pr.brunnel === 'tunnel') return;
+    const cls = pr.class, g = f.geometry; if (!g) return;
+    const parts = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+    parts.forEach(pts => {
+      if (!pts || pts.length < 2) return;
+      const m = pts[pts.length >> 1], dx = (m[0] - cx) * LIFE_KX, dy = (m[1] - cy) * LIFE_KY;
+      if (dx * dx + dy * dy > R2) return;
+      // le tile si sovrappongono ai bordi: scarto le linee i cui segmenti ho già visto
+      const mids = []; let dup = 0;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const k = ((pts[i][0] + pts[i + 1][0]) / 2).toFixed(5) + ',' + ((pts[i][1] + pts[i + 1][1]) / 2).toFixed(5);
+        mids.push(k); if (seen.has(k)) dup++;
+      }
+      if (dup >= (pts.length - 1) * 0.6) return;
+      mids.forEach(k => seen.add(k));
+      const cum = [0];
+      for (let i = 0; i < pts.length - 1; i++) {
+        cum.push(cum[i] + Math.hypot((pts[i + 1][0] - pts[i][0]) * LIFE_KX, (pts[i + 1][1] - pts[i][1]) * LIFE_KY));
+      }
+      const len = cum[cum.length - 1]; if (len < 6) return;
+      const ow = Number(pr.oneway) || 0;
+      const line = {
+        uid: ++life.serial, cls, pts, cum, len, oneway: ow > 0 ? 1 : ow < 0 ? -1 : 0,
+        w: C.roadHalfWidth[cls] !== undefined ? C.roadHalfWidth[cls] : 3,
+        car: C.carClasses.includes(cls), ped: C.pedClasses.includes(cls),
+        kS: key(pts[0]), kE: key(pts[pts.length - 1])
+      };
+      lines.push(line);
+      [[line.kS, 0], [line.kE, 1]].forEach(([k, end]) => {
+        if (!nodes.has(k)) nodes.set(k, []);
+        nodes.get(k).push({ line, end });
+      });
+    });
+  });
+  const mkSet = arr => { let t = 0; const cum = arr.map(l => (t += l.len)); return { arr, cum, total: t }; };
+  life.lines = lines; life.nodes = nodes; life.netCenter = [cx, cy];
+  life.sets = { car: mkSet(lines.filter(l => l.car)), ped: mkSet(lines.filter(l => l.ped)), any: mkSet(lines.filter(l => l.car || l.ped)) };
+}
+
+function lifePickLine(set) {
+  if (!set.arr.length) return null;
+  const r = Math.random() * set.total; let lo = 0, hi = set.cum.length - 1;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (set.cum[m] < r) lo = m + 1; else hi = m; }
+  return set.arr[lo];
+}
+
+// punto a distanza d (m) lungo la linea; h = oggetto che conserva l'indice del segmento (ottimizzazione)
+function lifeLinePoint(out, line, d, h) {
+  const cum = line.cum, n = cum.length - 2;
+  let i = h.seg | 0; if (i > n) i = n; if (i < 0) i = 0;
+  while (i > 0 && cum[i] > d) i--;
+  while (i < n && cum[i + 1] < d) i++;
+  h.seg = i;
+  const a = line.pts[i], b = line.pts[i + 1], sl = (cum[i + 1] - cum[i]) || 1e-6;
+  let t = (d - cum[i]) / sl; t = t < 0 ? 0 : t > 1 ? 1 : t;
+  out.x = a[0] + (b[0] - a[0]) * t; out.y = a[1] + (b[1] - a[1]) * t;
+  out.ux = (b[0] - a[0]) * LIFE_KX / sl; out.uy = (b[1] - a[1]) * LIFE_KY / sl;
+}
+
+function lifeInNoLife(x, y) {
+  for (const r of life.noRings) {
+    const b = r.bb;
+    if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3] && pointInRing([x, y], r.ring)) return true;
+  }
+  for (const c of life.noCircles) {
+    if (Math.hypot((x - c.lng) * LIFE_KX, (y - c.lat) * LIFE_KY) <= c.r) return true;
+  }
+  return false;
+}
+
+/* ---------- agenti ---------- */
+function lifeLatOffset(a) {
+  const C = life.cfg;
+  if (a.kind === 'car') return -a.dir * a.line.w * 0.45;                       // guida a destra
+  if (a.kind === 'ped') return a.line.cls === 'path' ? a.jit : a.sideSign * (a.line.w + C.sidewalk) + a.jit;
+  return 0;
+}
+function lifePlace(a) {
+  lifeLinePoint(_lp, a.line, a.d, a);
+  const lat = lifeLatOffset(a), nx = -_lp.uy, ny = _lp.ux;           // normale sinistra
+  a.x = _lp.x + nx * lat / LIFE_KX; a.y = _lp.y + ny * lat / LIFE_KY;
+  a.hx = _lp.ux * a.dir; a.hy = _lp.uy * a.dir;
+}
+function lifeDirOk(line, dir) { return line.oneway === 0 || line.oneway === dir; }
+
+function lifeTransition(a) {
+  const line = a.line, atEnd = a.d >= line.len, k = atEnd ? line.kE : line.kS;
+  const opts = (life.nodes.get(k) || []).filter(o => {
+    if (o.line === line) return false;
+    if (a.kind === 'car') return o.line.car && lifeDirOk(o.line, o.end === 0 ? 1 : -1);
+    if (a.kind === 'ped') return o.line.ped;
+    return true;
+  });
+  if (opts.length) {
+    const o = lifePick(opts);
+    a.line = o.line; a.dir = o.end === 0 ? 1 : -1; a.d = o.end === 0 ? 0 : o.line.len; a.seg = 0;
+    if (a.kind === 'ped') a.sideSign = Math.random() < 0.5 ? -1 : 1;
+    return true;
+  }
+  // vicolo cieco: i pedoni e i droni tornano indietro, le auto fanno inversione se la strada lo permette
+  const nd = -a.dir;
+  if (a.kind === 'car' && !lifeDirOk(line, nd)) return false;
+  a.dir = nd; a.d = Math.max(0, Math.min(line.len, a.d));
+  return true;
+}
+
+function lifeUpdateAgents(list, dt, cx, cy, R) {
+  const R2 = R * R * 1.56;                                            // despawn oltre ~1.25 R
+  for (let i = list.length - 1; i >= 0; i--) {
+    const a = list[i];
+    if (a.kind === 'ped') {
+      if (a.stopper) { a.stateT -= dt; if (a.stateT <= 0) { a.stand = !a.stand; a.stateT = lifeRand(4, 16); a.v = a.stand ? 0 : a.walk; } }
+      else if (Math.random() < dt * 0.01) a.dir = -a.dir;               // ogni tanto ci ripensano
+    }
+    a.d += a.dir * a.v * dt;
+    if (a.d < 0 || a.d > a.line.len) { if (!lifeTransition(a)) { list.splice(i, 1); continue; } }
+    lifePlace(a);
+    const dx = (a.x - cx) * LIFE_KX, dy = (a.y - cy) * LIFE_KY;
+    if (dx * dx + dy * dy > R2 || (a.kind !== 'drone' && lifeInNoLife(a.x, a.y))) list.splice(i, 1);
+  }
+}
+
+// le auto si seguono: chi ha un'auto davanti nella stessa corsia rallenta, senza sovrapporsi
+function lifeCarFollow(dt) {
+  const S = life.cfg.sizeXY, groups = new Map();
+  for (const c of life.cars) {
+    const k = c.line.uid * 2 + (c.dir > 0 ? 1 : 0);
+    let g = groups.get(k); if (!g) groups.set(k, g = []);
+    c.s = c.dir > 0 ? c.d : c.line.len - c.d; g.push(c);
+  }
+  groups.forEach(g => {
+    g.sort((a, b) => a.s - b.s);
+    for (let i = 0; i < g.length; i++) {
+      const me = g[i], lead = g[i + 1]; let target = me.vmax;
+      if (lead) {
+        const gap = lead.s - me.s - (lead.T.len + me.T.len) * 0.5 * S - 1.5;
+        if (gap < 14) target = Math.min(target, Math.max(0, lead.v * 0.95 + (gap - 4) * 0.8));
+        if (gap < 1.5) target = 0;
+      }
+      me.v = me.v < target ? Math.min(target, me.v + 6 * dt) : Math.max(target, me.v - 14 * dt);
+    }
+  });
+}
+
+function lifeFindSpot(set, cx, cy, R, tries) {
+  for (let t = 0; t < tries; t++) {
+    const line = lifePickLine(set); if (!line) return null;
+    const d = Math.random() * line.len;
+    lifeLinePoint(_lp, line, d, {});
+    const dx = (_lp.x - cx) * LIFE_KX, dy = (_lp.y - cy) * LIFE_KY;
+    if (dx * dx + dy * dy > R * R || lifeInNoLife(_lp.x, _lp.y)) continue;
+    return { line, d };
+  }
+  return null;
+}
+
+function lifePickVehicle(line) {
+  const types = life.cfg.vehicleTypes.filter(t => !t.classes || t.classes.includes(line.cls));
+  let tot = 0; types.forEach(t => { tot += t.w; });
+  let r = Math.random() * tot;
+  for (const t of types) { r -= t.w; if (r <= 0) return t; }
+  return types[0];
+}
+
+function lifeSpawnCar(cx, cy, R) {
+  const C = life.cfg, spot = lifeFindSpot(life.sets.car, cx, cy, R, 8); if (!spot) return;
+  const { line, d } = spot;
+  for (const o of life.cars) if (o.line === line && Math.abs(o.d - d) < 9) return;
+  const T = lifePickVehicle(line), spd = (C.carSpeed[line.cls] || 8) * lifeRand(0.8, 1.15);
+  const car = {
+    kind: 'car', line, d, dir: line.oneway || (Math.random() < 0.5 ? 1 : -1), seg: 0,
+    v: spd * 0.7, vmax: spd, T, x: 0, y: 0, hx: 1, hy: 0, s: 0,
+    color: lifePick(T.colors || C.carColors), neon: lifePick(C.neon), glowKind: Math.random() < 0.5 ? 0 : 1, nick: lifeNick()
+  };
+  lifePlace(car); life.cars.push(car);
+}
+
+function lifeSpawnPed(cx, cy, R) {
+  const C = life.cfg, spot = lifeFindSpot(life.sets.ped, cx, cy, R, 8); if (!spot) return;
+  const walk = Math.random() < 0.05 ? lifeRand(2.6, 3.4) : lifeRand(1.05, 1.7);
+  const ped = {
+    kind: 'ped', line: spot.line, d: spot.d, dir: Math.random() < 0.5 ? 1 : -1, seg: 0,
+    walk, v: walk, sideSign: Math.random() < 0.5 ? -1 : 1, jit: lifeRand(-0.6, 0.6), x: 0, y: 0, hx: 1, hy: 0,
+    cloth: lifePick(C.pedClothes), head: Math.random() < 0.12 ? lifePick(C.neon) : lifePick(C.skin),
+    stopper: Math.random() < 0.35, stand: false, stateT: lifeRand(3, 12), nick: lifeNick()
+  };
+  lifePlace(ped); life.peds.push(ped);
+}
+
+function lifeSpawnDrone(cx, cy, R) {
+  const C = life.cfg, spot = lifeFindSpot(life.sets.any, cx, cy, R, 8); if (!spot) return;
+  const dr = {
+    kind: 'drone', line: spot.line, d: spot.d, dir: Math.random() < 0.5 ? 1 : -1, seg: 0,
+    v: lifeRand(7, 13), alt: lifeRand(18, 70), ph: Math.random() * 6.28, color: lifePick(C.neon),
+    x: 0, y: 0, hx: 1, hy: 0, nick: 'DRN-' + String(Math.floor(Math.random() * 10000)).padStart(4, '0')
+  };
+  lifePlace(dr); life.drones.push(dr);
+}
+
+/* ---------- elicotteri ---------- */
+function lifeSpawnHeli(cx, cy, R, ang, alongOffset) {
+  const C = life.cfg, H = C.helicopters, D = R * 1.6 + 250;
+  const f = [Math.cos(ang), Math.sin(ang)], p = [-f[1], f[0]], off = lifeRand(-0.5, 0.5) * R;
+  const back = D + (alongOffset || 0), sd = lifeRand(H.speed[0], H.speed[1]);
+  return {
+    x: cx + (-f[0] * back + p[0] * off) / LIFE_KX, y: cy + (-f[1] * back + p[1] * off) / LIFE_KY,
+    fx: f[0], fy: f[1], v: sd, alt: lifeRand(H.altitude[0], H.altitude[1]), trav: 0, total: 2 * D,
+    rot: 0, ph: Math.random() * 6.28, body: lifePick(['#16181d', '#2a2e38', '#3b1320', '#102a3a']),
+    nick: lifePick(H.callsigns) + '-' + String(Math.floor(Math.random() * 90) + 10)
+  };
+}
+function lifeUpdateHelis(dt, now, cx, cy, R) {
+  const H = life.cfg.helicopters;
+  if (now > life.nextHeli) {
+    life.nextHeli = now + lifeRand(H.minGapMs, H.maxGapMs);
+    if (life.helis.length + 1 <= H.max) {
+      const ang = Math.random() * Math.PI * 2;
+      life.helis.push(lifeSpawnHeli(cx, cy, R, ang, 0));
+      if (life.helis.length < H.max && Math.random() < H.escortChance) {
+        const e = lifeSpawnHeli(cx, cy, R, ang, 70); life.helis.push(e);
+      }
+    }
+  }
+  for (let i = life.helis.length - 1; i >= 0; i--) {
+    const h = life.helis[i], s = h.v * dt;
+    h.x += h.fx * s / LIFE_KX; h.y += h.fy * s / LIFE_KY; h.trav += s; h.rot += 14 * dt;
+    if (h.trav > h.total) life.helis.splice(i, 1);
+  }
+}
+
+/* ---------- geometria 3D ---------- */
+// scatola orientata: centro (x,y) lng/lat, avanti = (ux,uy) in metri, fo/so = spostamento avanti/sinistra (m)
+function lifeBox(f, x, y, ux, uy, fo, so, len, wid, base, top, color, glow) {
+  const cxm = ux * fo - uy * so, cym = uy * fo + ux * so, hl = len / 2, hw = wid / 2, lx = -uy, ly = ux;
+  const ring = [[hl, hw], [hl, -hw], [-hl, -hw], [-hl, hw]].map(([a, b]) =>
+    [x + (cxm + ux * a + lx * b) / LIFE_KX, y + (cym + uy * a + ly * b) / LIFE_KY]);
+  ring.push(ring[0]);
+  f.push({ type: 'Feature', properties: { c: color, b: base, h: top, g: glow ? 1 : 0 }, geometry: { type: 'Polygon', coordinates: [ring] } });
+}
+function lifeDisc(f, x, y, r, base, top, color, glow) {
+  const ring = [];
+  for (let i = 0; i < 14; i++) { const a = i / 14 * 6.2832; ring.push([x + Math.cos(a) * r / LIFE_KX, y + Math.sin(a) * r / LIFE_KY]); }
+  ring.push(ring[0]);
+  f.push({ type: 'Feature', properties: { c: color, b: base, h: top, g: glow ? 1 : 0 }, geometry: { type: 'Polygon', coordinates: [ring] } });
+}
+
+function lifeBuildFeatures(T) {
+  const C = life.cfg, S = C.sizeXY, Z = C.sizeZ, f = [];
+  life.cars.forEach(c => {
+    const t = c.T, len = t.len * S, wid = t.wid * S, top = t.h * Z, base = 0.25 * Z;
+    lifeBox(f, c.x, c.y, c.hx, c.hy, 0, 0, len, wid, base, top, c.color, 0);
+    if (t.cabLen) lifeBox(f, c.x, c.y, c.hx, c.hy, t.cabOff * S, 0, t.cabLen * S, wid * 0.86, top, top + t.cabH * Z, t.cabColor, 0);
+    lifeBox(f, c.x, c.y, c.hx, c.hy, -len / 2 + 0.05 * S, 0, 0.3 * S, wid * 0.82, base + 0.35 * Z, base + 0.7 * Z, '#ff2a3a', 0);   // fanali posteriori
+    if (c.glowKind) lifeBox(f, c.x, c.y, c.hx, c.hy, 0, 0, len * 1.25, wid * 1.3, 0, 0.25, c.neon, 1);                           // underglow
+    else lifeBox(f, c.x, c.y, c.hx, c.hy, len / 2 + 3.4 * S, 0, 6.5 * S, wid * 1.1, 0, 0.2, '#fff2b8', 1);                       // fari
+  });
+  life.peds.forEach(p => {
+    lifeBox(f, p.x, p.y, p.hx, p.hy, 0, 0, 0.5 * S, 0.62 * S, 0, 1.45 * Z, p.cloth, 0);
+    lifeBox(f, p.x, p.y, p.hx, p.hy, 0, 0, 0.34 * S, 0.34 * S, 1.45 * Z, 1.85 * Z, p.head, 0);
+  });
+  life.drones.forEach(d => {
+    const a = d.alt + Math.sin(T * 2 + d.ph) * 1.0, k = S, on = Math.sin(T * 6 + d.ph) > 0;
+    lifeBox(f, d.x, d.y, d.hx, d.hy, 0, 0, 1.6 * k, 1.6 * k, a, a + 0.45 * Z, '#15181d', 0);
+    const c45 = Math.SQRT1_2;
+    lifeBox(f, d.x, d.y, (d.hx + (-d.hy)) * c45, (d.hy + d.hx) * c45, 0, 0, 3.4 * k, 0.28 * k, a + 0.45 * Z, a + 0.6 * Z, '#3a3f49', 0);
+    lifeBox(f, d.x, d.y, (d.hx - (-d.hy)) * c45, (d.hy - d.hx) * c45, 0, 0, 3.4 * k, 0.28 * k, a + 0.45 * Z, a + 0.6 * Z, '#3a3f49', 0);
+    lifeBox(f, d.x, d.y, d.hx, d.hy, 0, 0, 0.6 * k, 0.6 * k, a + 0.6 * Z, a + 0.95 * Z, on ? d.color : '#2a2d33', 0);
+  });
+  life.helis.forEach(h => {
+    const k = S * 0.9, a = h.alt, ux = h.fx, uy = h.fy;
+    lifeBox(f, h.x, h.y, ux, uy, 0, 0, 8 * k, 2.4 * k, a, a + 2.3 * k, h.body, 0);                      // fusoliera
+    lifeBox(f, h.x, h.y, ux, uy, 2.6 * k, 0, 3 * k, 2.1 * k, a + 0.4 * k, a + 2.7 * k, '#35e8ff', 0);   // cabina
+    lifeBox(f, h.x, h.y, ux, uy, -7 * k, 0, 7 * k, 0.7 * k, a + 1.2 * k, a + 1.9 * k, h.body, 0);       // trave di coda
+    lifeBox(f, h.x, h.y, ux, uy, -10 * k, 0, 1.2 * k, 0.3 * k, a + 1.2 * k, a + 3.4 * k, h.body, 0);    // deriva
+    lifeBox(f, h.x, h.y, ux, uy, 0, 0, 0.8 * k, 0.8 * k, a + 2.3 * k, a + 3 * k, '#2a2e38', 0);         // mozzo
+    const c = Math.cos(h.rot), s = Math.sin(h.rot);
+    lifeBox(f, h.x, h.y, c, s, 0, 0, 10 * k, 0.5 * k, a + 3 * k, a + 3.15 * k, '#aab4c0', 0);            // pale
+    lifeBox(f, h.x, h.y, -s, c, 0, 0, 10 * k, 0.5 * k, a + 3 * k, a + 3.15 * k, '#aab4c0', 0);
+    lifeDisc(f, h.x, h.y, 5 * k, a + 3.1 * k, a + 3.2 * k, '#ffffff', 1);                                // alone del rotore
+    lifeBox(f, h.x, h.y, ux, uy, -10 * k, 0, 0.6 * k, 0.6 * k, a + 3.4 * k, a + 4 * k, Math.sin(T * 8 + h.ph) > 0 ? '#ff1a1a' : '#3a0a0a', 0);   // luce lampeggiante
+    // riflettore a terra, un po' più avanti dell'elicottero
+    lifeDisc(f, h.x + ux * a * 0.35 / LIFE_KX, h.y + uy * a * 0.35 / LIFE_KY, 7 + a * 0.05, 0, 0.4, '#fff3b0', 1);
+  });
+  return f;
+}
+
+/* ---------- un passo di simulazione ---------- */
+function lifeStep(dt, now, T, push) {
+  const C = life.cfg, ctr = map.getCenter(), cx = ctr.lng, cy = ctr.lat, R = life.R;
+  const mob = (typeof isMobile !== 'undefined' && isMobile) ? 0.5 : 1;
+  if (life.lines.length && life.sets) {
+    lifeCarFollow(dt);
+    lifeUpdateAgents(life.cars, dt, cx, cy, R);
+    lifeUpdateAgents(life.peds, dt, cx, cy, R);
+    lifeUpdateAgents(life.drones, dt, cx, cy, R);
+    if (now - life.startedAt > 2500) life.fresh = false;
+    const budget = life.fresh ? 80 : 5;
+    const tCars = Math.min(Math.round(C.cars * mob), Math.ceil(life.carKm * C.carsPerKm));
+    const tPeds = Math.min(Math.round(C.peds * mob), Math.ceil(life.pedKm * C.pedsPerKm));
+    const tDrones = Math.round(C.drones * mob);
+    for (let n = 0; n < budget && life.cars.length < tCars; n++) lifeSpawnCar(cx, cy, R);
+    for (let n = 0; n < budget && life.peds.length < tPeds; n++) lifeSpawnPed(cx, cy, R);
+    for (let n = 0; n < Math.min(budget, 3) && life.drones.length < tDrones; n++) lifeSpawnDrone(cx, cy, R);
+  }
+  lifeUpdateHelis(dt, now, cx, cy, R);
+  if (push) {
+    const src = map.getSource('cy-life');
+    if (src) { life.busy = true; life.busyAt = now; src.setData({ type: 'FeatureCollection', features: lifeBuildFeatures(T) }); }
+  }
+  lifeUpdateLabels(cx, cy, map.getZoom());
+}
+
+/* ---------- nickname (etichette HTML) ---------- */
+function lifeUpdateLabels(cx, cy, z) {
+  const C = life.cfg, LC = C.labels, els = life.labelEls;
+  if (z < LC.minZoom) { els.forEach(e => { if (e._vis) { e.style.display = 'none'; e._vis = false; } }); return; }
+  const cand = [], r2 = LC.radiusM * LC.radiusM;
+  const add = (e, txt, cls, h, far) => {
+    const dx = (e.x - cx) * LIFE_KX, dy = (e.y - cy) * LIFE_KY, d2 = dx * dx + dy * dy;
+    if (far) cand.push({ d2: -1, e, txt, cls, h, r: LC.radiusM }); else if (d2 <= r2) cand.push({ d2, e, txt, cls, h, r: LC.radiusM });
+  };
+  life.helis.forEach(h => add(h, h.nick, 'heli', h.alt + 9, true));
+  life.drones.forEach(d => add(d, d.nick, 'drone', d.alt + 2));
+  life.cars.forEach(c => add(c, c.nick, 'car', (c.T.h + c.T.cabH) * C.sizeZ + 0.5));
+  life.peds.forEach(p => add(p, p.nick, 'ped', 1.85 * C.sizeZ + 0.3));
+  cand.sort((a, b) => a.d2 - b.d2);
+  const mpp = 156543.03392 * Math.cos(cy * Math.PI / 180) / Math.pow(2, z), cosP = Math.cos(map.getPitch() * Math.PI / 180);
+  const W = innerWidth, H = innerHeight; let n = 0;
+  for (const c of cand) {
+    if (n >= LC.max) break;
+    const p = map.project([c.e.x, c.e.y]), y = p.y - (c.h / mpp) * cosP - 6;
+    if (p.x < -60 || y < -30 || p.x > W + 60 || y > H + 30) continue;
+    let el = els[n];
+    if (!el) { el = document.createElement('div'); el._vis = false; life.labelBox.appendChild(el); els.push(el); }
+    if (el._txt !== c.txt) { el.textContent = c.txt; el._txt = c.txt; }
+    if (el._cls !== c.cls) { el.className = 'life-nick ' + c.cls; el._cls = c.cls; }
+    el.style.transform = 'translate(' + p.x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) translate(-50%,-100%)';
+    el.style.opacity = c.d2 < 0 ? '1' : (1 - 0.65 * Math.sqrt(c.d2) / c.r).toFixed(2);
+    if (!el._vis) { el.style.display = 'block'; el._vis = true; }
+    n++;
+  }
+  for (let i = n; i < els.length; i++) if (els[i]._vis) { els[i].style.display = 'none'; els[i]._vis = false; }
+}
 </script>
 </body>
 </html>
