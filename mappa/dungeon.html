@@ -110,6 +110,8 @@
 </div>
 <div id="err">Coordinate mancanti.<br>Apri questa pagina dal pulsante "APRI DUNGEON" nel pannello di un edificio (parametri lat / lng / h / name / poly).</div>
 
+<script src="data/cy-dungeons.js"></script>
+<script src="data/cy-dungeons.js"></script>
 <script>
 (async function(){
 /* =========================================================================
@@ -153,27 +155,27 @@ const SEED_HEX = hashStr(SEED_STR).toString(16).toUpperCase().padStart(8, '0');
 const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
 
 /* =========================================================================
-   DUNGEON DEFINITI DA FILE (data/cy-dungeons.json)
+   DUNGEON DEFINITI DA FILE (data/cy-dungeons.js)
    Se il seed di questo edificio (quello mostrato in alto a sinistra, 8 cifre esadecimali, oppure
    "lat,lng" a 6 decimali) è presente nel file, il dungeon viene costruito dalla descrizione scritta
    a mano invece di essere generato a caso. Il file si può anche caricare dal pannello CONTROLLI
-   ("CARICA JSON": utile aprendo la pagina da file://, dove il browser blocca il fetch del file).
-   Formato: vedi data/cy-dungeons.json (c'è un esempio commentato) o premi ESPORTA JSON nel pannello
+   ("CARICA JSON": utile per importare definizioni aggiuntive anche aprendo la pagina da file://).
+   Formato: vedi data/cy-dungeons.js o premi ESPORTA JSON nel pannello
    per scaricare il dungeon corrente già nel formato giusto e modificarlo.
    ========================================================================= */
-async function loadDefs() {
-  let remote = null, local = null;
-  try { const r = await fetch('data/cy-dungeons.json', {cache:'no-store'}); if (r.ok) remote = await r.json(); } catch (e) {}
+function loadDefs() {
+  const remote = window.CY_DUNGEONS || null;
+  let local = null;
   try { local = JSON.parse(localStorage.getItem('cydg-defs') || 'null'); } catch (e) {}
   const defs = {}, srcOf = {};
-  [[remote,'server'],[local,'locale']].forEach(([src, tag]) => {
+  [[remote,'file JS'],[local,'locale']].forEach(([src, tag]) => {
     const d = src && (src.dungeons || src);
     if (d && typeof d === 'object') Object.keys(d).forEach(k => {
       if (k[0] === '_' || typeof d[k] !== 'object') return;
       const key = k.replace(/\s+/g, '').toUpperCase(); defs[key] = d[k]; srcOf[key] = tag;
     });
   });
-  return {defs, srcOf, hasRemote: !!remote, hasLocal: !!local};
+  return {defs, srcOf, hasFile: !!remote, hasLocal: !!local};
 }
 
 function normalizeCustom(raw) {
@@ -194,7 +196,7 @@ function normalizeCustom(raw) {
   return {raw, name: raw.name, cs, W, H, ox, oy, floors, NB: NBc, kind: raw.kind, start: raw.start, controls: raw.controls};
 }
 
-const DEFS = await loadDefs();
+const DEFS = loadDefs();
 let CUSTOM = null, CUSTOM_ERR = null, CUSTOM_SRC = null;
 try {
   const key = [SEED_HEX, SEED_STR.replace(/\s+/g, '')].map(s => s.toUpperCase()).find(k => DEFS.defs[k]);
@@ -2349,7 +2351,7 @@ document.getElementById('ctl-export').onclick = () => {
   const text = JSON.stringify(buildExport(), null, 1), a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], {type:'application/json'})); a.download = 'dungeon-' + SEED_HEX + '.json';
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-  toast('JSON esportato: incollane il contenuto in data/cy-dungeons.json');
+  toast('JSON esportato. Puoi ricaricarlo con CARICA JSON oppure trasferirne i dati in data/cy-dungeons.js.');
 };
 document.getElementById('ctl-load').onclick = () => document.getElementById('ctl-file').click();
 document.getElementById('ctl-file').onchange = e => {
@@ -2365,7 +2367,7 @@ document.getElementById('ctl-clear').onclick = () => { try { localStorage.remove
 document.getElementById('ctl-clear').style.display = DEFS.hasLocal ? '' : 'none';
 document.getElementById('ctl-src').textContent = CUSTOM
   ? 'Dungeon definito da file (' + CUSTOM_SRC + ').'
-  : 'Dungeon generato a caso dal seed ' + SEED_HEX + (DEFS.hasRemote || DEFS.hasLocal ? ' (non presente nel file).' : '.');
+  : 'Dungeon generato a caso dal seed ' + SEED_HEX + (DEFS.hasFile || DEFS.hasLocal ? ' (non presente nel file).' : '.');
 ctlSync();
 if (CUSTOM_ERR) toast('Definizione dungeon non valida: ' + CUSTOM_ERR);
 
