@@ -162,37 +162,18 @@ const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
    per scaricare il dungeon corrente già nel formato giusto e modificarlo.
    ========================================================================= */
 async function loadDefs() {
-  const info = {json:'', js:''}, isFile = location.protocol === 'file:';
-  let remote = null, viaJs = null, local = null;
-  // 1) data/cy-dungeons.json (serve un server web: da file:// il browser blocca la lettura)
-  try {
-    const r = await fetch('data/cy-dungeons.json', {cache:'no-store'});
-    if (!r.ok) info.json = 'non trovato (HTTP ' + r.status + ')';
-    else { try { remote = await r.json(); info.json = 'letto'; } catch (e) { info.json = 'JSON non valido: ' + e.message; } }
-  } catch (e) { info.json = isFile ? 'non leggibile da file:// (il browser lo blocca)' : 'non raggiungibile'; }
-  // 2) ripiego: data/cy-dungeons.js, che contiene  window.CY_DUNGEONS = { ...stesso JSON... };  (funziona anche da file://)
-  if (!remote) {
-    await new Promise(res => {
-      const sc = document.createElement('script'); let done = false;
-      const end = msg => { if (!done) { done = true; info.js = msg; res(); } };
-      sc.src = 'data/cy-dungeons.js?' + Date.now();
-      sc.onload = () => { if (window.CY_DUNGEONS && typeof window.CY_DUNGEONS === 'object') { viaJs = window.CY_DUNGEONS; end('letto'); } else end('caricato ma senza window.CY_DUNGEONS'); };
-      sc.onerror = () => end('assente');
-      setTimeout(() => end('nessuna risposta'), 4000);
-      (document.head || document.body).appendChild(sc);
-    });
-  }
-  // 3) JSON caricato a mano dal pannello (localStorage): ha la precedenza
+  let remote = null, local = null;
+  try { const r = await fetch('data/cy-dungeons.json', {cache:'no-store'}); if (r.ok) remote = await r.json(); } catch (e) {}
   try { local = JSON.parse(localStorage.getItem('cydg-defs') || 'null'); } catch (e) {}
   const defs = {}, srcOf = {};
-  [[remote,'server'],[viaJs,'script'],[local,'locale']].forEach(([src, tag]) => {
+  [[remote,'server'],[local,'locale']].forEach(([src, tag]) => {
     const d = src && (src.dungeons || src);
     if (d && typeof d === 'object') Object.keys(d).forEach(k => {
       if (k[0] === '_' || typeof d[k] !== 'object') return;
       const key = k.replace(/\s+/g, '').toUpperCase(); defs[key] = d[k]; srcOf[key] = tag;
     });
   });
-  return {defs, srcOf, info, isFile, hasRemote: !!(remote || viaJs), hasLocal: !!local};
+  return {defs, srcOf, hasRemote: !!remote, hasLocal: !!local};
 }
 
 function normalizeCustom(raw) {
@@ -2382,17 +2363,9 @@ document.getElementById('ctl-file').onchange = e => {
 };
 document.getElementById('ctl-clear').onclick = () => { try { localStorage.removeItem('cydg-defs'); } catch(e) {} location.reload(); };
 document.getElementById('ctl-clear').style.display = DEFS.hasLocal ? '' : 'none';
-{ const lines = [];
-  if (CUSTOM) lines.push('Dungeon definito da file (' + CUSTOM_SRC + ').');
-  else {
-    lines.push('Dungeon generato a caso dal seed ' + SEED_HEX + '.');
-    const n = Object.keys(DEFS.defs).length;
-    if (n) lines.push('Il seed non è fra i ' + n + ' dungeon definiti (chiavi cercate: ' + SEED_HEX + ' oppure ' + SEED_STR + ').');
-  }
-  lines.push('data/cy-dungeons.json: ' + DEFS.info.json + (DEFS.info.js ? ' · data/cy-dungeons.js: ' + DEFS.info.js : '') + (DEFS.hasLocal ? ' · JSON locale: presente' : ''));
-  if (!CUSTOM && DEFS.isFile && !DEFS.hasRemote && !DEFS.hasLocal) lines.push('Aperto da file://: usa CARICA JSON oppure metti i dungeon in data/cy-dungeons.js (window.CY_DUNGEONS = {...};).');
-  document.getElementById('ctl-src').textContent = lines.join(' ');
-}
+document.getElementById('ctl-src').textContent = CUSTOM
+  ? 'Dungeon definito da file (' + CUSTOM_SRC + ').'
+  : 'Dungeon generato a caso dal seed ' + SEED_HEX + (DEFS.hasRemote || DEFS.hasLocal ? ' (non presente nel file).' : '.');
 ctlSync();
 if (CUSTOM_ERR) toast('Definizione dungeon non valida: ' + CUSTOM_ERR);
 

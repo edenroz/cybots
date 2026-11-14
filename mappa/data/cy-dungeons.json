@@ -1,11 +1,4 @@
-/* =========================================================================
-   CY — DUNGEON DEFINITI A MANO (versione .js, per chi apre le pagine da file://)
-   Contenuto IDENTICO a data/cy-dungeons.json, solo con  window.CY_DUNGEONS =  davanti e un ; in fondo.
-   Se il browser non può leggere il .json (file://), il dungeon legge questo file.
-   Tieni aggiornato UNO dei due (se esistono entrambi e il .json è leggibile, vince il .json).
-   Vedi il campo "_leggimi" per il formato.
-   ========================================================================= */
-window.CY_DUNGEONS = {
+{
  "_leggimi": [
   "DUNGEON SCRITTI A MANO. La chiave di ogni dungeon è il suo seed: quello mostrato in alto a sinistra nella pagina del dungeon (8 cifre esadecimali, es. 1C7E38F8) oppure \"lat,lng\" a 6 decimali. Se il seed è in questo file, il dungeon viene costruito da qui invece che generato a caso.",
   "Per partire da un dungeon vero: aprilo, apri il pannello CONTROLLI e premi ESPORTA JSON; incolla il blocco scaricato dentro \"dungeons\" e modificalo.",
@@ -21,7 +14,7 @@ window.CY_DUNGEONS = {
   "PROPS: {k,x,y,w,h}; k = sofa table desk bed shelf counter rack crate machine wc sink pillar plant tv locker barrel terminal vend rug car. PNG: {x,y,to:[x,y],nick,speed,fixed}; fixed:true = non sparisce con lo slider PNG. CAMS: {x,y,dir:N|E|S|W oppure angle in gradi,fov,range,id}. DEVICES: {kind,x,y,id,name,ice}; kind = srv trm wrk tv vnd mch veh cam lck acc elv lgt iot. FEATS: {x,y,k:M|$|!,label}."
  ],
  "dungeons": {
-  "A1F4271E": {
+  "00000000": {
    "name": "Il Covo di Dok",
    "cellSize": 1,
    "basements": 0,
@@ -180,4 +173,4 @@ window.CY_DUNGEONS = {
    ]
   }
  }
-};
+}
