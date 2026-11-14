@@ -38,6 +38,18 @@
   #bar #b-net.on{border-color:var(--cyan);color:var(--cyan);}
   #bar input[type=range]{width:min(220px,36vw);accent-color:#00fff2;}
   #flabel{min-width:190px;text-align:center;font-size:12px;letter-spacing:1px;}
+  #ctl{position:fixed;left:14px;bottom:calc(76px + env(safe-area-inset-bottom));width:262px;padding:8px 12px;font-size:11px;z-index:6;}
+  #ctl h3{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;margin:0;font-family:Impact,sans-serif;font-size:14px;letter-spacing:1px;color:var(--cyan);}
+  #ctl-tog{background:none;border:1px solid rgba(242,237,228,.3);color:var(--grey);font-family:inherit;font-size:11px;padding:0 7px;cursor:pointer;}
+  #ctl.collapsed #ctl-body{display:none;}
+  #ctl label{display:block;margin-top:9px;color:var(--grey);letter-spacing:.5px;}
+  #ctl label b{float:right;color:var(--yellow);font-weight:normal;}
+  #ctl input[type=range]{width:100%;accent-color:#00fff2;margin:3px 0 0;}
+  #ctl .ctl-note,#ctl-src{margin-top:8px;color:var(--grey);line-height:1.5;font-size:10.5px;}
+  #ctl-src{color:var(--cyan);}
+  #ctl .ctl-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  #ctl .ctl-row button{background:rgba(242,237,228,.08);border:1px solid rgba(242,237,228,.4);color:var(--white);font-family:inherit;font-size:10.5px;padding:4px 8px;cursor:pointer;}
+  #ctl .ctl-row button:hover{border-color:var(--cyan);color:var(--cyan);}
   #nettip{position:fixed;display:none;z-index:30;pointer-events:none;padding:6px 10px;font-size:11px;line-height:1.5;max-width:230px;}
   #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));padding:8px 14px;display:none;font-size:12px;color:var(--yellow);max-width:90vw;text-align:center;}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--grey);}
@@ -49,6 +61,7 @@
   #camgrid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;align-content:start;margin-top:8px;color:var(--grey);font-size:12px;}
   .camcv{width:100%;height:auto;border:1px solid rgba(0,255,242,.4);background:#050807;display:block;}
   @media (max-width:640px){#camwall{left:8px;right:8px;top:90px;bottom:70px;}}
+  @media (max-width:640px){#ctl{left:8px;right:8px;width:auto;bottom:calc(78px + 31vh);}}
   @media (max-width:640px){#side{top:auto;bottom:70px;right:8px;left:8px;width:auto;max-height:30vh;}#title{max-width:90vw}}
 </style>
 </head>
@@ -78,9 +91,27 @@
 </div>
 <div id="toast" class="box"></div>
 <div id="nettip" class="box"></div>
+<div id="ctl" class="box collapsed">
+  <h3 id="ctl-t" title="Comprimi/espandi i controlli"><span>CONTROLLI</span><button id="ctl-tog">▸</button></h3>
+  <div id="ctl-body">
+    <label>PNG <b id="v-npc">100%</b><input id="s-npc" type="range" min="0" max="200" step="5" value="100"></label>
+    <label>DISPOSITIVI <b id="v-dev">100%</b><input id="s-dev" type="range" min="0" max="200" step="5" value="100"></label>
+    <label>SICUREZZA RETE <b id="v-sec">100%</b><input id="s-sec" type="range" min="0" max="200" step="5" value="100"></label>
+    <div class="ctl-note">100% = come generato. Oltre il 100% si aggiungono PNG e dispositivi IoT. La sicurezza scala l'ICE (0 = rete aperta, massimo 5).</div>
+    <div class="ctl-row">
+      <button id="ctl-reset" title="Torna ai valori di partenza">RESET</button>
+      <button id="ctl-export" title="Scarica questo dungeon nel formato di data/cy-dungeons.json">ESPORTA JSON</button>
+      <button id="ctl-load" title="Carica un file JSON di dungeon (anche da file://)">CARICA JSON</button>
+      <button id="ctl-clear" style="display:none" title="Dimentica il JSON caricato a mano">RIMUOVI LOCALE</button>
+    </div>
+    <input id="ctl-file" type="file" accept=".json,application/json" style="display:none">
+    <div id="ctl-src"></div>
+  </div>
+</div>
 <div id="err">Coordinate mancanti.<br>Apri questa pagina dal pulsante "APRI DUNGEON" nel pannello di un edificio (parametri lat / lng / h / name / poly).</div>
 
 <script>
+(async function(){
 /* =========================================================================
    CY — DUNGEON DI EDIFICIO
    Parametri URL: lat, lng (seed), h (altezza in metri → numero di piani),
@@ -112,7 +143,7 @@ if (!isFinite(LAT) || !isFinite(LNG)) {
   ['title','side','bar'].forEach(i => document.getElementById(i).style.display = 'none');
   throw new Error('lat/lng mancanti');
 }
-const NAME = Q.get('name') || 'Edificio';
+let NAME = Q.get('name') || 'Edificio';
 let BH = parseFloat(Q.get('h')); if (!isFinite(BH) || BH <= 0) BH = 12;
 
 function hashStr(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h>>>0;}
@@ -121,23 +152,77 @@ const SEED_STR = LAT.toFixed(6) + ',' + LNG.toFixed(6);
 const SEED_HEX = hashStr(SEED_STR).toString(16).toUpperCase().padStart(8, '0');
 const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
 
+/* =========================================================================
+   DUNGEON DEFINITI DA FILE (data/cy-dungeons.json)
+   Se il seed di questo edificio (quello mostrato in alto a sinistra, 8 cifre esadecimali, oppure
+   "lat,lng" a 6 decimali) è presente nel file, il dungeon viene costruito dalla descrizione scritta
+   a mano invece di essere generato a caso. Il file si può anche caricare dal pannello CONTROLLI
+   ("CARICA JSON": utile aprendo la pagina da file://, dove il browser blocca il fetch del file).
+   Formato: vedi data/cy-dungeons.json (c'è un esempio commentato) o premi ESPORTA JSON nel pannello
+   per scaricare il dungeon corrente già nel formato giusto e modificarlo.
+   ========================================================================= */
+async function loadDefs() {
+  let remote = null, local = null;
+  try { const r = await fetch('data/cy-dungeons.json', {cache:'no-store'}); if (r.ok) remote = await r.json(); } catch (e) {}
+  try { local = JSON.parse(localStorage.getItem('cydg-defs') || 'null'); } catch (e) {}
+  const defs = {}, srcOf = {};
+  [[remote,'server'],[local,'locale']].forEach(([src, tag]) => {
+    const d = src && (src.dungeons || src);
+    if (d && typeof d === 'object') Object.keys(d).forEach(k => {
+      if (k[0] === '_' || typeof d[k] !== 'object') return;
+      const key = k.replace(/\s+/g, '').toUpperCase(); defs[key] = d[k]; srcOf[key] = tag;
+    });
+  });
+  return {defs, srcOf, hasRemote: !!remote, hasLocal: !!local};
+}
+
+function normalizeCustom(raw) {
+  const cs = Number(raw.cellSize) > 0 ? Number(raw.cellSize) : 1;
+  const fr = Array.isArray(raw.floors) ? raw.floors : [];
+  if (!fr.length) throw new Error('"floors" è vuoto o mancante');
+  const basements = Number.isInteger(raw.basements) ? raw.basements : 0;
+  let W = 0, H = 0;
+  const floors = fr.map((F, idx) => {
+    const map = Array.isArray(F.map) ? F.map.map(r => String(r)) : [];
+    if (!map.length) throw new Error('piano ' + idx + ': "map" mancante');
+    map.forEach(r => { W = Math.max(W, r.length); }); H = Math.max(H, map.length);
+    return Object.assign({}, F, {map, level: Number.isFinite(F.level) ? F.level : idx - basements});
+  });
+  floors.forEach(F => { F.map = F.map.map(r => r.padEnd(W, ' ')); while (F.map.length < H) F.map.push(' '.repeat(W)); });
+  let NBc = floors.filter(F => F.level < 0).length; NBc = Math.min(NBc, floors.length - 1);
+  const og = Array.isArray(raw.origin) ? raw.origin : [1,1], ox = Number.isInteger(og[0]) ? og[0] : 1, oy = Number.isInteger(og[1]) ? og[1] : 1;   // cella della griglia interna che corrisponde a colonna/riga 0 della mappa (1 = con un bordo di vuoto)
+  return {raw, name: raw.name, cs, W, H, ox, oy, floors, NB: NBc, kind: raw.kind, start: raw.start, controls: raw.controls};
+}
+
+const DEFS = await loadDefs();
+let CUSTOM = null, CUSTOM_ERR = null, CUSTOM_SRC = null;
+try {
+  const key = [SEED_HEX, SEED_STR.replace(/\s+/g, '')].map(s => s.toUpperCase()).find(k => DEFS.defs[k]);
+  if (key) { CUSTOM = normalizeCustom(DEFS.defs[key]); CUSTOM_SRC = DEFS.srcOf[key]; }
+} catch (e) { CUSTOM_ERR = e.message; console.error('[CY dungeon] definizione non valida:', e); }
+if (CUSTOM && CUSTOM.name) NAME = CUSTOM.name;
+
+
 /* ---------- piani ---------- */
 const FLOOR_H = 3.65;                                  // metri per piano (533 m → 201 piani)
-const FL_RAW = Math.round(BH / FLOOR_H);
-const FL = Math.max(1, Math.min(1500, FL_RAW));
+if (CUSTOM) BH = CUSTOM.floors.length * FLOOR_H;
+const FL_RAW = CUSTOM ? CUSTOM.floors.length - CUSTOM.NB : Math.round(BH / FLOOR_H);
+const FL = CUSTOM ? FL_RAW : Math.max(1, Math.min(1500, FL_RAW));
 // Definiamo un minimo fisso (es. 1) e un massimo scalato in base a FL (es. 1 piano interrato ogni 4 fuori terra)
 const minNB = 1;
 const maxNB = Math.max(minNB, Math.floor(FL / 4)); // Più alto è FL, più alto è il tetto massimo interrato
 const range = maxNB - minNB + 1;
 
 // Calcoliamo NB usando l'hash all'interno del range dinamico
-const NB = minNB + (hashStr(SEED_STR + 'basement') % range);const NL = NB + FL;                                    // livelli totali (indice 0 = più profondo)
+const NB = CUSTOM ? CUSTOM.NB : minNB + (hashStr(SEED_STR + 'basement') % range);const NL = NB + FL;                                    // livelli totali (indice 0 = più profondo)
 const levelOf = i => i - NB;
 const labelOf = i => { const n = levelOf(i); return n < 0 ? 'S' + (-n) : 'P' + n; };
 
 /* ---------- tema ---------- */
-const KIND = (function(){ const r = hashStr(SEED_STR + 'kind') % 100; return r < 45 ? 'residential' : r < 80 ? 'office' : 'mixed'; })();
+const KIND = (CUSTOM && CUSTOM.kind) ? CUSTOM.kind : (function(){ const r = hashStr(SEED_STR + 'kind') % 100; return r < 45 ? 'residential' : r < 80 ? 'office' : 'mixed'; })();
 function themeOf(i){
+  const ov = CUSTOM && CUSTOM.floors[i] && CUSTOM.floors[i].theme;
+  if (ov && THEME[ov]) return ov;
   const n = levelOf(i);
   if (n < 0) return 'basement';
   if (n === 0) return 'ground';
@@ -163,6 +248,7 @@ if (ps) {
   poly = ps.split(';').map(s => s.split(':').map(Number)).filter(a => a.length === 2 && isFinite(a[0]) && isFinite(a[1]));
   if (poly.length < 3) poly = null;
 }
+if (CUSTOM) poly = [[0,0],[CUSTOM.W*CUSTOM.cs,0],[CUSTOM.W*CUSTOM.cs,CUSTOM.H*CUSTOM.cs],[0,CUSTOM.H*CUSTOM.cs]];
 if (!poly) {
   const r = mulberry32(hashStr(SEED_STR + 'fp'));
   const w = 16 + r() * 18, d = 12 + r() * 14, t = r() * Math.PI, c = Math.cos(t), s = Math.sin(t);
@@ -170,8 +256,8 @@ if (!poly) {
 }
 let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
 poly.forEach(([x,y]) => { minX=Math.min(minX,x); maxX=Math.max(maxX,x); minY=Math.min(minY,y); maxY=Math.max(maxY,y); });
-const CS = Math.max(0.8, Math.max(maxX-minX, maxY-minY) / 72);   // metri per cella
-const GW = Math.ceil((maxX-minX)/CS) + 2, GD = Math.ceil((maxY-minY)/CS) + 2;
+const CS = CUSTOM ? CUSTOM.cs : Math.max(0.8, Math.max(maxX-minX, maxY-minY) / 72);   // metri per cella
+const GW = CUSTOM ? CUSTOM.W + CUSTOM.ox + (CUSTOM.ox ? 1 : 0) : Math.ceil((maxX-minX)/CS) + 2, GD = CUSTOM ? CUSTOM.H + CUSTOM.oy + (CUSTOM.oy ? 1 : 0) : Math.ceil((maxY-minY)/CS) + 2;
 function pointInPoly(px, py, pl) {
   let inside = false;
   for (let i = 0, j = pl.length-1; i < pl.length; j = i++) {
@@ -186,6 +272,23 @@ for (let y=1;y<GD-1;y++) for (let x=1;x<GW-1;x++) {
   if (pointInPoly(minX+(x-1+.5)*CS, maxY-(y-1+.5)*CS, poly)) { mask[y*GW+x]=1; maskCount++; }
 }
 if (maskCount < 10) { for (let y=1;y<GD-1;y++) for (let x=1;x<GW-1;x++) mask[y*GW+x]=1; maskCount=(GW-2)*(GD-2); }
+if (CUSTOM) {
+  // impronta dell'edificio: tutto ciò che NON è "esterno" in almeno un piano. Esterno = spazio vuoto raggiungibile dal bordo
+  // + muri che lo toccano (così le finestre compaiono sulle pareti esterne come nei dungeon generati)
+  mask.fill(0); maskCount = 0;
+  CUSTOM.floors.forEach(F => {
+    const ext = new Uint8Array(GW*GD), st = [], ch = (x,y) => { const c=x-CUSTOM.ox, r=y-CUSTOM.oy; return (c<0||r<0||c>=CUSTOM.W||r>=CUSTOM.H) ? ' ' : F.map[r][c]; };
+    for (let x=0;x<GW;x++) { st.push(x); st.push((GD-1)*GW+x); }
+    for (let y=0;y<GD;y++) { st.push(y*GW); st.push(y*GW+GW-1); }
+    while (st.length) { const k=st.pop(); if (ext[k]) continue; const x=k%GW, y=(k/GW)|0; if (ch(x,y)!==' ') continue; ext[k]=1;
+      for (const [dx,dy] of D4) { const nx=x+dx, ny=y+dy; if (nx>=0&&ny>=0&&nx<GW&&ny<GD&&!ext[ny*GW+nx]) st.push(ny*GW+nx); } }
+    for (let y=1;y<GD-1;y++) for (let x=1;x<GW-1;x++) {
+      const k=y*GW+x; let outside = ext[k] === 1;
+      if (!outside && ch(x,y)==='#') outside = D4.some(([dx,dy]) => ext[(y+dy)*GW+x+dx] === 1);
+      if (!outside && !mask[k]) { mask[k]=1; maskCount++; }
+    }
+  });
+}
 const fpCells = poly.map(([x,y]) => [(x-minX)/CS+1, (maxY-y)/CS+1]);
 // edifici circostanti (salvati da index.html al click su APRI DUNGEON): solo sagome accennate nella vista 3D
 let NEIGH = [];
@@ -202,7 +305,11 @@ try {
 } catch(e) {}
 
 /* ---------- nucleo scale/ascensore (stessa posizione a ogni piano) ---------- */
-const CORE = (function(){
+const CORE = CUSTOM ? (function(){
+  let x=Math.floor(GW/2), y=Math.floor(GD/2); const F0=CUSTOM.floors[Math.min(CUSTOM.floors.length-1,NB)];
+  F0.map.some((row,ry) => { const cx=row.indexOf('^'); if (cx>=0) { x=cx+CUSTOM.ox; y=ry+CUSTOM.oy; return true; } return false; });
+  return {x,y,s:1};
+})() : (function(){
   let sx=0,sy=0,n=0;
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) if (mask[y*GW+x]) { sx+=x; sy+=y; n++; }
   const mx=sx/n, my=sy/n;
@@ -225,7 +332,7 @@ const inZone = (x,y) => x>=CORE.x-1 && x<=CORE.x+CORE.s && y>=CORE.y-1 && y<=COR
 /* =========================================================================
    SCHEMA STRUTTURALE (uguale a ogni piano)
    ========================================================================= */
-const SKEL = (function(){
+const SKEL = CUSTOM ? {corr:new Uint8Array(GW*GD), blocks:[], ends:[], horiz:GW>=GD} : (function(){
   const rng = mulberry32(hashStr(SEED_STR + 'skel'));
   const horiz = GW >= GD;
   const U = horiz?GW:GD, V = horiz?GD:GW;
@@ -283,7 +390,7 @@ const SKEL = (function(){
    nella cella di corridoio adiacente. Se il corridoio è troppo corto (< 14 m dal nucleo), rinuncia. */
 const CORE2_MIN_AREA = 500;
 const CORE2 = (function(){
-  if (maskCount*CS*CS < CORE2_MIN_AREA) return null;
+  if (CUSTOM || maskCount*CS*CS < CORE2_MIN_AREA) return null;
   const cx=CORE.x+CORE.s/2, cy=CORE.y+CORE.s/2, cand=[];
   let maxD=0;
   for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
@@ -824,10 +931,200 @@ function typeFor(theme, depth, areaM, rng, level){
    g: 0 muro/vuoto 1 stanza 2 corridoio 3 porta 4 scale 5 ascensore
       6 porta segreta 7 porta chiusa 8 arco 9 ingresso
    ========================================================================= */
+/* =========================================================================
+   COSTRUZIONE DI UN PIANO DA DESCRIZIONE (vedi sopra) + CONTROLLI (slider)
+   Legenda della "map" di ogni piano (una stringa per riga, la prima riga è il nord):
+     ' ' vuoto fuori dall'edificio     '#' muro        '.' corridoio
+     '+' porta    'L' porta chiusa a chiave    'S' porta segreta    'A' arco    'E' ingresso
+     '^' scale    '=' ascensore
+     qualunque altro carattere (cifre, lettere, simboli) = una STANZA: tutte le celle con lo stesso
+     carattere sono la stessa stanza; i dettagli stanno in "rooms": { "1": { type, desc, ... } }
+   ========================================================================= */
+const ROOM_CHARS = '0123456789abcdefghijklmnopqrstuvwxyzBCDFGHIJKMNOPQRTUVWXYZβγδζηθκλμξπρστφψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþÿ';
+const SPECIAL_CH = {'.':2,'+':3,'S':6,'L':7,'A':8,'E':9,'^':4,'=':5};
+const mapCX = v => Number.isInteger(v) ? v + CUSTOM.ox + .5 : v + CUSTOM.ox;   // coordinate "fini" (PNG, dispositivi), asse x: intero = centro cella
+const mapCY = v => Number.isInteger(v) ? v + CUSTOM.oy + .5 : v + CUSTOM.oy;
+
+function wallsOfGrid(arr) {
+  const cells = [], wmk = new Uint8Array(GW*GD);
+  for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
+    if (arr[y*GW+x]!==0) continue;
+    let near=false;
+    for (let dy=-1;dy<=1&&!near;dy++) for (let dx=-1;dx<=1;dx++) { const nx=x+dx, ny=y+dy; if (nx>=0&&ny>=0&&nx<GW&&ny<GD&&arr[ny*GW+nx]!==0){near=true;break;} }
+    if (near) { cells.push(y*GW+x); wmk[y*GW+x]=1; }
+  }
+  return {cells, wmk};
+}
+
+function customFurnish(kept, g, occ, noProp, rng) {
+  const out=[], isWall = k => [-1,1,-GW,GW].some(d => g[k+d]===0);
+  const shuf = a => { a=a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const put = (kind,k,w=1) => { out.push({x:k%GW,y:(k/GW)|0,k:kind,w,h:1}); for (let o=0;o<w;o++) occ.add(k+o); };
+  kept.forEach(r => {
+    if (r.flood) return;
+    const free=r.cells.filter(k => !noProp.has(k) && !occ.has(k)), wallC=free.filter(isWall), innerC=free.filter(k => !isWall(k));
+    (FURN[r.type]||[]).forEach(([kind,where,qty]) => {
+      let list;
+      if (where==='w') list = shuf(wallC.filter(k=>!occ.has(k)));
+      else if (where==='i') list = shuf(innerC.filter(k=>!occ.has(k)).concat(wallC.filter(k=>!occ.has(k))));
+      else if (where==='g') list = free.filter(k => !occ.has(k) && (k%GW)%2===0 && ((k/GW)|0)%2===0 && rng()<qty);
+      else list = free.filter(k => !occ.has(k) && rng()<qty);
+      const n = (where==='g'||where==='r') ? list.length : qty;
+      for (let t=0;t<n && t<list.length;t++) if (!occ.has(list[t])) put(kind,list[t]);
+    });
+  });
+  return out;
+}
+
+function buildCustomFloor(i) {
+  const F = CUSTOM.floors[i], N = GW*GD, g = new Uint8Array(N), rid = new Int16Array(N).fill(-1);
+  const level = levelOf(i), theme = themeOf(i), top = i===NL-1, bottom = i===0;
+  const rng = mulberry32(hashStr(SEED_STR + '#' + i + 'cust'));
+  const X = k => k % GW, Y = k => (k/GW)|0;
+  // 1) griglia
+  const byCh = new Map(), order = [];
+  F.map.forEach((row, ry) => { for (let cx=0;cx<row.length;cx++) {
+    const ch=row[cx]; if (ch===' ' || ch==='#') continue;
+    const k=(ry+CUSTOM.oy)*GW+cx+CUSTOM.ox;
+    if (SPECIAL_CH[ch] !== undefined) { g[k]=SPECIAL_CH[ch]; continue; }
+    g[k]=1; let R=byCh.get(ch); if (!R) { R={ch,cells:[]}; byCh.set(ch,R); order.push(R); } R.cells.push(k);
+  }});
+  // 2) stanze: nell'ordine dell'alfabeto ROOM_CHARS (così un dungeon esportato si ricarica identico), poi per prima apparizione
+  order.forEach((R,n) => { const q = ROOM_CHARS.indexOf(R.ch); R.sk = q >= 0 ? q : 1e6 + n; });
+  order.sort((a,b) => a.sk - b.sk);
+  const meta = F.rooms || {}, used = new Set();
+  order.forEach(R => { const m=meta[R.ch]; if (m && m.id!==undefined) used.add(m.id); });
+  let seq = 0;
+  const kept = order.map((R, n) => {
+    const m = meta[R.ch] || {}; let id = m.id; if (id===undefined) { do { seq++; } while (used.has(seq)); id = seq; }
+    let bx0=1e9,by0=1e9,bx1=-1,by1=-1,sx=0,sy=0;
+    R.cells.forEach(k => { const x=X(k), y=Y(k); bx0=Math.min(bx0,x); by0=Math.min(by0,y); bx1=Math.max(bx1,x); by1=Math.max(by1,y); sx+=x; sy+=y; });
+    const mx=sx/R.cells.length, my=sy/R.cells.length; let lk=R.cells[0], ld=1e9;
+    R.cells.forEach(k => { const d=(X(k)-mx)**2+(Y(k)-my)**2; if (d<ld){ld=d;lk=k;} });
+    const type = m.type || 'Stanza';
+    const r = {cells:R.cells, x:bx0, y:by0, w:bx1-bx0+1, h:by1-by0+1, lx:X(lk), ly:Y(lk), area:R.cells.length*CS*CS, id, ch:R.ch, type,
+      secret:!!m.secret, flood: m.flood!==undefined ? !!m.flood : type==='Cisterna', pub:true, node:n,
+      notes: Array.isArray(m.notes) ? m.notes.map(String) : (m.notes ? [String(m.notes)] : []),
+      floorStyle: m.floorStyle!==undefined ? m.floorStyle : (rng() < .45 ? 1 : (rng() < .5 ? 2 : 0))};
+    r.desc = m.desc ? String(m.desc) : pick(DESC[type] || [DESC_DEF[theme] || DESC_DEF.residential], rng) + ' ' + pick(COND, rng) + (r.flood ? ' Il pavimento è sommerso da acqua scura.' : '');
+    const LT = LIGHT_BY_TYPE[type];
+    if ('light' in m) r.light = !m.light ? null : (m.light==='off' ? {c:'0,0,0',a:m.lightA!==undefined?m.lightA:.38,m:'off'} : {c:m.lightColor||'255,240,210',a:m.lightA!==undefined?m.lightA:.08,m:m.light});
+    else if (r.secret) r.light = {c:'255,46,230',a:.10,m:'pulse'};
+    else if (LT) r.light = {c:LT[0],a:LT[1],m:LT[2]};
+    else r.light = null;
+    r.amb = m.amb!==undefined ? (m.amb || null) : ((!r.secret && rng()<.7) ? pick(AMB[theme]||AMB.basement, rng) : null);
+    R.cells.forEach(k => { rid[k]=n; });
+    return r;
+  });
+  let pc=0; kept.slice().sort((a,b) => a.id-b.id).forEach(r => { if (!r.secret) r.pid=++pc; });
+  const s = CORE.s;
+  const coreRoom = {id:'N', type:'Nucleo', desc:'Vano scale e ascensore. Il cuore dell\'edificio: tutti i piani si incontrano qui.', notes:[], core:true, cells:[], x:CORE.x, y:CORE.y, w:s, h:s, lx:CORE.x, ly:CORE.y, area:s*s*CS*CS};
+  // 3) arredi, decorazioni, incontri
+  const occ = new Set(), noProp = new Set();
+  for (let k=0;k<N;k++) if (g[k]>=3 && g[k]!==4 && g[k]!==5) { noProp.add(k); [-1,1,-GW,GW].forEach(o => noProp.add(k+o)); }
+  const props = [];
+  (Array.isArray(F.props) ? F.props : []).forEach(p => {
+    if (!p || typeof p.k !== 'string' || !isFinite(p.x) || !isFinite(p.y)) return;
+    const w = p.w || 1, h = p.h || 1;
+    const px=Math.floor(p.x)+CUSTOM.ox, py=Math.floor(p.y)+CUSTOM.oy;
+    props.push({x:px, y:py, k:p.k, w, h, v:p.v});
+    for (let dy=0;dy<h;dy++) for (let dx=0;dx<w;dx++) occ.add((py+dy)*GW+px+dx);
+  });
+  if (F.furnish === true) customFurnish(kept, g, occ, noProp, rng).forEach(p => props.push(p));
+  const decals = (Array.isArray(F.decals) ? F.decals : []).filter(d => d && isFinite(d.x) && isFinite(d.y)).map(d => ({x:d.x+CUSTOM.ox, y:d.y+CUSTOM.oy, k:d.k||'stain', r:d.r||0, z:d.z||.5}));
+  const feats = [];
+  (Array.isArray(F.feats) ? F.feats : []).forEach(ft => {
+    if (!ft || !isFinite(ft.x) || !isFinite(ft.y)) return;
+    const x=Math.floor(ft.x)+CUSTOM.ox, y=Math.floor(ft.y)+CUSTOM.oy, label=String(ft.label||ft.k||'');
+    feats.push({x,y,k:ft.k||'M',label});
+    const rr=rid[y*GW+x]; if (rr>=0 && label) kept[rr].notes.push(label);
+  });
+  // 4) PNG: elencati a mano oppure automatici (NPC_N per tipo di stanza)
+  const npcs = [];
+  if (Array.isArray(F.npcs)) F.npcs.forEach((n, idx) => {
+    if (!n || !isFinite(n.x) || !isFinite(n.y)) return;
+    const to = Array.isArray(n.to) ? n.to : [n.x, n.y], ax=mapCX(n.x), ay=mapCY(n.y);
+    const rr = rid[Math.floor(ay)*GW+Math.floor(ax)];
+    npcs.push({ax, ay, bx:mapCX(to[0]), by:mapCY(to[1]), sp: n.speed!==undefined ? n.speed : .2+rng()*.3, ph: n.phase!==undefined ? n.phase : rng()*6.28,
+      nick: n.nick || makeNick(i, idx), rm: rr>=0 ? kept[rr].id : undefined, fixed: !!n.fixed});
+  });
+  else if (F.autoNpcs !== false) kept.forEach(r => {
+    if (r.secret || r.flood) return;
+    const T0 = NPC_N[r.type]; if (!T0) return;
+    const cnt = T0[0] + Math.floor(rng()*(T0[1]-T0[0]+1)), spots = r.cells.filter(k => !occ.has(k));
+    if (!cnt || spots.length < 2) return;
+    for (let t=0;t<cnt;t++) {
+      const a=spots[Math.floor(rng()*spots.length)], b=spots[Math.floor(rng()*spots.length)];
+      npcs.push({ax:X(a)+.5, ay:Y(a)+.5, bx:X(b)+.5, by:Y(b)+.5, sp:.2+rng()*.3, ph:rng()*6.28, nick:makeNick(i, npcs.length), rm:r.id});
+    }
+  });
+  const npcsAll = withNpcExtras(i, npcs, kept, occ);
+  // 5) telecamere
+  const DIRS = {E:0, S:Math.PI/2, W:Math.PI, N:-Math.PI/2};
+  const cams = [];
+  (Array.isArray(F.cams) ? F.cams : []).forEach((c, idx) => {
+    if (!c || !isFinite(c.x) || !isFinite(c.y)) return;
+    const x=Math.floor(c.x)+CUSTOM.ox, y=Math.floor(c.y)+CUSTOM.oy, rr=rid[y*GW+x];
+    const ang = c.angle!==undefined ? c.angle*Math.PI/180 : (DIRS[String(c.dir||'E').toUpperCase()] || 0);
+    cams.push({x, y, ang, fov: c.fov!==undefined ? c.fov*Math.PI/180 : Math.PI*.6, range: c.range || Math.max(8,Math.min(22,Math.round(16/CS))),
+      id: c.id!==undefined ? c.id : idx+1, where: rr>=0 ? kept[rr].type : 'Corridoio', fixed: !!c.fixed});
+  });
+  // 6) piante "pulite" per la planimetria e contorni dei muri
+  const pg = g.slice();
+  kept.forEach(r => { if (r.secret) r.cells.forEach(k => { pg[k]=0; }); });
+  for (let k=0;k<N;k++) if (pg[k]===6) pg[k]=0;
+  const W1 = wallsOfGrid(g), W2 = wallsOfGrid(pg);
+  const customDevices = (Array.isArray(F.devices) ? F.devices : []).filter(d => d && NET_INFO[d.kind] && isFinite(d.x) && isFinite(d.y))
+    .map(d => ({kind:d.kind, x:mapCX(d.x), y:mapCY(d.y), id:d.id, name:d.name, ice:d.ice}));
+  return {idx:i, g, pg, rid, rooms:kept, core:coreRoom, feats, propsAll:props, props:[], decals, npcsAll, npcs:[], camsAll:cams, cams:[], customDevices,
+    wallCells:W1.cells, wm:W1.wmk, pwall:W2.cells, pwm:W2.wmk, level, theme, top, bottom};
+}
+
+// PNG extra (slider oltre il 100%): stessa distribuzione dei base, ma con un rng separato, così il resto del piano non cambia
+function withNpcExtras(i, base, rooms, occ) {
+  const rx = mulberry32(hashStr(SEED_STR + '#' + i + 'npcx')), extras = [];
+  base.forEach(n => { n.th = (hashStr(n.nick) % 1000) / 1000; });
+  base.forEach((n, idx) => {
+    const e = Object.assign({}, n); e.ph = rx()*6.28; e.sp = n.sp*(0.8 + rx()*0.4);
+    const r = n.rm !== undefined ? rooms.find(q => q.id === n.rm) : null;
+    if (r) {
+      const spots = r.cells.filter(k => !occ.has(k));
+      if (spots.length >= 2) { const a=spots[Math.floor(rx()*spots.length)], b=spots[Math.floor(rx()*spots.length)];
+        e.ax=(a%GW)+.5; e.ay=((a/GW)|0)+.5; e.bx=(b%GW)+.5; e.by=((b/GW)|0)+.5; }
+    }
+    e.nick = makeNick(i, base.length + idx); e.th = 1 + (hashStr(e.nick) % 1000) / 1000; e.extra = true; e.fixed = false;
+    extras.push(e);
+  });
+  return base.concat(extras);
+}
+
+/* ---------- CONTROLLI: quantità di PNG / dispositivi e sicurezza della rete ----------
+   1.0 = com'è generato. PNG e dispositivi: sotto 1 se ne tolgono (sempre gli stessi per ogni valore),
+   sopra 1 se ne aggiungono (PNG in più, dispositivi IoT). Sicurezza: moltiplica l'ICE (0 = rete aperta, max 5). */
+const CTL = {npc:1, dev:1, sec:1};
+const CTL_KEY = 'cydg-ctl:' + SEED_HEX;
+const ELEC_PROPS = new Set(['rack','terminal','tv','vend']);        // arredi puramente elettronici: spariscono davvero con lo slider
+const thr = s => (hashStr(SEED_STR + s) % 1000) / 1000;
+const propTh = (i,p) => thr('#' + i + 'p' + p.x + ',' + p.y + p.k);
+const camTh = (i,c) => thr('#' + i + 'c' + c.id);
+(function(){
+  let s=null; try { s=JSON.parse(localStorage.getItem(CTL_KEY) || 'null'); } catch(e) {}
+  const d = (CUSTOM && CUSTOM.controls) || {}, pk = (a,b) => Number.isFinite(a) ? a : (Number.isFinite(b) ? b : 1);
+  CTL.npc = pk(s && s.npc, d.npc); CTL.dev = pk(s && s.devices, d.devices); CTL.sec = pk(s && s.security, d.security);
+})();
+function applyCtl(f) {
+  const i = f.idx;
+  f.npcs  = f.npcsAll.filter(n => n.fixed || n.th < CTL.npc);
+  f.props = f.propsAll.filter(p => !ELEC_PROPS.has(p.k) || propTh(i,p) < CTL.dev);
+  f.cams  = f.camsAll.filter(c => c.fixed || camTh(i,c) < CTL.dev);
+  return f;
+}
+
 const floorCache = [];
-function getFloor(i){ return floorCache[i] || (floorCache[i] = genFloor(i)); }
+function getFloor(i){ return floorCache[i] || (floorCache[i] = applyCtl(genFloor(i))); }
 
 function genFloor(i) {
+  if (CUSTOM) return buildCustomFloor(i);
   const rng = mulberry32(hashStr(SEED_STR + '#' + i));
   const level = levelOf(i), theme = themeOf(i), TH = THEME[theme];
   const top = i === NL-1, bottom = i === 0;
@@ -1063,9 +1360,9 @@ function genFloor(i) {
     for (let t=0;t<cnt;t++) {
       const a = spots[Math.floor(rng()*spots.length)], b = spots[Math.floor(rng()*spots.length)];
       const nick = makeNick(i, npcs.length); nicks.push(nick);
-      npcs.push({ax:X(a)+.5, ay:Y(a)+.5, bx:X(b)+.5, by:Y(b)+.5, sp:.2+rng()*.3, ph:rng()*6.28, nick});
+      npcs.push({ax:X(a)+.5, ay:Y(a)+.5, bx:X(b)+.5, by:Y(b)+.5, sp:.2+rng()*.3, ph:rng()*6.28, nick, rm:r.id});
     }
-    r.notes.push('PNG presenti: '+nicks.join(', '));
+    // (le note "PNG presenti" si calcolano dal vivo in updateHud: dipendono dallo slider)
   });
   { const cc=[]; for (let k=0;k<N;k++) if (g[k]===2) cc.push(k);
     const nWalk = cc.length ? (theme==='ground' ? 3 : theme==='basement' ? 0 : 1+Math.floor(rng()*2)) : 0;
@@ -1106,7 +1403,8 @@ function genFloor(i) {
   kept.forEach(r => { if (r.secret) r.cells.forEach(k => { pg[k]=0; }); });
   for (let k=0;k<N;k++) if (pg[k]===6) pg[k]=0;
   const W1=wallsOf(g), W2=wallsOf(pg);
-  return {g, pg, rid, rooms:kept, core:coreRoom, feats, props, decals, npcs, cams, wallCells:W1.cells, wm:W1.wmk, pwall:W2.cells, pwm:W2.wmk, level, theme, top, bottom};
+  const npcsAll = withNpcExtras(i, npcs, kept, occ);
+  return {idx:i, g, pg, rid, rooms:kept, core:coreRoom, feats, propsAll:props, props:[], decals, npcsAll, npcs:[], camsAll:cams, cams:[], wallCells:W1.cells, wm:W1.wmk, pwall:W2.cells, pwm:W2.wmk, level, theme, top, bottom};
 }
 
 /* ---------- stato / viste ---------- */
@@ -1126,7 +1424,7 @@ const v3 = {yaw:-0.6, pitch:0.9, zoom:6, px:0, py:0};
    chiave e le porte segrete bloccano la vista; archi e pavimenti no. Ciò che è
    stato visto resta "esplorato" (mostrato scuro), il resto è nero. Lo stato è
    salvato nel browser (localStorage), per edificio. Con MASTER si vede tutto. */
-const FOG_KEY = 'cydg-fog:' + SEED_HEX;
+const FOG_KEY = 'cydg-fog:' + SEED_HEX + (CUSTOM ? ':c' + hashStr(JSON.stringify(CUSTOM.raw)) : '');
 const fog = {tok:null, exp:{}, vis:null};
 const VIS_R = Math.max(6, Math.min(22, Math.round(20/CS)));
 function computeVis(f, tx, ty, R=VIS_R, cone=null){
@@ -1175,9 +1473,9 @@ function fogLoad(){
   } catch(e) { return false; }
 }
 function fogStart(){
-  const gi = Math.min(NL-1, NB);
+  const gi = (CUSTOM && CUSTOM.start && Number.isInteger(CUSTOM.start.floor)) ? Math.max(0,Math.min(NL-1,CUSTOM.start.floor)) : Math.min(NL-1, NB);
   fog.exp = {};
-  const [sx,sy] = SKEL.ends.length ? SKEL.ends[0] : [CORE.x, CORE.y];
+  const [sx,sy] = (CUSTOM && CUSTOM.start && isFinite(CUSTOM.start.x) && isFinite(CUSTOM.start.y)) ? [Math.floor(CUSTOM.start.x)+CUSTOM.ox, Math.floor(CUSTOM.start.y)+CUSTOM.oy] : SKEL.ends.length ? SKEL.ends[0] : [CORE.x, CORE.y];
   fog.tok = {f:gi, x:sx, y:sy};
   fogReveal();
 }
@@ -1372,6 +1670,7 @@ const NET_INFO = {
   elv: {p:'ELV', n:'Controllo ascensore',          c:'#ffd27a', o:10, ice:[2,4], f:'Chiamata, blocco e registro passeggeri dell\'ascensore.'},
   lgt: {p:'LGT', n:'Illuminazione smart',          c:'#fff3b0', o:11, ice:[0,1], f:'Luci e sensori di presenza della stanza.'},
   sec: {p:'SEC', n:'Serratura nascosta',           c:'#ff2ee6', o:12, ice:[4,5], f:'Apre la porta segreta: non compare in nessuna planimetria.'},
+  iot: {p:'IOT', n:'Dispositivo IoT',            c:'#9affc8', o:14, ice:[0,2], f:'Sensori, prese e gadget smart: piccoli, ovunque, spesso poco protetti.'},
   com: {p:'COM', n:'Commlink / impianti',          c:'#ff2ee6', o:13, ice:[1,4], f:'Comunicazioni e cyberware del PNG.'}
 };
 const NET_PROP = {rack:'srv', terminal:'trm', desk:'wrk', tv:'tv', vend:'vnd', machine:'mch', car:'veh'};
@@ -1382,28 +1681,38 @@ const netName = d => d.name || NET_INFO[d.kind].n;
 
 function getNetDevices(i){
   if (netCache[i]) return netCache[i];
-  const f=getFloor(i), g=f.g, devs=[], cnt={}, rng=mulberry32(hashStr(SEED_STR+'#'+i+'net'));
+  const f=getFloor(i), g=f.g, all=[], cnt={}, rng=mulberry32(hashStr(SEED_STR+'#'+i+'net'));
   const roomAt=(x,y)=>{ const r=f.rid[(y|0)*GW+(x|0)]; return r>=0 ? f.rooms[r] : null; };
+  // th = soglia dello slider DISPOSITIVI: il dispositivo c'è se th < CTL.dev (-1 = sempre; >=1 = solo oltre il 100%)
   const add=(kind,x,y,o)=>{
     o=o||{}; cnt[kind]=(cnt[kind]||0)+1;
-    const room=roomAt(x,y), inf=NET_INFO[kind], t=g[(y|0)*GW+(x|0)];
-    devs.push(Object.assign({kind,x,y,
-      id: NET_INFO[kind].p+'-'+String(cnt[kind]).padStart(2,'0'),
+    const room=roomAt(x,y), inf=NET_INFO[kind], t=g[(y|0)*GW+(x|0)], r0=rng();
+    const d={kind,x,y, id: inf.p+'-'+String(cnt[kind]).padStart(2,'0'),
       roomName: room ? room.type : (t===2 ? 'Corridoio' : (t===4||t===5) ? 'Nucleo scale/ascensore' : 'Porta / ingresso'),
-      secret: !!(room && room.secret),
-      ice: inf.ice[0]+Math.floor(rng()*(inf.ice[1]-inf.ice[0]+1))}, o));
+      secret: !!(room && room.secret), ice0: inf.ice[0]+Math.floor(r0*(inf.ice[1]-inf.ice[0]+1)), th: thr('#'+i+'d'+kind+x+','+y)};
+    Object.keys(o).forEach(k => { if (o[k] !== undefined) d[k]=o[k]; });
+    all.push(d);
   };
-  f.props.forEach(p => {
+  f.propsAll.forEach(p => {
     const m=NET_PROP[p.k]; if (!m) return;
     const x=p.x+(p.w||1)/2, y=p.y+(p.h||1)/2, room=roomAt(x,y);
-    add(m,x,y, m==='mch' ? {name:NET_MACHINE[room&&room.type]||'Macchinario'} : null);
+    add(m,x,y, m==='mch' ? {name:NET_MACHINE[room&&room.type]||'Macchinario'} : (ELEC_PROPS.has(p.k) ? {th:propTh(i,p)} : null));
   });
-  f.cams.forEach(c => add('cam',c.x+.5,c.y+.5,{id:'CAM-'+String(c.id).padStart(2,'0'), ang:c.ang}));
+  f.camsAll.forEach(c => add('cam',c.x+.5,c.y+.5,{id:'CAM-'+String(c.id).padStart(2,'0'), ang:c.ang, th: c.fixed ? -1 : camTh(i,c)}));
   for (let k=0;k<GW*GD;k++) {
     const t=g[k], x=(k%GW)+.5, y=((k/GW)|0)+.5;
-    if (t===7) add('lck',x,y); else if (t===9) add('acc',x,y); else if (t===5) add('elv',x,y); else if (t===6) add('sec',x,y,{secret:true});
+    if (t===7) add('lck',x,y); else if (t===9) add('acc',x,y,{th:-1}); else if (t===5) add('elv',x,y,{th:-1}); else if (t===6) add('sec',x,y,{secret:true,th:-1});
   }
   f.rooms.forEach(r => { if (r.light && r.light.m!=='off' && !r.flood) add('lgt',r.lx+.5,r.ly+.5); });
+  (f.customDevices||[]).forEach(d => add(d.kind,d.x,d.y,{id:d.id, name:d.name, ice0:d.ice, th:-1}));
+  // dispositivi IoT extra (sensori, prese smart...): compaiono solo con lo slider oltre il 100%
+  { const rI=mulberry32(hashStr(SEED_STR+'#'+i+'iot')), rr=f.rooms.filter(r => !r.flood && r.cells.length), pool=Math.max(8,all.length);
+    for (let j=0;j<pool && rr.length;j++) {
+      const r=rr[Math.floor(rI()*rr.length)], k=r.cells[Math.floor(rI()*r.cells.length)];
+      add('iot',(k%GW)+.5+(rI()-.5)*.6,((k/GW)|0)+.5+(rI()-.5)*.6,{th:1+j/pool});
+    } }
+  const devs=all.filter(d => d.th < CTL.dev);
+  devs.forEach(d => { d.ice = Math.min(5, Math.round(d.ice0 * CTL.sec)); });
   // rete: ogni dispositivo al server più vicino (senza server: ai controlli ascensore); i server tra loro
   let hubs=devs.filter(d => d.kind==='srv'); const hubKind = hubs.length ? 'srv' : 'elv';
   if (!hubs.length) hubs=devs.filter(d => d.kind==='elv');
@@ -1427,7 +1736,7 @@ function netLive(f,i){
     const u=(Math.sin(T*n.sp*NPC_SPEED*2+n.ph)+1)/2, x=n.ax+(n.bx-n.ax)*u, y=n.ay+(n.by-n.ay)*u;
     const r=f.rid[(y|0)*GW+(x|0)], room=r>=0 ? f.rooms[r] : null;
     if (room && room.secret && !GM) return;
-    out.push({kind:'com', id:n.nick, x, y, roomName: room ? room.type : 'Corridoio', ice: 1+hashStr(n.nick)%4});
+    out.push({kind:'com', id:n.nick, x, y, roomName: room ? room.type : 'Corridoio', ice: Math.min(5, Math.round((1+hashStr(n.nick)%4) * CTL.sec))});
   });
   return out;
 }
@@ -1768,7 +2077,7 @@ function draw(){
 const slider=document.getElementById('slider');
 slider.max=NL-1;
 document.getElementById('meta').innerHTML =
-  `seed ${SEED_HEX}<br>lat ${LAT.toFixed(5)} &nbsp; lng ${LNG.toFixed(5)}<br>altezza ${BH.toFixed(0)} m → ${FL} piani${FL_RAW>FL?' (limitato)':''} + ${NB} interrati<br>uso prevalente: ${KIND==='residential'?'residenziale':KIND==='office'?'uffici':'misto'} · cella = ${CS.toFixed(1)} m`;
+  `seed ${SEED_HEX}<br>lat ${LAT.toFixed(5)} &nbsp; lng ${LNG.toFixed(5)}<br>altezza ${BH.toFixed(0)} m → ${FL} piani${FL_RAW>FL?' (limitato)':''} + ${NB} interrati<br>uso prevalente: ${KIND==='residential'?'residenziale':KIND==='office'?'uffici':'misto'} · cella = ${CS.toFixed(1)} m${CUSTOM ? '<br><span style="color:#ff2ee6">definito da file</span>' : ''}`;
 (function(){ const h=document.createElement('div'); h.style.cssText='font-size:12px;margin-bottom:4px;color:#f2ede4'; h.textContent=NAME; document.getElementById('meta').prepend(h); document.title='DUNGEON // '+NAME; })();
 
 function updateHud(){
@@ -1799,7 +2108,8 @@ function updateHud(){
     if (sel===si) {
       const e=document.createElement('div'); e.className='desc'; e.textContent=r.desc;
       if (r.amb) { const a=document.createElement('span'); a.className='n'; a.textContent='♪ '+r.amb; e.appendChild(a); }
-      if (GM && r.notes && r.notes.length) { const m=document.createElement('span'); m.className='gm'; m.textContent='▸ '+r.notes.join(' · '); e.appendChild(m); }
+      const pn = f.npcs.filter(q => q.rm===r.id).map(q => q.nick), nts = (r.notes||[]).concat(pn.length ? ['PNG presenti: '+pn.join(', ')] : []);
+      if (GM && nts.length) { const m=document.createElement('span'); m.className='gm'; m.textContent='▸ '+nts.join(' · '); e.appendChild(m); }
       if (GM && r.secret) { const m=document.createElement('span'); m.className='gm'; m.textContent='▸ accessibile solo da una porta segreta'; e.appendChild(m); }
       list.appendChild(e);
     }
@@ -1968,9 +2278,101 @@ document.getElementById('camwall-close').onclick=()=>toggleCamWall(false);
 let lastAnim=0;
 (function loop(ts){ requestAnimationFrame(loop); if (!ANIM||document.hidden||drag||ts-lastAnim<70) return; if (mode!=='2d' && !CAMWALL) return; lastAnim=ts; T=ts/1000; if (mode==='2d') draw(); else renderCamWall(); })(0);
 
+/* =========================================================================
+   PANNELLO CONTROLLI + ESPORTAZIONE / CARICAMENTO JSON
+   ========================================================================= */
+function applyCtlAll() {
+  floorCache.forEach(f => { if (f) applyCtl(f); });
+  netCache.length = 0; camOn.clear(); camWallEl.dataset.f = ''; sel = -1; netSel = null;
+  hideNetTip(); updateHud(); draw();
+}
+function ctlSave() { try { localStorage.setItem(CTL_KEY, JSON.stringify({npc:CTL.npc, devices:CTL.dev, security:CTL.sec})); } catch(e) {} }
+const CTL_UI = [['npc','s-npc','v-npc'], ['dev','s-dev','v-dev'], ['sec','s-sec','v-sec']];
+function ctlSync() { CTL_UI.forEach(([k,sid,vid]) => { document.getElementById(sid).value = Math.round(CTL[k]*100); document.getElementById(vid).textContent = Math.round(CTL[k]*100)+'%'; }); }
+CTL_UI.forEach(([k,sid,vid]) => {
+  document.getElementById(sid).oninput = e => { CTL[k] = parseInt(e.target.value,10)/100; document.getElementById(vid).textContent = e.target.value+'%'; ctlSave(); applyCtlAll(); };
+});
+document.getElementById('ctl-reset').onclick = () => {
+  const d = (CUSTOM && CUSTOM.controls) || {};
+  CTL.npc = Number.isFinite(d.npc) ? d.npc : 1; CTL.dev = Number.isFinite(d.devices) ? d.devices : 1; CTL.sec = Number.isFinite(d.security) ? d.security : 1;
+  try { localStorage.removeItem(CTL_KEY); } catch(e) {}
+  ctlSync(); applyCtlAll();
+};
+{ const box=document.getElementById('ctl'), tog=document.getElementById('ctl-tog');
+  const setOpen = o => { box.classList.toggle('collapsed', !o); tog.textContent = o ? '▾' : '▸'; try { localStorage.setItem('cydg-ctl-open', o ? '1' : '0'); } catch(e) {} };
+  let st=null; try { st=localStorage.getItem('cydg-ctl-open'); } catch(e) {}
+  setOpen(st==='1');
+  document.getElementById('ctl-t').onclick = () => setOpen(box.classList.contains('collapsed')); }
+
+// esporta TUTTO il dungeon corrente (al 100%) nel formato di data/cy-dungeons.json
+function buildExport() {
+  // se qualcosa tocca il bordo della griglia (es. un ingresso) la mappa parte da 0, altrimenti da 1 (con un giro di vuoto)
+  let edge = false;
+  for (let i=0;i<NL && !edge;i++) { const g=getFloor(i).g; for (let x=0;x<GW;x++) if (g[x] || g[(GD-1)*GW+x]) edge=true; for (let y=0;y<GD;y++) if (g[y*GW] || g[y*GW+GW-1]) edge=true; }
+  const OX = edge ? 0 : 1, OY = edge ? 0 : 1, floors = [];
+  for (let i=0;i<NL;i++) {
+    const f = getFloor(i), g = f.g, rows = [], rooms = {};
+    f.rooms.forEach((r,n) => {
+      const ch = ROOM_CHARS[n] || '?', m = {id:r.id, type:r.type, desc:r.desc};
+      if (r.secret) m.secret = true;
+      if (r.flood) m.flood = true;
+      if (r.light) { m.light = r.light.m; m.lightColor = r.light.c; m.lightA = r.light.a; } else m.light = null;
+      if (r.amb) m.amb = r.amb;
+      if (r.floorStyle) m.floorStyle = r.floorStyle;
+      const nts = (r.notes||[]).filter(t => !/^PNG presenti/.test(t)); if (nts.length) m.notes = nts;
+      rooms[ch] = m;
+    });
+    const at = (x,y) => (x<0||y<0||x>=GW||y>=GD) ? 0 : g[y*GW+x];
+    for (let y=OY;y<GD-(edge?0:1);y++) { let row=''; for (let x=OX;x<GW-(edge?0:1);x++) {
+      const k=y*GW+x, t=g[k];
+      if (t===0) { let near=false; for (let dy=-1;dy<=1&&!near;dy++) for (let dx=-1;dx<=1;dx++) { if (at(x+dx,y+dy)) { near=true; break; } } row += near ? '#' : ' '; }
+      else if (t===1) row += f.rid[k]>=0 ? (ROOM_CHARS[f.rid[k]] || '?') : '.';
+      else row += ({2:'.',3:'+',4:'^',5:'=',6:'S',7:'L',8:'A',9:'E'})[t] || '#';
+    } rows.push(row); }
+    const cx = v => +(v-OX).toFixed(2), cy = v => +(v-OY).toFixed(2);
+    floors.push({
+      map: rows, rooms, furnish: false,
+      props: f.propsAll.map(p => { const o={k:p.k, x:p.x-OX, y:p.y-OY}; if (p.w>1) o.w=p.w; if (p.h>1) o.h=p.h; if (p.v) o.v=p.v; return o; }),
+      decals: f.decals.map(d => ({x:cx(d.x), y:cy(d.y), k:d.k, r:+d.r.toFixed(2), z:+d.z.toFixed(2)})),
+      feats: f.feats.map(ft => ({x:ft.x-OX, y:ft.y-OY, k:ft.k, label:ft.label})),
+      npcs: f.npcsAll.filter(n => !n.extra).map(n => ({x:cx(n.ax), y:cy(n.ay), to:[cx(n.bx), cy(n.by)], speed:+n.sp.toFixed(3), phase:+n.ph.toFixed(3), nick:n.nick})),
+      cams: f.camsAll.map(c => ({x:c.x-OX, y:c.y-OY, angle:Math.round(c.ang*180/Math.PI), fov:Math.round(c.fov*180/Math.PI), range:c.range, id:c.id}))
+    });
+  }
+  const [sx, sy] = (CUSTOM && CUSTOM.start && isFinite(CUSTOM.start.x)) ? [Math.floor(CUSTOM.start.x)+CUSTOM.ox, Math.floor(CUSTOM.start.y)+CUSTOM.oy] : SKEL.ends.length ? SKEL.ends[0] : [CORE.x, CORE.y];
+  const entry = {name:NAME, cellSize:+CS.toFixed(3), basements:NB, kind:KIND, origin:[OX,OY], start:{floor:Math.min(NL-1,NB), x:sx-OX, y:sy-OY},
+    controls:{npc:CTL.npc, devices:CTL.dev, security:CTL.sec}, floors};
+  const out = {dungeons:{}}; out.dungeons[SEED_HEX] = entry;
+  return out;
+}
+document.getElementById('ctl-export').onclick = () => {
+  const text = JSON.stringify(buildExport(), null, 1), a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:'application/json'})); a.download = 'dungeon-' + SEED_HEX + '.json';
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  toast('JSON esportato: incollane il contenuto in data/cy-dungeons.json');
+};
+document.getElementById('ctl-load').onclick = () => document.getElementById('ctl-file').click();
+document.getElementById('ctl-file').onchange = e => {
+  const file = e.target.files && e.target.files[0]; if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try { const j = JSON.parse(rd.result); if (!j || typeof j !== 'object') throw new Error('non è un oggetto JSON'); localStorage.setItem('cydg-defs', JSON.stringify(j)); location.reload(); }
+    catch (err) { toast('JSON non valido: ' + err.message); }
+  };
+  rd.readAsText(file);
+};
+document.getElementById('ctl-clear').onclick = () => { try { localStorage.removeItem('cydg-defs'); } catch(e) {} location.reload(); };
+document.getElementById('ctl-clear').style.display = DEFS.hasLocal ? '' : 'none';
+document.getElementById('ctl-src').textContent = CUSTOM
+  ? 'Dungeon definito da file (' + CUSTOM_SRC + ').'
+  : 'Dungeon generato a caso dal seed ' + SEED_HEX + (DEFS.hasRemote || DEFS.hasLocal ? ' (non presente nel file).' : '.');
+ctlSync();
+if (CUSTOM_ERR) toast('Definizione dungeon non valida: ' + CUSTOM_ERR);
+
 if (fogLoad()) fogReveal(); else fogStart();
 if (!GM && !PLAN) cur = fog.tok.f;
 resize(); updateHud(); draw();
+})();
 </script>
 </body>
 </html>

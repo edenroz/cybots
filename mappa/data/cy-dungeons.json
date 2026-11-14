@@ -1,0 +1,176 @@
+{
+ "_leggimi": [
+  "DUNGEON SCRITTI A MANO. La chiave di ogni dungeon è il suo seed: quello mostrato in alto a sinistra nella pagina del dungeon (8 cifre esadecimali, es. 1C7E38F8) oppure \"lat,lng\" a 6 decimali. Se il seed è in questo file, il dungeon viene costruito da qui invece che generato a caso.",
+  "Per partire da un dungeon vero: aprilo, apri il pannello CONTROLLI e premi ESPORTA JSON; incolla il blocco scaricato dentro \"dungeons\" e modificalo.",
+  "Se apri la pagina da file:// il browser non può leggere questo file: usa il pulsante CARICA JSON nel pannello CONTROLLI (oppure servi la cartella con un server locale).",
+  "Il dungeon qui sotto ha la chiave 00000000 e quindi non viene mai usato: per provarlo sostituisci 00000000 con il seed del tuo edificio.",
+  "",
+  "CAMPI DI UN DUNGEON: name (nome), cellSize (metri per cella, default 1), basements (quanti piani iniziali sono interrati), kind (residential|office|mixed), origin ([1,1] di default: la mappa ha un giro di vuoto attorno; [0,0] se la mappa include già il bordo), start ({floor,x,y}: dove parte il gruppo; floor 0 = il piano più basso), controls ({npc,devices,security}: valori iniziali degli slider, 1 = 100%), floors (dal piano più basso al più alto).",
+  "CAMPI DI UN PIANO: map (righe di testo, la prima è il nord), rooms (dettagli delle stanze), props (arredi), furnish (true = arreda le stanze da solo secondo il tipo), decals, feats (incontri per il MASTER), npcs, autoNpcs (false = niente PNG automatici), cams, devices (dispositivi extra per la vista netrunning), theme (basement|ground|residential|office|penthouse).",
+  "",
+  "LEGENDA DELLA MAPPA: ' ' fuori dall'edificio · '#' muro · '.' corridoio · '+' porta · 'L' porta chiusa a chiave · 'S' porta segreta · 'A' arco · 'E' ingresso · '^' scale · '=' ascensore · qualunque altro carattere (cifre, lettere...) = una stanza: tutte le celle con lo stesso carattere sono la stessa stanza, descritta in \"rooms\". Scale e ascensori devono stare nella stessa cella a ogni piano.",
+  "STANZE (\"rooms\", per carattere): type (es. Bar clandestino, Sala server, Archivio, Suite...: decide arredi, PNG e descrizioni automatiche), desc (descrizione), id (numero mostrato in mappa), secret, flood, light (pulse|flicker|steady|off|null), lightColor (\"r,g,b\"), lightA, amb (rumore d'ambiente), notes (note per il MASTER).",
+  "COORDINATE: x e y sono colonna e riga della mappa, a partire da 0. PNG, dispositivi: un numero intero = centro della cella, uno con decimali (3.5) = posizione esatta.",
+  "PROPS: {k,x,y,w,h}; k = sofa table desk bed shelf counter rack crate machine wc sink pillar plant tv locker barrel terminal vend rug car. PNG: {x,y,to:[x,y],nick,speed,fixed}; fixed:true = non sparisce con lo slider PNG. CAMS: {x,y,dir:N|E|S|W oppure angle in gradi,fov,range,id}. DEVICES: {kind,x,y,id,name,ice}; kind = srv trm wrk tv vnd mch veh cam lck acc elv lgt iot. FEATS: {x,y,k:M|$|!,label}."
+ ],
+ "dungeons": {
+  "00000000": {
+   "name": "Il Covo di Dok",
+   "cellSize": 1,
+   "basements": 0,
+   "kind": "residential",
+   "start": {
+    "floor": 0,
+    "x": 20,
+    "y": 5
+   },
+   "controls": {
+    "npc": 1,
+    "devices": 1,
+    "security": 1.2
+   },
+   "floors": [
+    {
+     "map": [
+      "######################",
+      "#aaaaaa#.....#bbbbbbb#",
+      "#aaaaaa+.....+bbbbbbb#",
+      "#aaaaaa#.....#bbbbbbb#",
+      "####+#####.#####L#####",
+      "#.........^..........E",
+      "####+#####+#####S#####",
+      "#cccccc#dddddd#eeeeee#",
+      "######################"
+     ],
+     "rooms": {
+      "a": {
+       "id": 1,
+       "type": "Bar clandestino",
+       "desc": "Un bancone ricavato da un portellone industriale e luci basse che pulsano a tempo con il basso di una musica sorda. Dok serve distillati di casa a chi sa dire la parola giusta.",
+       "light": "pulse",
+       "lightColor": "255,46,230",
+       "lightA": 0.14
+      },
+      "b": {
+       "id": 2,
+       "type": "Sala server",
+       "desc": "Rack ammassati e ventole al massimo: la rete privata del Covo. Un LED rosso lampeggia su un'unità isolata.",
+       "notes": [
+        "Il server controlla le telecamere e la serratura della porta L."
+       ]
+      },
+      "c": {
+       "id": 3,
+       "type": "Magazzino"
+      },
+      "d": {
+       "id": 4,
+       "type": "Officina",
+       "desc": "Banchi da lavoro unti, un sollevatore idraulico e il tariffario scritto a mano: il prezzo cambia se non fai domande."
+      },
+      "e": {
+       "id": 5,
+       "type": "Stanza segreta",
+       "secret": true,
+       "desc": "Dietro un finto muro: una branda, una radio e una valigetta che nessuno dovrebbe aver visto.",
+       "notes": [
+        "Contiene la valigetta di crediti di Dok."
+       ]
+      }
+     },
+     "furnish": true,
+     "props": [
+      {
+       "k": "counter",
+       "x": 2,
+       "y": 1,
+       "w": 3
+      },
+      {
+       "k": "terminal",
+       "x": 15,
+       "y": 1
+      }
+     ],
+     "npcs": [
+      {
+       "x": 3,
+       "y": 2,
+       "to": [
+        5,
+        2
+       ],
+       "nick": "@dok_barman_0007",
+       "speed": 0.3,
+       "fixed": true
+      }
+     ],
+     "cams": [
+      {
+       "x": 9,
+       "y": 5,
+       "dir": "E",
+       "id": 1,
+       "range": 12
+      },
+      {
+       "x": 19,
+       "y": 5,
+       "dir": "W",
+       "id": 2,
+       "range": 10
+      }
+     ],
+     "devices": [
+      {
+       "kind": "srv",
+       "x": 16,
+       "y": 2,
+       "id": "SRV-DOK",
+       "name": "Server del Covo",
+       "ice": 5
+      }
+     ],
+     "feats": [
+      {
+       "x": 3,
+       "y": 7,
+       "k": "M",
+       "label": "Due sicari di guardia al magazzino"
+      },
+      {
+       "x": 18,
+       "y": 7,
+       "k": "$",
+       "label": "Valigetta di crediti"
+      }
+     ]
+    },
+    {
+     "map": [
+      "######################",
+      "#ffffff#.....#ggggggg#",
+      "#ffffff+.....+ggggggg#",
+      "#ffffff#.....#ggggggg#",
+      "####+#####.#####+#####",
+      "#.........^..........#",
+      "######################"
+     ],
+     "rooms": {
+      "f": {
+       "id": 1,
+       "type": "Suite",
+       "desc": "L'alloggio di Dok: letto king-size, un minibar e tende elettrocromatiche che si oscurano da sole."
+      },
+      "g": {
+       "id": 2,
+       "type": "Studio"
+      }
+     },
+     "furnish": true,
+     "npcs": []
+    }
+   ]
+  }
+ }
+}
