@@ -416,6 +416,25 @@ const CORE2 = (function(){
   return best;
 })();
 
+/* TERZO NUCLEO: negli edifici ENORMI (pianta >= CORE3_MIN_AREA m²) ci sono 3 ascensori (e 3 set di scale): il terzo
+   sta sul corridoio nel punto più lontano da entrambi gli altri nuclei, evitando le estremità (ingressi). */
+const CORE3_MIN_AREA = 5000;
+const CORE3 = (function(){
+  if (CUSTOM || !CORE2 || maskCount*CS*CS < CORE3_MIN_AREA) return null;
+  const cx=CORE.x+CORE.s/2, cy=CORE.y+CORE.s/2, c2=CORE2.stairs, used=new Set([CORE2.stairs[1]*GW+CORE2.stairs[0], CORE2.lift[1]*GW+CORE2.lift[0]]);
+  const ok = (x,y) => x>0&&y>0&&x<GW-1&&y<GD-1 && SKEL.corr[y*GW+x] && !inZone(x,y) && !used.has(y*GW+x);
+  let best=null, bs=-1;
+  for (let y=1;y<GD-1;y++) for (let x=1;x<GW-1;x++) {
+    if (!ok(x,y) || SKEL.ends.some(([ex,ey]) => Math.hypot(ex-x,ey-y) < 6)) continue;
+    const sc=Math.min(Math.hypot(x+.5-cx,y+.5-cy), Math.hypot(x-c2[0],y-c2[1]));
+    if (sc>bs) { bs=sc; best=[x,y]; }
+  }
+  if (!best || bs*CS < 14) return null;
+  let nb=null, nd=-1;
+  for (const [dx,dy] of D4) { const nx=best[0]+dx, ny=best[1]+dy; if (!ok(nx,ny)) continue; const dd=Math.hypot(nx+.5-cx,ny+.5-cy); if (dd>nd){nd=dd;nb=[nx,ny];} }
+  return nb ? {stairs:best, lift:nb} : null;
+})();
+
 /* =========================================================================
    TESTI (modificabili): descrizioni, incontri, arredi
    ========================================================================= */
@@ -1143,7 +1162,8 @@ function getFloor(i){
    piano i usa solo celle con (x+y) % 3 === i % 3 (un piano ospita al massimo quelli di j, j-1, j-2).
    Nei dungeon da file: "links": [{x, y, to}] dentro il piano, con "to" = scostamento in piani (+2, -1...).
    ========================================================================= */
-const LINK_P = 0.45;        // probabilità che da un piano parta un collegamento extra
+const LINK_SLOTS = 2;       // fino a 2 collegamenti extra che partono da ogni piano
+const LINK_P1 = 0.9, LINK_P2 = 0.55;   // probabilità del 1° e del 2° collegamento
 const linkMemo = [];
 function linkCellOk(f,k){
   const G = f.g0 || f.g;
@@ -1160,15 +1180,18 @@ function linkCellOk(f,k){
   for (const d of [-1,1,-GW,GW]) if (G[k+d]>=3) return false;       // mai accanto a porte, scale o ascensore
   return true;
 }
-function outLink(i){
+// celle usate da (x+y)%6 === (i%3)*2 + slot: un piano ospita al massimo i collegamenti di j, j-1, j-2 (3 gruppi x 2 slot): mai in conflitto
+function outLinks(i){
   if (i in linkMemo) return linkMemo[i];
-  let res = null;
+  const res = [];
   if (!CUSTOM && i < NL-1) {
-    const r = mulberry32(hashStr(SEED_STR+'#'+i+'xlink'));
-    if (r() < LINK_P) {
-      const j = Math.min(NL-1, i+1+(r()<.4?1:0)), a = baseFloor(i), b = baseFloor(j), cand = [];
-      for (let k=0;k<GW*GD;k++) if ((((k%GW)+((k/GW)|0))%3)===(i%3) && linkCellOk(a,k) && linkCellOk(b,k)) cand.push(k);
-      if (cand.length) res = {k:cand[Math.floor(r()*cand.length)], to:j};
+    const r = mulberry32(hashStr(SEED_STR+'#'+i+'xlink')), a = baseFloor(i);
+    for (let sl=0; sl<LINK_SLOTS; sl++) {
+      const roll=r(), spanR=r(), pickR=r();
+      if (roll >= (sl ? LINK_P2 : LINK_P1)) continue;
+      const j = Math.min(NL-1, i+1+(spanR<.5?1:0)), b = baseFloor(j), cls = (i%3)*2+sl, cand = [];
+      for (let k=0;k<GW*GD;k++) if ((((k%GW)+((k/GW)|0))%6)===cls && linkCellOk(a,k) && linkCellOk(b,k)) cand.push(k);
+      if (cand.length) res.push({k:cand[Math.floor(pickR*cand.length)], to:j});
     }
   }
   return (linkMemo[i] = res);
@@ -1183,8 +1206,8 @@ function attachLinks(f){
       if (to>=0 && to<NL && to!==i && f.g[k]) add(k,to);
     });
   } else {
-    const o = outLink(i); if (o) add(o.k,o.to);
-    for (const sp of [1,2]) { const q = i-sp>=0 ? outLink(i-sp) : null; if (q && q.to===i) add(q.k,i-sp); }
+    outLinks(i).forEach(o => add(o.k,o.to));
+    for (const sp of [1,2]) if (i-sp>=0) outLinks(i-sp).forEach(q => { if (q.to===i) add(q.k,i-sp); });
   }
   f.linkAt = new Map(f.links.map(l => [l.k,l]));
 }
@@ -1241,6 +1264,7 @@ function genFloor(i) {
   g[CORE.y*GW+CORE.x] = 4;
   if (s >= 2) g[(CORE.y+s-1)*GW+CORE.x+s-1] = 5;
   if (CORE2) { g[CORE2.stairs[1]*GW+CORE2.stairs[0]] = 4; g[CORE2.lift[1]*GW+CORE2.lift[0]] = 5; }
+  if (CORE3) { g[CORE3.stairs[1]*GW+CORE3.stairs[0]] = 4; g[CORE3.lift[1]*GW+CORE3.lift[0]] = 5; }
 
   // stanze: BSP dei blocchi con muri di una cella
   const rooms = [];
