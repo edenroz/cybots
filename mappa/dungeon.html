@@ -10,6 +10,7 @@
   html,body{margin:0;height:100%;background:var(--black);overflow:hidden;font-family:'Courier New',monospace;color:var(--white);}
   #cv{position:fixed;inset:0;touch-action:none;cursor:grab;}
   #cv.drag{cursor:grabbing;}
+  #cv.wall{cursor:crosshair;}
   .box{background:rgba(10,9,8,0.9);border:1px solid rgba(242,237,228,0.25);backdrop-filter:blur(2px);}
   #title{position:fixed;top:calc(14px + env(safe-area-inset-top));left:14px;padding:10px 14px;max-width:min(360px,60vw);}
   #title h1{font-family:Impact,'Arial Narrow',sans-serif;font-size:22px;margin:0 0 4px;letter-spacing:1px;}
@@ -36,6 +37,7 @@
   #bar button:hover{border-color:var(--cyan);color:var(--cyan);}
   #bar button.on{border-color:var(--mag);color:var(--mag);}
   #bar #b-net.on{border-color:var(--cyan);color:var(--cyan);}
+  #bar #b-wall.on{border-color:#ff9a3a;color:#ff9a3a;}
   #bar input[type=range]{width:min(220px,36vw);accent-color:#00fff2;}
   #flabel{min-width:190px;text-align:center;font-size:12px;letter-spacing:1px;}
   #ctl{position:fixed;left:14px;bottom:calc(76px + env(safe-area-inset-bottom));width:262px;padding:8px 12px;font-size:11px;z-index:6;}
@@ -81,6 +83,8 @@
   <button id="b-view" title="Cambia vista (V)">VISTA 3D</button>
   <button id="b-gm" title="Mostra tutto: segreti, mostri, trappole, niente nebbia (M)">MASTER</button>
   <button id="b-plan" title="Planimetria: tutta la pianta, senza arredi, incontri né porte e stanze segrete (P)">PLANIMETRIA</button>
+  <button id="b-wall" style="display:none" title="Master: traccia muri al volo per bloccare i giocatori (W). Trascina per aggiungere, riclicca un muro aggiunto per toglierlo">MURI</button>
+  <button id="b-wclr" style="display:none" title="Rimuove tutti i muri aggiunti su questo piano">SVUOTA MURI</button>
   <button id="b-props" style="display:none" title="Mostra/nascondi gli arredi">ARREDI</button>
   <button id="b-npc" class="on" title="Mostra/nascondi i passanti (PNG)">PNG</button>
   <button id="b-cam" title="Vista di tutte le telecamere del piano (C)">CAM</button>
@@ -1123,7 +1127,94 @@ function applyCtl(f) {
 }
 
 const floorCache = [];
-function getFloor(i){ return floorCache[i] || (floorCache[i] = applyCtl(genFloor(i))); }
+const baseCache = [];
+function baseFloor(i){ return baseCache[i] || (baseCache[i] = genFloor(i)); }
+function getFloor(i){
+  if (!floorCache[i]) { const f = baseFloor(i); attachLinks(f); xwApply(f); floorCache[i] = applyCtl(f); }
+  return floorCache[i];
+}
+
+/* =========================================================================
+   SCALE INTERNE TRA PIANI (oltre al nucleo scale/ascensore)
+   Ogni tanto una stanza ha un set di scale che porta SOLO a 1 o 2 piani sopra (e, dall'altro lato, 1 o 2
+   piani sotto), nella stessa cella (x,y) dei due piani. Sono deterministiche (seed + piano) e calcolate
+   su piante "base" (senza muri aggiunti a mano), così non si spostano se il master tocca i muri.
+   Per non far mai cadere due collegamenti nella stessa cella di un piano, il collegamento che parte dal
+   piano i usa solo celle con (x+y) % 3 === i % 3 (un piano ospita al massimo quelli di j, j-1, j-2).
+   Nei dungeon da file: "links": [{x, y, to}] dentro il piano, con "to" = scostamento in piani (+2, -1...).
+   ========================================================================= */
+const LINK_P = 0.45;        // probabilità che da un piano parta un collegamento extra
+const linkMemo = [];
+function linkCellOk(f,k){
+  const G = f.g0 || f.g;
+  if (G[k]!==1 || f.rid[k]<0 || inZone(k%GW,(k/GW)|0)) return false;
+  const r = f.rooms[f.rid[k]]; if (!r || r.secret || r.flood) return false;
+  if (!f._occ) {
+    const o = new Set();
+    f.propsAll.forEach(p => { for (let dy=0;dy<(p.h||1);dy++) for (let dx=0;dx<(p.w||1);dx++) o.add((p.y+dy)*GW+p.x+dx); });
+    f.feats.forEach(ft => o.add(ft.y*GW+ft.x));
+    f.camsAll.forEach(c => o.add(c.y*GW+c.x));
+    f._occ = o;
+  }
+  if (f._occ.has(k)) return false;
+  for (const d of [-1,1,-GW,GW]) if (G[k+d]>=3) return false;       // mai accanto a porte, scale o ascensore
+  return true;
+}
+function outLink(i){
+  if (i in linkMemo) return linkMemo[i];
+  let res = null;
+  if (!CUSTOM && i < NL-1) {
+    const r = mulberry32(hashStr(SEED_STR+'#'+i+'xlink'));
+    if (r() < LINK_P) {
+      const j = Math.min(NL-1, i+1+(r()<.4?1:0)), a = baseFloor(i), b = baseFloor(j), cand = [];
+      for (let k=0;k<GW*GD;k++) if ((((k%GW)+((k/GW)|0))%3)===(i%3) && linkCellOk(a,k) && linkCellOk(b,k)) cand.push(k);
+      if (cand.length) res = {k:cand[Math.floor(r()*cand.length)], to:j};
+    }
+  }
+  return (linkMemo[i] = res);
+}
+function attachLinks(f){
+  const i = f.idx; f.links = [];
+  const add = (k,to) => f.links.push({k, x:k%GW, y:(k/GW)|0, to});
+  if (CUSTOM) {
+    (Array.isArray(CUSTOM.floors[i].links) ? CUSTOM.floors[i].links : []).forEach(l => {
+      if (!l || !isFinite(l.x) || !isFinite(l.y) || !Number.isInteger(l.to)) return;
+      const to = i + l.to, k = (Math.floor(l.y)+CUSTOM.oy)*GW + Math.floor(l.x)+CUSTOM.ox;
+      if (to>=0 && to<NL && to!==i && f.g[k]) add(k,to);
+    });
+  } else {
+    const o = outLink(i); if (o) add(o.k,o.to);
+    for (const sp of [1,2]) { const q = i-sp>=0 ? outLink(i-sp) : null; if (q && q.to===i) add(q.k,i-sp); }
+  }
+  f.linkAt = new Map(f.links.map(l => [l.k,l]));
+}
+
+/* =========================================================================
+   MURI AGGIUNTI AL VOLO (solo MASTER): bloccano il passaggio e la linea di vista dei giocatori.
+   Si salvano in localStorage per edificio/piano (stessa logica della nebbia di guerra).
+   ========================================================================= */
+let WALLMODE = false;
+const XW_KEY = 'cydg-xw:' + SEED_HEX + (CUSTOM ? ':c' + hashStr(JSON.stringify(CUSTOM.raw)) : '');
+let XWSTORE = {}; try { XWSTORE = JSON.parse(localStorage.getItem(XW_KEY) || '{}') || {}; } catch(e) {}
+function xwSave(){ try { const o={}; Object.keys(XWSTORE).forEach(k => { if (XWSTORE[k].length) o[k]=XWSTORE[k]; }); localStorage.setItem(XW_KEY, JSON.stringify(o)); } catch(e) {} }
+function xwSync(f){ const a=[]; f.xw.forEach((orig,k) => a.push([k,orig])); XWSTORE[f.idx]=a; }
+function xwRebuild(f){ const W1=wallsOfGrid(f.g); f.wallCells=W1.cells; f.wm=W1.wmk; f.camsAll.forEach(c => { c.cone=null; }); }
+function xwApply(f){
+  f.g0 = f.g.slice(); f.xw = new Map();
+  (XWSTORE[f.idx]||[]).forEach(([k,orig]) => { if (orig && f.g[k]===orig) { f.xw.set(k,orig); f.g[k]=0; } });
+  if (f.xw.size) xwRebuild(f);
+}
+function setXWall(f,k,add){
+  const g=f.g;
+  if (add) {
+    if (f.xw.has(k) || !g[k] || g[k]===4 || g[k]===5 || f.linkAt.has(k)) return false;
+    if (fog.tok && fog.tok.f===f.idx && fog.tok.y*GW+fog.tok.x===k) return false;     // non sulla pedina
+    f.xw.set(k,g[k]); g[k]=0; return true;
+  }
+  if (!f.xw.has(k)) return false;
+  g[k]=f.xw.get(k); f.xw.delete(k); return true;
+}
+function xwCommit(f){ xwSync(f); xwSave(); if (fog.tok && fog.tok.f===f.idx) fogReveal(); draw(); }
 
 function genFloor(i) {
   if (CUSTOM) return buildCustomFloor(i);
@@ -1515,7 +1606,12 @@ function tryFloor(i){
   const from = fog.tok.f;
   if (i===from) { updateHud(); return; }
   const t = getFloor(from).g[fog.tok.y*GW+fog.tok.x];
-  if (t!==4 && t!==5) { toast('Per cambiare piano raggiungi le scale (▲▼) o l\'ascensore (E).'); updateHud(); return; }
+  const lk = getFloor(from).linkAt.get(fog.tok.y*GW+fog.tok.x);
+  if (lk) {
+    if (Math.sign(i-from)===Math.sign(lk.to-from) && Math.abs(i-from)<=Math.abs(lk.to-from)) i = lk.to;
+    else { const dd=Math.abs(lk.to-from); toast('Queste scale portano solo a '+labelOf(lk.to)+' ('+dd+(dd===1?' piano':' piani')+(lk.to>from?' sopra':' sotto')+').'); updateHud(); return; }
+  }
+  if (!lk && t!==4 && t!==5) { toast('Per cambiare piano raggiungi le scale (▲▼) o l\'ascensore (E).'); updateHud(); return; }
   if (t===4 && Math.abs(i-from)!==1) { toast('Le scale portano solo al piano adiacente: serve l\'ascensore (E).'); updateHud(); return; }
   fog.tok = {f:i, x:fog.tok.x, y:fog.tok.y};
   cur = i; sel = -1; netSel = null; fogReveal(); fogSave(); updateHud(); draw();
@@ -2032,6 +2128,22 @@ function drawTopology(){
     }
     ctx.globalAlpha=1;
   });
+  if (sel) {
+    const ni=topoNextIce(TP,sel);
+    if (ni.path.length>1) {                       // linea tratteggiata animata fino al prossimo ICE
+      ctx.lineWidth=3.5; ctx.strokeStyle='#ff3b3b'; ctx.setLineDash([9,6]); ctx.lineDashOffset=-T*26; ctx.shadowColor='#ff3b3b'; ctx.shadowBlur=8;
+      ctx.beginPath(); let st=false;
+      ni.path.forEach(id => { const p=L.pos.get(id); if (!p) { st=false; return; } if (!st) { ctx.moveTo(p.x,p.y); st=true; } else ctx.lineTo(p.x,p.y); });
+      ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset=0; ctx.shadowBlur=0;
+    }
+    const ip=ni.ice && L.pos.get(ni.ice.nid);
+    if (ip) {
+      const rr=(isInfra(ni.ice)?14:9)+4+2*Math.sin(T*6);
+      ctx.strokeStyle='#ff3b3b'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(ip.x,ip.y,rr,0,7); ctx.stroke();
+      ctx.font='bold 10px "Courier New",monospace'; ctx.textAlign='left'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)';
+      const tx='ICE '+ni.ice.ice; ctx.strokeText(tx,ip.x+rr+4,ip.y-8); ctx.fillStyle='#ff3b3b'; ctx.fillText(tx,ip.x+rr+4,ip.y-8);
+    }
+  }
   ctx.restore();
 }
 
@@ -2054,6 +2166,13 @@ function topoPath(TP,id){
   const prev=new Map([[id,null]]), q=[id];
   while (q.length) { const a=q.shift(); if (a===TP.coreId) break; (adj.get(a)||[]).forEach(b => { if (!prev.has(b)) { prev.set(b,a); q.push(b); } }); }
   const p=[]; let c=TP.coreId; if (!prev.has(c)) return p; while (c!==null) { p.push(c); c=prev.get(c); } return p.reverse();
+}
+
+// percorso dal nodo verso il core, fermandosi al primo nodo (dopo il nodo di partenza) con ICE > 0
+function topoNextIce(TP,id){
+  const p=topoPath(TP,id);
+  for (let j=1;j<p.length;j++) { const n=TP.byId.get(p[j]); if (n && n.ice>0) return {path:p.slice(0,j+1), ice:n}; }
+  return {path:p, ice:null};
 }
 
 function renderNetList(list,f){
@@ -2084,6 +2203,9 @@ function renderNetList(list,f){
     add('Ubicazione fisica: '+labelOf(n.fl)+' · '+n.roomName);
     if (n.rule) add('Regola: '+n.rule);
     const p=topoPath(TP,n.nid); if (p.length>1) add('Percorso verso il core: '+p.map(i=>TP.byId.get(i).id).join(' → '));
+    const ni=topoNextIce(TP,n.nid);
+    if (ni.ice) { const h=ni.path.length-1; add('Prossimo ICE: '+ni.ice.id+' (ICE '+ni.ice.ice+') a '+h+(h===1?' salto':' salti')+' — linea rossa tratteggiata'); }
+    else if (p.length>1) add('Nessun ICE tra questo nodo e il core.');
     list.appendChild(e);
   }
 }
@@ -2127,11 +2249,11 @@ function draw2D(){
   // stanze allagate
   f.rooms.forEach(r => {
     if (PLAN && r.secret) return;
-    const fc = k => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5);
+    const fc = k => { if (g[k]) ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5); };
     if (!PLAN && r.floorStyle===1) { ctx.fillStyle='rgba(255,255,255,0.045)'; r.cells.forEach(k => { if (((k%GW)+((k/GW)|0))&1) fc(k); }); }
     else if (!PLAN && r.floorStyle===2) { ctx.fillStyle='rgba(0,0,0,0.16)'; r.cells.forEach(k => { if (((k/GW)|0)&1) fc(k); }); }
     if (!PLAN && r.light) { const L=r.light; ctx.fillStyle = L.m==='off' ? 'rgba(0,0,0,'+L.a+')' : 'rgba('+L.c+','+(L.a*lightLevel(r)).toFixed(3)+')'; r.cells.forEach(fc); }
-    if (r.flood) r.cells.forEach(k => { const x=k%GW, y=(k/GW)|0; ctx.fillStyle='rgba(40,110,200,'+(0.40+0.08*Math.sin(T*1.6+x*.8+y*.6)).toFixed(3)+')'; fc(k); });
+    if (r.flood) r.cells.forEach(k => { if (!g[k]) return; const x=k%GW, y=(k/GW)|0; ctx.fillStyle='rgba(40,110,200,'+(0.40+0.08*Math.sin(T*1.6+x*.8+y*.6)).toFixed(3)+')'; fc(k); });
   });
   // lampade nei corridoi
   if (!PLAN) for (let y=0;y<GD;y++) for (let x=0;x<GW;x++) {
@@ -2146,9 +2268,9 @@ function draw2D(){
   ctx.stroke();
   // arredi
   if (!PLAN || SHOWPROPS) {
-    f.decals.forEach(d => { if (!PLAN || g[(d.y|0)*GW+(d.x|0)]) drawDecal(d,s); });
-    f.props.forEach(p => { if (p.k==='rug' && (!PLAN || g[p.y*GW+p.x])) drawProp(p,s); });
-    f.props.forEach(p => { if (p.k!=='rug' && (!PLAN || g[p.y*GW+p.x])) drawProp(p,s); });
+    f.decals.forEach(d => { if (g[(d.y|0)*GW+(d.x|0)]) drawDecal(d,s); });
+    f.props.forEach(p => { if (p.k==='rug' && g[p.y*GW+p.x]) drawProp(p,s); });
+    f.props.forEach(p => { if (p.k!=='rug' && g[p.y*GW+p.x]) drawProp(p,s); });
   }
   // contorno dei muri
   ctx.strokeStyle=acc; ctx.lineWidth=Math.max(1.5,s*0.13); ctx.lineCap='square'; ctx.shadowColor=acc; ctx.shadowBlur=4;
@@ -2188,6 +2310,17 @@ function draw2D(){
     else if (t===4) { ctx.fillStyle='#00fff2'; ctx.fillText(f.bottom?'▲':f.top?'▼':'⇅',cx,cy); }
     else if (t===5) { ctx.fillStyle='#e8c93a'; ctx.strokeStyle='#e8c93a'; ctx.lineWidth=1; ctx.strokeRect(x*s+2,y*s+2,s-4,s-4); ctx.fillText('E',cx,cy); }
   }
+  // scale interne (1-2 piani): cella arancione con freccia e numero di piani
+  f.links.forEach(l => {
+    if (!GM && !PLAN && !(fog.exp[cur] && fog.exp[cur][l.k])) return;
+    const x=l.x*s, y=l.y*s, d=l.to-cur;
+    ctx.fillStyle='rgba(255,154,58,0.22)'; ctx.fillRect(x+1,y+1,s-2,s-2);
+    ctx.strokeStyle='#ff9a3a'; ctx.lineWidth=1; ctx.strokeRect(x+2,y+2,s-4,s-4);
+    ctx.fillStyle='#ff9a3a'; ctx.font=`bold ${Math.max(7,s*.6)}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText((d>0?'▲':'▼')+Math.abs(d),(l.x+.5)*s,(l.y+.5)*s);
+  });
+  // muri aggiunti al volo: il master li vede evidenziati
+  if (GM && f.xw && f.xw.size) { ctx.fillStyle='rgba(255,154,58,0.35)'; f.xw.forEach((o,k) => ctx.fillRect((k%GW)*s,((k/GW)|0)*s,s+.5,s+.5)); }
   // incontri (solo master)
   if (GM) f.feats.forEach(ft => {
     ctx.fillStyle = ft.k==='M'?'#ff5a5a' : ft.k==='$'?'#e8c93a' : '#ff2ee6';
@@ -2310,6 +2443,11 @@ function draw3D(){
         if (!groups.has(c)) groups.set(c,[]); groups.get(c).push(k);
       }
       groups.forEach((ks,c) => { ctx.beginPath(); ks.forEach(k => quad(k%GW,(k/GW)|0,1,1,z)); ctx.fillStyle=c; ctx.fill(); });
+      f.links.forEach(l => {
+        if (!GM && !PLAN && !(fog.exp[i] && fog.exp[i][l.k])) return;
+        const a=P(l.x+.5,l.y+.5,z), b=P(l.x+.5,l.y+.5,l.to*GAP3);
+        ctx.strokeStyle='#ff9a3a'; ctx.lineWidth=2; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); ctx.setLineDash([]);
+      });
       if (NET && !PLAN) getNetDevices(i).devs.forEach(d => { if (d.secret && !GM) return; const q=P(d.x,d.y,z); ctx.fillStyle=NET_INFO[d.kind].c; ctx.beginPath(); ctx.arc(q[0],q[1],3,0,7); ctx.fill(); });
       ctx.fillStyle=`rgb(${col})`; ctx.font='bold 13px "Courier New",monospace'; ctx.textAlign='left';
       const lp=P(GW,GD/2,z); ctx.fillText(labelOf(i),lp[0]+14,lp[1]);
@@ -2359,6 +2497,11 @@ function updateHud(){
   document.getElementById('b-props').style.display = 'none';
   document.getElementById('b-props').classList.toggle('on', SHOWPROPS);
   document.getElementById('b-fog').style.display = GM ? '' : 'none';
+  if (!GM) WALLMODE = false;
+  document.getElementById('b-wall').style.display = GM ? '' : 'none';
+  document.getElementById('b-wall').classList.toggle('on', WALLMODE);
+  document.getElementById('b-wclr').style.display = (GM && WALLMODE) ? '' : 'none';
+  cv.classList.toggle('wall', WALLMODE && GM && mode==='2d');
   const list=document.getElementById('side-list'); list.innerHTML='';
   if (NET && !PLAN) { document.getElementById('side-h').textContent='NETRUNNING // '+labelOf(cur); renderNetList(list,f); return; }
   [f.core,...f.rooms.slice().sort((a,b) => a.id-b.id)].forEach((r,idx) => {
@@ -2388,6 +2531,14 @@ function updateHud(){
     const ii=document.createElement('i'); ii.textContent=on?'● LIVE':'○ off'; ii.style.color=on?'#00fff2':'';
     d.append(b,t,ii); d.onclick=()=>{ toggleCam(cur,i); updateHud(); draw(); }; list.appendChild(d);
   });
+  f.links.forEach(l => {
+    if (!GM && !PLAN && !(fog.exp[cur] && fog.exp[cur][l.k])) return;
+    const d=document.createElement('div'), n2=Math.abs(l.to-cur); d.className='r';
+    const b=document.createElement('b'); b.textContent='⇅'; b.style.color='#ff9a3a';
+    const t=document.createElement('span'); t.textContent='Scale interne → '+labelOf(l.to);
+    const ii=document.createElement('i'); ii.textContent=n2+(n2===1?' piano':' piani');
+    d.append(b,t,ii); list.appendChild(d);
+  });
 }
 function setFloor(i){ cur=Math.max(0,Math.min(NL-1,i)); sel=-1; netSel=null; updateHud(); draw(); }
 function setMode(m){ mode=m; document.getElementById('b-view').textContent = m==='2d'?'VISTA 3D':'VISTA 2D'; draw(); }
@@ -2409,6 +2560,30 @@ document.getElementById('b-gm').onclick=()=>setGM(!GM);
 document.getElementById('b-plan').onclick=()=>setPlan(!PLAN);
 document.getElementById('b-net').onclick=()=>setNet(!NET);
 document.getElementById('b-props').onclick=()=>{ SHOWPROPS=!SHOWPROPS; updateHud(); draw(); };
+function setWallMode(v){
+  if (v && !GM) { toast('I muri si tracciano in modalità MASTER (M).'); return; }
+  if (v && mode!=='2d') setMode('2d');
+  WALLMODE = v;
+  if (v) toast('MURI: trascina per tracciare, clicca/trascina su un muro aggiunto per toglierlo. Shift o tasto destro = sposta la mappa.');
+  updateHud(); draw();
+}
+function wallPaint(cx,cy){
+  const w = drag && drag.wall; if (!w) return;
+  const f=getFloor(cur), px=w.px===undefined?cx:w.px, py=w.py===undefined?cy:w.py, n=Math.max(1,Math.ceil(Math.hypot(cx-px,cy-py)/(v2.s*.5)));
+  let ch=false;
+  for (let t=1;t<=n;t++) {
+    const x=Math.floor((px+(cx-px)*t/n-v2.ox)/v2.s), y=Math.floor((py+(cy-py)*t/n-v2.oy)/v2.s);
+    if (x<0||y<0||x>=GW||y>=GD) continue;
+    if (setXWall(f,y*GW+x,w.add)) ch=true;
+  }
+  w.px=cx; w.py=cy;
+  if (ch) { xwRebuild(f); draw(); }
+}
+document.getElementById('b-wall').onclick=()=>setWallMode(!WALLMODE);
+document.getElementById('b-wclr').onclick=()=>{
+  const f=getFloor(cur); if (!f.xw.size) { toast('Nessun muro aggiunto su questo piano.'); return; }
+  if (confirm('Rimuovere tutti i muri aggiunti su questo piano?')) { Array.from(f.xw.keys()).forEach(k => setXWall(f,k,false)); xwRebuild(f); xwCommit(f); }
+};
 document.getElementById('b-zin').onclick=()=>zoomBy(1.25);
 document.getElementById('b-zout').onclick=()=>zoomBy(0.8);
 document.getElementById('b-fit').onclick=()=>{fit();if(TOPOV())nvFit();draw();};
@@ -2420,6 +2595,7 @@ window.addEventListener('keydown',e=>{
   else if (e.key==='v'||e.key==='V') setMode(mode==='2d'?'3d':'2d');
   else if (e.key==='m'||e.key==='M') setGM(!GM);
   else if (e.key==='p'||e.key==='P') setPlan(!PLAN);
+  else if (e.key==='w'||e.key==='W') setWallMode(!WALLMODE);
   else if (e.key==='c'||e.key==='C') toggleCamWall();
   else if (e.key==='n'||e.key==='N') setNet(!NET);
   else if ((e.key==='t'||e.key==='T') && NET && !PLAN) setNetView(NETV==='map'?'topo':'map');
@@ -2433,16 +2609,22 @@ let drag=null;
 cv.addEventListener('pointerdown',e=>{
   cv.setPointerCapture(e.pointerId);
   drag={x:e.clientX,y:e.clientY,moved:0,pan:e.shiftKey||e.button===2||mode==='2d'};
+  if (WALLMODE && GM && mode==='2d' && !TOPOV() && !NET && e.button===0 && !e.shiftKey) {
+    const f=getFloor(cur), x=Math.floor((e.clientX-v2.ox)/v2.s), y=Math.floor((e.clientY-v2.oy)/v2.s);
+    if (x>=0&&y>=0&&x<GW&&y<GD) { drag.wall={add:!f.xw.has(y*GW+x)}; wallPaint(e.clientX,e.clientY); }
+  }
   cv.classList.add('drag');
 });
 cv.addEventListener('pointermove',e=>{
   if (!drag) return;
+  if (drag.wall) { wallPaint(e.clientX,e.clientY); return; }
   const dx=e.clientX-drag.x, dy=e.clientY-drag.y; drag.x=e.clientX; drag.y=e.clientY; drag.moved+=Math.abs(dx)+Math.abs(dy);
   if (drag.pan) { if(mode==='2d'){ if (TOPOV()) { nv.ox+=dx; nv.oy+=dy; } else { v2.ox+=dx; v2.oy+=dy; } } else {v3.px+=dx;v3.py+=dy;} }
   else { v3.yaw+=dx*0.008; v3.pitch=Math.max(0.15,Math.min(1.55,v3.pitch+dy*0.006)); }
   draw();
 });
 cv.addEventListener('pointerup',e=>{
+  if (drag && drag.wall) { xwCommit(getFloor(cur)); drag=null; cv.classList.remove('drag'); return; }
   if (drag && drag.moved<5) {
     if (mode==='3d') {
       let best=-1,bd=1e9;
@@ -2605,7 +2787,8 @@ function buildExport() {
       decals: f.decals.map(d => ({x:cx(d.x), y:cy(d.y), k:d.k, r:+d.r.toFixed(2), z:+d.z.toFixed(2)})),
       feats: f.feats.map(ft => ({x:ft.x-OX, y:ft.y-OY, k:ft.k, label:ft.label})),
       npcs: f.npcsAll.filter(n => !n.extra).map(n => ({x:cx(n.ax), y:cy(n.ay), to:[cx(n.bx), cy(n.by)], speed:+n.sp.toFixed(3), phase:+n.ph.toFixed(3), nick:n.nick})),
-      cams: f.camsAll.map(c => ({x:c.x-OX, y:c.y-OY, angle:Math.round(c.ang*180/Math.PI), fov:Math.round(c.fov*180/Math.PI), range:c.range, id:c.id}))
+      cams: f.camsAll.map(c => ({x:c.x-OX, y:c.y-OY, angle:Math.round(c.ang*180/Math.PI), fov:Math.round(c.fov*180/Math.PI), range:c.range, id:c.id})),
+      links: f.links.map(l => ({x:l.x-OX, y:l.y-OY, to:l.to-i}))
     });
   }
   const [sx, sy] = (CUSTOM && CUSTOM.start && isFinite(CUSTOM.start.x)) ? [Math.floor(CUSTOM.start.x)+CUSTOM.ox, Math.floor(CUSTOM.start.y)+CUSTOM.oy] : SKEL.ends.length ? SKEL.ends[0] : [CORE.x, CORE.y];
