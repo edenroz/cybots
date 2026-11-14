@@ -1885,6 +1885,48 @@ function layoutTopo(TP){
   return (TL={key,pos,zones,kc,W0,H:Math.max(maxY,260)+40});
 }
 
+/* ---------- VISTA NETRUNNING SULLA MAPPA: copertura (sfocata) dei router ----------
+   I router NON sono segnati: si vedono aloni di segnale con centro spostato e raggio ampio
+   (deterministico per router), che attraversano i piani con intensità decrescente. Nell'elenco
+   la vicinanza del gruppo ai router è solo a 4 livelli di barre, senza distanze né stanze. */
+let NETV = 'map';
+const TOPOV = () => NET && !PLAN && NETV==='topo';
+function setNetView(v){ NETV=v; topoSel=null; netHoverId=null; hideNetTip(); if (v==='topo') { TL=null; nvFit(); } updateHud(); draw(); }
+function routerHalo(r){
+  const h=hashStr(r.nid+'halo'), R=Math.max(9,24/CS);
+  return {x:r.x+(((h%1000)/1000)-.5)*R*.9, y:r.y+((((h>>>10)%1000)/1000)-.5)*R*.9, R:R*(.85+((h>>>20)%100)/400)};
+}
+function sigBars(r){
+  const t=fog.tok; if (!t) return 0;
+  const d=Math.hypot(t.x+.5-r.x,t.y+.5-r.y)*CS+Math.abs(t.f-r.fl)*FLOOR_H*2;
+  return d<10?4:d<22?3:d<40?2:d<65?1:0;
+}
+function drawNetMap(f,s){
+  const TP=buildTopology(), W2=GW*s, H2=GD*s;
+  ctx.save();
+  ctx.globalCompositeOperation='multiply'; ctx.fillStyle='rgb(70,170,175)'; ctx.fillRect(0,0,W2,H2);
+  ctx.globalCompositeOperation='source-over'; ctx.fillStyle='rgba(0,10,14,0.38)'; ctx.fillRect(0,0,W2,H2);
+  const sy=((T*0.18)%1)*H2, bh=H2*0.06, gr=ctx.createLinearGradient(0,sy-bh,0,sy+bh);
+  gr.addColorStop(0,'rgba(0,255,242,0)'); gr.addColorStop(.5,'rgba(0,255,242,0.10)'); gr.addColorStop(1,'rgba(0,255,242,0)');
+  ctx.fillStyle=gr; ctx.fillRect(0,sy-bh,W2,bh*2);
+  // dispositivi (come nella vista originale, senza collegamenti)
+  getNetDevices(cur).devs.forEach(d => {
+    if (d.secret && !GM) return; const col=NET_INFO[d.kind].c, X=d.x*s, Y=d.y*s;
+    ctx.shadowColor=col; ctx.shadowBlur=5; netIcon(d,X,Y,s,col); ctx.shadowBlur=0;
+    if (s>=8) { ctx.font=`${Math.max(8,Math.min(10,s*.8))}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; const r=Math.max(3.5,s*.5); ctx.strokeText(d.id,X,Y+r+2); ctx.fillStyle=col; ctx.fillText(d.id,X,Y+r+2); }
+  });
+  // aloni dei router
+  TP.nodes.filter(n=>n.kind==='rtr').forEach(r => {
+    const df=Math.abs(r.fl-cur); if (df>2) return;
+    const k=[1,.55,.3][df], h=routerHalo(r), X=h.x*s, Y=h.y*s, R=h.R*s;
+    const g=ctx.createRadialGradient(X,Y,0,X,Y,R); g.addColorStop(0,'rgba(255,255,255,'+(.22*k).toFixed(3)+')'); g.addColorStop(.5,'rgba(0,255,242,'+(.10*k).toFixed(3)+')'); g.addColorStop(1,'rgba(0,255,242,0)');
+    ctx.globalCompositeOperation='screen'; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(X,Y,R,0,7); ctx.fill(); ctx.globalCompositeOperation='source-over';
+    for (let q=0;q<2;q++) { const ph=(T*.35+q*.5+(hashStr(r.nid)%100)/100)%1; ctx.strokeStyle='rgba(0,255,242,'+(.35*k*(1-ph)).toFixed(3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(X,Y,R*ph,0,7); ctx.stroke(); }
+    if (s>=4) { ctx.font=`bold ${Math.max(9,Math.min(12,s*.9))}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='middle'; const t='≈ '+r.id+(df?' ('+(r.fl>cur?'▲':'▼')+df+')':''); ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(t,X,Y); ctx.fillStyle='rgba(255,255,255,'+(.5+.5*k).toFixed(2)+')'; ctx.fillText(t,X,Y); }
+  });
+  ctx.restore();
+}
+
 function nvFit(){
   const L=layoutTopo(buildTopology()), sideW=innerWidth>640?320:0;
   nv.s=Math.max(.2,Math.min(1.6,(W-sideW-40)/L.W0,(HH-150)/L.H)); nv.ox=(W-sideW-L.W0*nv.s)/2; nv.oy=70;
@@ -1953,6 +1995,12 @@ function topoPath(TP,id){
 }
 
 function renderNetList(list,f){
+  const tg=document.createElement('div'); tg.className='r'; tg.innerHTML='<b style="color:#00fff2">⇄</b><span>VISTA: '+(NETV==='map'?'MAPPA (copertura router)':'TOPOLOGIA LAN')+'</span><i>[T]</i>'; tg.onclick=()=>setNetView(NETV==='map'?'topo':'map'); list.appendChild(tg);
+  if (NETV==='map') {
+    const TQ=buildTopology(), hd=document.createElement('div'); hd.className='desc'; hd.style.paddingLeft='6px'; hd.textContent='Segnale dei router vicino al gruppo (aloni sulla mappa: posizione indicativa).'; list.appendChild(hd);
+    TQ.nodes.filter(n=>n.kind==='rtr').map(r=>({r,b:sigBars(r)})).sort((a,b)=>b.b-a.b||(a.r.id<b.r.id?-1:1)).forEach(({r,b}) => { const row=document.createElement('div'); row.className='r'; const i1=document.createElement('b'); i1.textContent='■'; i1.style.color='#fff'; const t=document.createElement('span'); t.textContent=r.id+(r.core?' · core':''); const i2=document.createElement('i'); i2.textContent='▮'.repeat(b)+'▯'.repeat(4-b); row.append(i1,t,i2); list.appendChild(row); });
+    return;
+  }
   const TP=buildTopology(), L=layoutTopo(TP), cnt=k=>TP.nodes.filter(n=>n.kind===k&&(GM||!n.secret)&&(L.pos.has(n.nid)||k==='rtr')).length;
   const nd=TP.nodes.filter(n=>!n.infra&&(GM||!n.secret)).length;
   const head=document.createElement('div'); head.className='desc'; head.style.paddingLeft='6px';
@@ -1982,11 +2030,11 @@ function showNetTip(n,cx,cy){
   el.style.left=Math.min(innerWidth-230,cx+14)+'px'; el.style.top=(cy+14)+'px'; el.style.display='block';
 }
 function hideNetTip(){ document.getElementById('nettip').style.display='none'; }
-function setNet(v){ NET=v; if (v) PLAN=false; netSel=null; topoSel=null; netHoverId=null; hideNetTip(); if (v) { TL=null; nvFit(); } updateHud(); draw(); }
+function setNet(v){ NET=v; if (v) PLAN=false; netSel=null; topoSel=null; netHoverId=null; hideNetTip(); if (v && NETV==='topo') { TL=null; nvFit(); } updateHud(); draw(); }
 document.querySelector('.netk').innerHTML = Object.values(NET_INFO).filter(x => x.p!=='SEC').map(x => '<span style="color:'+x.c+'">■</span> '+x.p).join(' &nbsp;');
 
 function draw2D(){
-  if (NET && !PLAN) { drawTopology(); return; }
+  if (TOPOV()) { drawTopology(); return; }
   const f=getFloor(cur), g=PLAN?f.pg:f.g, s=v2.s, acc=accent(f);
   ctx.save(); ctx.translate(v2.ox, v2.oy);
   // piano terra: le strade intorno all'edificio
@@ -2130,6 +2178,7 @@ function draw2D(){
     ctx.shadowColor=acc; ctx.shadowBlur=10; ctx.fillStyle='#f2ede4'; ctx.strokeStyle=acc; ctx.lineWidth=2;
     ctx.beginPath(); ctx.arc(tx,ty,Math.max(4,s*.36)*(1+.08*Math.sin(T*4)),0,7); ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
   }
+  if (NET && !PLAN) drawNetMap(f,s);
   // scala
   const sc=10/CS*s; ctx.strokeStyle='#f2ede4'; ctx.fillStyle='#f2ede4'; ctx.lineWidth=2; ctx.textAlign='left'; ctx.font='11px "Courier New",monospace';
   ctx.beginPath(); ctx.moveTo(0,GD*s+14); ctx.lineTo(sc,GD*s+14); ctx.stroke(); ctx.fillText('10 m',sc+6,GD*s+14);
@@ -2282,7 +2331,7 @@ function viewChanged(){ sel=-1; if (!GM && !PLAN && fog.tok) cur=fog.tok.f; upda
 function setGM(v){ GM=v; if (v) PLAN=false; viewChanged(); }
 function setPlan(v){ PLAN=v; if (v) { GM=false; NET=false; } viewChanged(); }
 function zoomBy(k,cx=W/2,cy=HH/2){
-  if (mode==='2d' && NET && !PLAN) { const wx=(cx-nv.ox)/nv.s, wy=(cy-nv.oy)/nv.s; nv.s=Math.max(.15,Math.min(4,nv.s*k)); nv.ox=cx-wx*nv.s; nv.oy=cy-wy*nv.s; draw(); return; }
+  if (mode==='2d' && TOPOV()) { const wx=(cx-nv.ox)/nv.s, wy=(cy-nv.oy)/nv.s; nv.s=Math.max(.15,Math.min(4,nv.s*k)); nv.ox=cx-wx*nv.s; nv.oy=cy-wy*nv.s; draw(); return; }
   if (mode==='2d') { const wx=(cx-v2.ox)/v2.s, wy=(cy-v2.oy)/v2.s; v2.s=Math.max(2,Math.min(80,v2.s*k)); v2.ox=cx-wx*v2.s; v2.oy=cy-wy*v2.s; }
   else v3.zoom=Math.max(1,Math.min(80,v3.zoom*k));
   draw();
@@ -2298,7 +2347,7 @@ document.getElementById('b-net').onclick=()=>setNet(!NET);
 document.getElementById('b-props').onclick=()=>{ SHOWPROPS=!SHOWPROPS; updateHud(); draw(); };
 document.getElementById('b-zin').onclick=()=>zoomBy(1.25);
 document.getElementById('b-zout').onclick=()=>zoomBy(0.8);
-document.getElementById('b-fit').onclick=()=>{fit();if(NET&&!PLAN)nvFit();draw();};
+document.getElementById('b-fit').onclick=()=>{fit();if(TOPOV())nvFit();draw();};
 slider.oninput=()=>tryFloor(parseInt(slider.value,10));
 window.addEventListener('keydown',e=>{
   if (e.target.tagName==='INPUT' && e.key!=='ArrowUp' && e.key!=='ArrowDown') return;
@@ -2309,6 +2358,7 @@ window.addEventListener('keydown',e=>{
   else if (e.key==='p'||e.key==='P') setPlan(!PLAN);
   else if (e.key==='c'||e.key==='C') toggleCamWall();
   else if (e.key==='n'||e.key==='N') setNet(!NET);
+  else if ((e.key==='t'||e.key==='T') && NET && !PLAN) setNetView(NETV==='map'?'topo':'map');
   else if (e.key==='Escape' && CAMWALL) toggleCamWall(false);
   else if (e.key==='+'||e.key==='=') zoomBy(1.25);
   else if (e.key==='-') zoomBy(0.8);
@@ -2324,7 +2374,7 @@ cv.addEventListener('pointerdown',e=>{
 cv.addEventListener('pointermove',e=>{
   if (!drag) return;
   const dx=e.clientX-drag.x, dy=e.clientY-drag.y; drag.x=e.clientX; drag.y=e.clientY; drag.moved+=Math.abs(dx)+Math.abs(dy);
-  if (drag.pan) { if(mode==='2d'){ if (NET && !PLAN) { nv.ox+=dx; nv.oy+=dy; } else { v2.ox+=dx; v2.oy+=dy; } } else {v3.px+=dx;v3.py+=dy;} }
+  if (drag.pan) { if(mode==='2d'){ if (TOPOV()) { nv.ox+=dx; nv.oy+=dy; } else { v2.ox+=dx; v2.oy+=dy; } } else {v3.px+=dx;v3.py+=dy;} }
   else { v3.yaw+=dx*0.008; v3.pitch=Math.max(0.15,Math.min(1.55,v3.pitch+dy*0.006)); }
   draw();
 });
@@ -2335,7 +2385,7 @@ cv.addEventListener('pointerup',e=>{
       for (let i=0;i<NL;i++) { const p=P(GW/2,GD/2,i*GAP3); const d=Math.hypot(p[0]-e.clientX,p[1]-e.clientY); if(d<bd){bd=d;best=i;} }
       if (best>=0) tryFloor(best);
     } else {
-      if (NET && !PLAN) { topoClick(e.clientX,e.clientY); drag=null; cv.classList.remove('drag'); return; }
+      if (TOPOV()) { topoClick(e.clientX,e.clientY); drag=null; cv.classList.remove('drag'); return; }
       const x=Math.floor((e.clientX-v2.ox)/v2.s), y=Math.floor((e.clientY-v2.oy)/v2.s);
       if (x>=0&&y>=0&&x<GW&&y<GD) {
         const f=getFloor(cur), k=y*GW+x, ex=fog.exp[cur];
@@ -2353,7 +2403,7 @@ cv.addEventListener('pointerup',e=>{
   drag=null; cv.classList.remove('drag');
 });
 cv.addEventListener('pointermove',e=>{                    // vista netrunning: tooltip del dispositivo sotto il mouse
-  if (!NET || PLAN || mode!=='2d' || drag) { if (netHoverId) { netHoverId=null; hideNetTip(); draw(); } return; }
+  if (!TOPOV() || mode!=='2d' || drag) { if (netHoverId) { netHoverId=null; hideNetTip(); draw(); } return; }
   const h=topoPick(e.clientX,e.clientY), d=h&&h.node, id=d?d.nid:null;
   if (d) showNetTip(d,e.clientX,e.clientY); else hideNetTip();
   if (id!==netHoverId) { netHoverId=id; draw(); }
