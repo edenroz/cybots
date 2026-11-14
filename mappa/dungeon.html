@@ -1892,6 +1892,21 @@ function layoutTopo(TP){
 let NETV = 'map';
 const TOPOV = () => NET && !PLAN && NETV==='topo';
 function setNetView(v){ NETV=v; topoSel=null; netHoverId=null; hideNetTip(); if (v==='topo') { TL=null; nvFit(); } updateHud(); draw(); }
+let hackSel = null;     // router "hackerato" sulla mappa
+function hackReach(TP,id){
+  const seen=new Set([id]), fw=new Set(), ek=new Set(), edges=[], q=[id];
+  while (q.length) { const a=q.shift();
+    TP.edges.forEach(e => { if (e.t!=='bb') return; const b=e.a===a?e.b:(e.b===a?e.a:null); if (!b) return;
+      const k=e.a<e.b?e.a+'|'+e.b:e.b+'|'+e.a; if (!ek.has(k)) { ek.add(k); edges.push([e.a,e.b]); }
+      if (TP.byId.get(b).kind==='fwl') { fw.add(b); return; }
+      if (!seen.has(b)) { seen.add(b); q.push(b); } }); }
+  return {routers:seen, fws:fw, edges};
+}
+function hackPick(cx,cy){
+  const wx=(cx-v2.ox)/v2.s, wy=(cy-v2.oy)/v2.s; let best, bd=1e9;
+  buildTopology().nodes.forEach(r => { if (r.kind!=='rtr' || Math.abs(r.fl-cur)>2) return; const h=routerHalo(r), d=Math.hypot(h.x-wx,h.y-wy); if (d<h.R*.35 && d<bd) { bd=d; best=r.nid; } });
+  return best;
+}
 function routerHalo(r){
   const h=hashStr(r.nid+'halo'), R=Math.max(9,24/CS);
   return {x:r.x+(((h%1000)/1000)-.5)*R*.9, y:r.y+((((h>>>10)%1000)/1000)-.5)*R*.9, R:R*(.85+((h>>>20)%100)/400)};
@@ -1910,8 +1925,7 @@ function drawNetMap(f,s){
   gr.addColorStop(0,'rgba(0,255,242,0)'); gr.addColorStop(.5,'rgba(0,255,242,0.10)'); gr.addColorStop(1,'rgba(0,255,242,0)');
   ctx.fillStyle=gr; ctx.fillRect(0,sy-bh,W2,bh*2);
   // dispositivi (come nella vista originale, senza collegamenti)
-  getNetDevices(cur).devs.forEach(d => {
-    if (d.secret && !GM) return; const col=NET_INFO[d.kind].c, X=d.x*s, Y=d.y*s;
+  netLive(f,cur).forEach(d => { const col=NET_INFO[d.kind].c, X=d.x*s, Y=d.y*s;
     ctx.shadowColor=col; ctx.shadowBlur=5; netIcon(d,X,Y,s,col); ctx.shadowBlur=0;
     if (s>=8) { ctx.font=`${Math.max(8,Math.min(10,s*.8))}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; const r=Math.max(3.5,s*.5); ctx.strokeText(d.id,X,Y+r+2); ctx.fillStyle=col; ctx.fillText(d.id,X,Y+r+2); }
   });
@@ -1922,8 +1936,22 @@ function drawNetMap(f,s){
     const g=ctx.createRadialGradient(X,Y,0,X,Y,R); g.addColorStop(0,'rgba(255,255,255,'+(.22*k).toFixed(3)+')'); g.addColorStop(.5,'rgba(0,255,242,'+(.10*k).toFixed(3)+')'); g.addColorStop(1,'rgba(0,255,242,0)');
     ctx.globalCompositeOperation='screen'; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(X,Y,R,0,7); ctx.fill(); ctx.globalCompositeOperation='source-over';
     for (let q=0;q<2;q++) { const ph=(T*.35+q*.5+(hashStr(r.nid)%100)/100)%1; ctx.strokeStyle='rgba(0,255,242,'+(.35*k*(1-ph)).toFixed(3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(X,Y,R*ph,0,7); ctx.stroke(); }
+    if (r.nid===hackSel) { ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,R*.35,0,7); ctx.stroke(); }
     if (s>=4) { ctx.font=`bold ${Math.max(9,Math.min(12,s*.9))}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='middle'; const t='≈ '+r.id+(df?' ('+(r.fl>cur?'▲':'▼')+df+')':''); ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(t,X,Y); ctx.fillStyle='rgba(255,255,255,'+(.5+.5*k).toFixed(2)+')'; ctx.fillText(t,X,Y); }
   });
+  // router hackerato: dorsale fino ai firewall (posizioni indicative, come gli aloni)
+  const hs=hackSel&&TP.byId.get(hackSel);
+  if (hs) {
+    const RA=hackReach(TP,hs.nid), pt=n=>{ const h=routerHalo(n); return [h.x*s,h.y*s]; };
+    ctx.lineWidth=2; ctx.setLineDash([8,5]); ctx.lineDashOffset=-T*16;
+    RA.edges.forEach(([a,b]) => { const na=TP.byId.get(a), nb=TP.byId.get(b), p=pt(na), q=pt(nb); ctx.strokeStyle=(na.kind==='fwl'||nb.kind==='fwl')?'#ff5a5a':'#ffffff'; ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]); ctx.stroke(); });
+    ctx.setLineDash([]); ctx.lineDashOffset=0;
+    const mark=(n,col) => { const p=pt(n), df=n.fl-cur; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(p[0],p[1],Math.max(3,s*.35),0,7); ctx.fill();
+      ctx.font=`bold ${Math.max(9,Math.min(11,s*.8))}px "Courier New",monospace`; ctx.textAlign='left'; ctx.textBaseline='middle'; const t=n.id+(df?' · '+labelOf(n.fl):'')+(n.kind==='fwl'?' 🛡':'');
+      ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(t,p[0]+8,p[1]-8); ctx.fillStyle=col; ctx.fillText(t,p[0]+8,p[1]-8); };
+    RA.routers.forEach(id => mark(TP.byId.get(id),id===hs.nid?'#ffffff':'#8cf0ff'));
+    RA.fws.forEach(id => mark(TP.byId.get(id),'#ff5a5a'));
+  }
   ctx.restore();
 }
 
@@ -1999,6 +2027,8 @@ function renderNetList(list,f){
   if (NETV==='map') {
     const TQ=buildTopology(), hd=document.createElement('div'); hd.className='desc'; hd.style.paddingLeft='6px'; hd.textContent='Segnale dei router vicino al gruppo (aloni sulla mappa: posizione indicativa).'; list.appendChild(hd);
     TQ.nodes.filter(n=>n.kind==='rtr').map(r=>({r,b:sigBars(r)})).sort((a,b)=>b.b-a.b||(a.r.id<b.r.id?-1:1)).forEach(({r,b}) => { const row=document.createElement('div'); row.className='r'; const i1=document.createElement('b'); i1.textContent='■'; i1.style.color='#fff'; const t=document.createElement('span'); t.textContent=r.id+(r.core?' · core':''); const i2=document.createElement('i'); i2.textContent='▮'.repeat(b)+'▯'.repeat(4-b); row.append(i1,t,i2); list.appendChild(row); });
+    const hn=hackSel&&TQ.byId.get(hackSel);
+    if (hn) { const RA=hackReach(TQ,hn.nid), e=document.createElement('div'); e.className='desc'; e.textContent=hn.id+' hackerato · ICE '+hn.ice; const a=document.createElement('span'); a.className='n'; a.textContent='Dorsale: '+Array.from(RA.routers).map(i=>TQ.byId.get(i).id).join(', '); e.appendChild(a); const b=document.createElement('span'); b.className='n'; b.textContent=RA.fws.size?'Si ferma ai firewall: '+Array.from(RA.fws).map(i=>TQ.byId.get(i).id).join(', '):'Nessun firewall sulla dorsale.'; e.appendChild(b); list.appendChild(e); }
     return;
   }
   const TP=buildTopology(), L=layoutTopo(TP), cnt=k=>TP.nodes.filter(n=>n.kind===k&&(GM||!n.secret)&&(L.pos.has(n.nid)||k==='rtr')).length;
@@ -2030,7 +2060,7 @@ function showNetTip(n,cx,cy){
   el.style.left=Math.min(innerWidth-230,cx+14)+'px'; el.style.top=(cy+14)+'px'; el.style.display='block';
 }
 function hideNetTip(){ document.getElementById('nettip').style.display='none'; }
-function setNet(v){ NET=v; if (v) PLAN=false; netSel=null; topoSel=null; netHoverId=null; hideNetTip(); if (v && NETV==='topo') { TL=null; nvFit(); } updateHud(); draw(); }
+function setNet(v){ NET=v; if (v) PLAN=false; netSel=null; topoSel=null; hackSel=null; netHoverId=null; hideNetTip(); if (v && NETV==='topo') { TL=null; nvFit(); } updateHud(); draw(); }
 document.querySelector('.netk').innerHTML = Object.values(NET_INFO).filter(x => x.p!=='SEC').map(x => '<span style="color:'+x.c+'">■</span> '+x.p).join(' &nbsp;');
 
 function draw2D(){
@@ -2385,6 +2415,7 @@ cv.addEventListener('pointerup',e=>{
       for (let i=0;i<NL;i++) { const p=P(GW/2,GD/2,i*GAP3); const d=Math.hypot(p[0]-e.clientX,p[1]-e.clientY); if(d<bd){bd=d;best=i;} }
       if (best>=0) tryFloor(best);
     } else {
+      if (NET && !PLAN && NETV==='map') { const hk=hackPick(e.clientX,e.clientY); if (hk!==undefined) { hackSel=hackSel===hk?null:hk; updateHud(); draw(); drag=null; cv.classList.remove('drag'); return; } }
       if (TOPOV()) { topoClick(e.clientX,e.clientY); drag=null; cv.classList.remove('drag'); return; }
       const x=Math.floor((e.clientX-v2.ox)/v2.s), y=Math.floor((e.clientY-v2.oy)/v2.s);
       if (x>=0&&y>=0&&x<GW&&y<GD) {
