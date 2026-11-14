@@ -418,7 +418,7 @@ const CORE2 = (function(){
 
 /* TERZO NUCLEO: negli edifici ENORMI (pianta >= CORE3_MIN_AREA m²) ci sono 3 ascensori (e 3 set di scale): il terzo
    sta sul corridoio nel punto più lontano da entrambi gli altri nuclei, evitando le estremità (ingressi). */
-const CORE3_MIN_AREA = 5000;
+const CORE3_MIN_AREA = 10000;
 const CORE3 = (function(){
   if (CUSTOM || !CORE2 || maskCount*CS*CS < CORE3_MIN_AREA) return null;
   const cx=CORE.x+CORE.s/2, cy=CORE.y+CORE.s/2, c2=CORE2.stairs, used=new Set([CORE2.stairs[1]*GW+CORE2.stairs[0], CORE2.lift[1]*GW+CORE2.lift[0]]);
