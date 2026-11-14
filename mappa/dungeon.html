@@ -1673,6 +1673,9 @@ const NET_INFO = {
   lgt: {p:'LGT', n:'Illuminazione smart',          c:'#fff3b0', o:11, ice:[0,1], f:'Luci e sensori di presenza della stanza.'},
   sec: {p:'SEC', n:'Serratura nascosta',           c:'#ff2ee6', o:12, ice:[4,5], f:'Apre la porta segreta: non compare in nessuna planimetria.'},
   iot: {p:'IOT', n:'Dispositivo IoT',            c:'#9affc8', o:14, ice:[0,2], f:'Sensori, prese e gadget smart: piccoli, ovunque, spesso poco protetti.'},
+  rtr: {p:'RTR', n:'Router',   c:'#ffffff', o:-3, ice:[3,5], f:'Instradamento tra segmenti e dorsale.'},
+  swt: {p:'SWT', n:'Switch',   c:'#8cf0ff', o:-2, ice:[2,4], f:'Aggrega i dispositivi di un segmento.'},
+  fwl: {p:'FWL', n:'Firewall', c:'#ff5a5a', o:-1, ice:[4,5], f:'Perimetro di una rete protetta.'},
   com: {p:'COM', n:'Commlink / impianti',          c:'#ff2ee6', o:13, ice:[1,4], f:'Comunicazioni e cyberware del PNG.'}
 };
 const NET_PROP = {rack:'srv', terminal:'trm', desk:'wrk', tv:'tv', vend:'vnd', machine:'mch', car:'veh'};
@@ -1693,6 +1696,7 @@ function getNetDevices(i){
       roomName: room ? room.type : (t===2 ? 'Corridoio' : (t===4||t===5) ? 'Nucleo scale/ascensore' : 'Porta / ingresso'),
       secret: !!(room && room.secret), ice0: inf.ice[0]+Math.floor(r0*(inf.ice[1]-inf.ice[0]+1)), th: thr('#'+i+'d'+kind+x+','+y)};
     Object.keys(o).forEach(k => { if (o[k] !== undefined) d[k]=o[k]; });
+    d.fl=i; d.tid=labelOf(i)+'/'+d.id;
     all.push(d);
   };
   f.propsAll.forEach(p => {
@@ -1756,85 +1760,233 @@ function netIcon(d,X,Y,s,col){
     case 'lck': case 'sec': ctx.fillRect(X-r*.7,Y-r*.1,r*1.4,r*.95); ctx.beginPath(); ctx.arc(X,Y-r*.1,r*.5,Math.PI,0); ctx.stroke(); break;
     case 'acc': ctx.beginPath(); ctx.moveTo(X,Y-r*1.1); ctx.lineTo(X+r*1.1,Y); ctx.lineTo(X,Y+r*1.1); ctx.lineTo(X-r*1.1,Y); ctx.closePath(); ctx.fill(); break;
     case 'elv': ctx.strokeRect(X-r,Y-r,r*2,r*2); ctx.font=`bold ${Math.max(8,r*1.4)}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('E',X,Y+.5); break;
+    case 'rtr': ctx.beginPath(); ctx.arc(X,Y,r*.85,0,7); ctx.stroke(); [[0,-1],[1,0],[0,1],[-1,0]].forEach(([a,b]) => { ctx.beginPath(); ctx.moveTo(X+a*r*.2,Y+b*r*.2); ctx.lineTo(X+a*r*.75,Y+b*r*.75); ctx.stroke(); ctx.fillRect(X+a*r*.75-1.5,Y+b*r*.75-1.5,3,3); }); break;
+    case 'swt': ctx.strokeRect(X-r,Y-r*.5,r*2,r); for (let q=0;q<4;q++) ctx.fillRect(X-r*.8+q*r*.5,Y-r*.2,r*.3,r*.4); break;
+    case 'fwl': ctx.beginPath(); ctx.moveTo(X-r,Y-r*.7); ctx.lineTo(X+r,Y-r*.7); ctx.lineTo(X+r,Y+r*.3); ctx.lineTo(X,Y+r); ctx.lineTo(X-r,Y+r*.3); ctx.closePath(); ctx.stroke(); ctx.fillRect(X-r*.5,Y-r*.2,r,r*.25); break;
     case 'lgt': ctx.beginPath(); ctx.arc(X,Y,r*.45,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(X,Y,r*.9,0,7); ctx.stroke(); break;
     case 'mch': case 'veh': ctx.beginPath(); ctx.arc(X,Y,r*.7,0,7); ctx.stroke(); for (let k=0;k<6;k++) { const a=k*1.047+T*.5; ctx.beginPath(); ctx.moveTo(X+Math.cos(a)*r*.7,Y+Math.sin(a)*r*.7); ctx.lineTo(X+Math.cos(a)*r*1.05,Y+Math.sin(a)*r*1.05); ctx.stroke(); } break;
     default: ctx.beginPath(); ctx.arc(X,Y,r*.8,0,7); ctx.stroke(); ctx.beginPath(); ctx.arc(X,Y,r*.3,0,7); ctx.fill();   // com
   }
 }
 
-function drawNet(f,s){
-  const live=netLive(f,cur), pack=getNetDevices(cur), W2=GW*s, H2=GD*s;
-  ctx.save();
-  // tinta ciano + velo scuro + riga di scansione che scorre
-  ctx.globalCompositeOperation='multiply'; ctx.fillStyle='rgb(70,170,175)'; ctx.fillRect(0,0,W2,H2);
-  ctx.globalCompositeOperation='source-over'; ctx.fillStyle='rgba(0,10,14,0.38)'; ctx.fillRect(0,0,W2,H2);
-  const sy=((T*0.18)%1)*H2, bh=H2*0.06, gr=ctx.createLinearGradient(0,sy-bh,0,sy+bh);
-  gr.addColorStop(0,'rgba(0,255,242,0)'); gr.addColorStop(.5,'rgba(0,255,242,0.10)'); gr.addColorStop(1,'rgba(0,255,242,0)');
-  ctx.fillStyle=gr; ctx.fillRect(0,sy-bh,W2,bh*2);
-  // collegamenti di rete (tratteggio che scorre)
-  const vis=d => GM || !d.secret;
-  ctx.setLineDash([s*.45,s*.4]); ctx.lineDashOffset=-T*s*2;
-  pack.links.forEach(([a,b]) => {
-    if (!vis(a)||!vis(b)) return;
-    const hot=(a.id===netSel||b.id===netSel);
-    ctx.strokeStyle=hot?'rgba(255,255,255,0.95)':'rgba(0,255,242,0.30)'; ctx.lineWidth=hot?2:1;
-    ctx.beginPath(); ctx.moveTo(a.x*s,a.y*s); ctx.lineTo(b.x*s,b.y*s); ctx.stroke();
-  });
-  ctx.setLineDash([]); ctx.lineDashOffset=0;
-  // dispositivi
-  const showLbl=s>=8;
-  live.forEach(d => {
-    const col=NET_INFO[d.kind].c, X=d.x*s, Y=d.y*s, r=Math.max(3.5,s*.5);
-    if (s>=3) { const ph=(T*0.7+d.x*.37+d.y*.21)%1; ctx.strokeStyle=col; ctx.globalAlpha=.35*(1-ph); ctx.lineWidth=1; ctx.beginPath(); ctx.arc(X,Y,r*(1+ph*1.8),0,7); ctx.stroke(); ctx.globalAlpha=1; }
-    ctx.shadowColor=col; ctx.shadowBlur=6; netIcon(d,X,Y,s,col); ctx.shadowBlur=0;
-    const hot=(d.id===netSel||d.id===netHoverId);
-    if (hot) { ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,r*1.7,0,7); ctx.stroke(); }
-    if (showLbl || hot) {
-      ctx.font=`${Math.max(8,Math.min(10,s*.8))}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='top';
-      ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(d.id,X,Y+r+2); ctx.fillStyle=col; ctx.fillText(d.id,X,Y+r+2);
+/* =========================================================================
+   TOPOLOGIA LOGICA DELLA LAN (vista NETRUNNING)
+   Dati SEPARATI dalla planimetria: buildTopology() legge i dispositivi fisici già generati
+   (getNetDevices, che restano invariati) e crea in più router, switch e firewall come nodi
+   reali della rete. La posizione fisica (fl/x/y) è solo metadato (tooltip, elenco): il
+   disegno usa un layout a livelli (core > router > firewall > switch > dispositivi) e non
+   le coordinate della pianta; il piano non è mai un criterio di collegamento tra segmenti.
+   Segmenti: Corporate, Security, Industrial/Building, Server, Restricted (firewall dedicati).
+   Archi: bb dorsale · up uplink · dev dispositivo→switch · red uplink ridondante · acl regola.
+   ========================================================================= */
+const SEG = {
+  bb:  {n:'Backbone',                 c:'#e8f6ff', vlan:1},
+  corp:{n:'Corporate LAN',            c:'#4ac8ff', vlan:10},
+  sec: {n:'Security LAN',             c:'#ff4a4a', vlan:20},
+  bld: {n:'Industrial / Building LAN',c:'#ff9a3a', vlan:30},
+  srv: {n:'Server LAN',               c:'#00fff2', vlan:40},
+  rst: {n:'Restricted LAN',           c:'#ff2ee6', vlan:50}
+};
+const SEG_ORDER = ['corp','sec','bld','srv','rst'];
+const SEG_OF = {trm:'corp',wrk:'corp',vnd:'bld',tv:'bld',mch:'bld',veh:'bld',elv:'bld',lgt:'bld',iot:'bld',cam:'sec',lck:'sec',acc:'sec',sec:'rst',srv:'srv'};
+const RST_ROOMS = new Set(['Camera blindata','Ufficio dirigenziale','Laboratorio clandestino']);
+let TOPO = null, TL = null, topoSel = null;
+const netCol = new Set();                 // switch compressi (i loro dispositivi sono nascosti)
+const nv = {s:1, ox:0, oy:0};             // vista della topologia (pan/zoom), indipendente da v2
+const isInfra = n => n.kind==='rtr' || n.kind==='swt' || n.kind==='fwl';
+
+function segOf(d){
+  if (d.kind==='srv' && (d.secret || RST_ROOMS.has(d.roomName))) return 'rst';
+  return SEG_OF[d.kind] || 'bld';
+}
+function cellNear(fl,tx,ty,want){
+  const g=getFloor(fl).g; let best=null,bd=1e18;
+  for (let k=0;k<g.length;k++) { if (want.indexOf(g[k])<0) continue; const x=k%GW,y=(k/GW)|0,d=(x-tx)**2+(y-ty)**2; if (d<bd){bd=d;best=[x+.5,y+.5];} }
+  return best || [CORE.x+.5,CORE.y+.5];
+}
+
+function buildTopology(){
+  if (TOPO) return TOPO;
+  const rng=mulberry32(hashStr(SEED_STR+'#topo')), nodes=[], edges=[], byId=new Map(), ek=new Set(), sq={};
+  const nm = p => p+'-'+String(sq[p]=(sq[p]||0)+1).padStart(2,'0');
+  const mk = (kind,o) => { const inf=NET_INFO[kind], n=Object.assign({kind,infra:true,ice0:inf.ice[0]+Math.floor(rng()*(inf.ice[1]-inf.ice[0]+1))},o);
+    n.nid=n.nid||n.id; n.ice=Math.min(5,Math.round(n.ice0*CTL.sec)); nodes.push(n); byId.set(n.nid,n); return n; };
+  const link = (a,b,t) => { if (!a||!b||a===b) return; const k=a.nid+'>'+b.nid+t; if (ek.has(k)||ek.has(b.nid+'>'+a.nid+t)) return; ek.add(k); edges.push({a:a.nid,b:b.nid,t}); };
+  // dispositivi fisici (stessi oggetti della planimetria, non copie)
+  const devs=[];
+  for (let i=0;i<NL;i++) getNetDevices(i).devs.forEach(d => { d.seg=segOf(d); let n=0; d.nid=d.tid; while (byId.has(d.nid)) d.nid=d.tid+'#'+(++n); byId.set(d.nid,d); devs.push(d); });
+  // in ogni server room con >=3 server il più sensibile finisce in una subnet isolata
+  const sg=new Map();
+  devs.filter(d=>d.kind==='srv').forEach(d => { const k=d.fl+'|'+d.roomName; if (!sg.has(k)) sg.set(k,[]); sg.get(k).push(d); });
+  sg.forEach(a => { if (a.length>=3) a.reduce((p,q)=>q.ice>p.ice?q:p).seg='rst'; });
+  // dorsale: un router per fascia di piani, anello tra router vicini
+  const R=Math.max(1,Math.min(8,Math.ceil(NL/5))), band=fl=>Math.min(R-1,Math.floor(fl*R/NL));
+  const srv=devs.filter(d=>d.kind==='srv').sort((a,b)=>a.fl-b.fl);
+  const coreFl=srv.length ? srv[0].fl : Math.min(NL-1,NB), coreB=band(coreFl), rt=[];
+  for (let b=0;b<R;b++) {
+    const fl=b===coreB ? coreFl : Math.min(NL-1,Math.floor((b+.5)*NL/R)), p=cellNear(fl,CORE.x+(b%2?5:-5),CORE.y+((b%3)-1)*3,[2]);
+    rt.push(mk('rtr',{id:b===coreB?'RTR-CORE':nm('RTR'),fl,x:p[0],y:p[1],band:b,core:b===coreB,seg:'bb',roomName:'Corridoio'}));
+  }
+  const core=rt[coreB];
+  rt.forEach((r,b) => { if (r!==core) link(r,core,'bb'); if (b+1<R) link(r,rt[b+1],'bb'); });
+  if (R>=3) link(rt[R-1],rt[0],'bb');
+  const BIG = devs.length>=40 || R>=3, fws=new Map(), swMap=new Map();
+  const mkFw=(key,seg,fl,room,rule) => { let f=fws.get(key); if (f) return f;
+    const p=cellNear(fl,CORE.x,CORE.y,[2]); f=mk('fwl',{id:nm('FW-'+seg.toUpperCase()),fl,x:p[0],y:p[1],seg,rule,roomName:room||'Corridoio'}); fws.set(key,f); link(f,core,'bb'); return f; };
+  const swFor=(seg,key,fl,par,room) => { let s2=swMap.get(key); if (s2) return s2;
+    const p=cellNear(fl,CORE.x,CORE.y,[2]); s2=mk('swt',{id:nm('SW-'+seg.toUpperCase()),fl,x:p[0],y:p[1],seg,roomName:room||'Corridoio'}); swMap.set(key,s2); link(s2,par,'up'); return s2; };
+  const secUp=b=>BIG?mkFw('sec','sec',coreFl,'','DENY corp→sec · ALLOW sec-ops, guardiole'):rt[b];
+  const bldUp=b=>BIG?mkFw('bld','bld',coreFl,'','ALLOW solo protocolli di automazione (BACnet/Modbus)'):rt[b];
+  const guards=[]; for (let i=0;i<NL;i++) getFloor(i).rooms.forEach(r => { if (r.type==='Guardiola' && !r.secret) guards.push({fl:i,r,sw:null}); });
+  devs.forEach(d => {
+    const b=band(d.fl); let sw;
+    if (d.seg==='srv') { const k='srv|'+d.fl+'|'+d.roomName; sw=swFor('srv',k,d.fl,mkFw(k,'srv',d.fl,d.roomName,'ALLOW corp→srv (443,22) · DENY *'),d.roomName); }
+    else if (d.seg==='rst') sw=swFor('rst','rst',d.fl,mkFw('rst','rst',coreFl,'','ALLOW solo workstation autorizzate · DENY *'),d.roomName);
+    else if (d.seg==='sec') {
+      let g=null,gs=1e9; guards.forEach(q => { const sc=Math.abs(q.fl-d.fl)*1000+Math.hypot(q.r.lx+.5-d.x,q.r.ly+.5-d.y); if (Math.abs(q.fl-d.fl)<=3 && sc<gs){gs=sc;g=q;} });
+      if (g) { if (!g.sw) { g.sw=mk('swt',{id:nm('SW-GUARD'),fl:g.fl,x:g.r.lx+.5,y:g.r.ly+.5,seg:'sec',guard:true,roomName:'Guardiola'}); link(g.sw,secUp(band(g.fl)),'up'); } sw=g.sw; }
+      else sw=swFor('sec','sec|'+b,rt[b].fl,secUp(b));
     }
+    else if (d.seg==='bld') sw=swFor('bld','bld|'+b,rt[b].fl,bldUp(b));
+    else { const fresh=!swMap.has('corp|'+b); sw=swFor('corp','corp|'+b,rt[b].fl,rt[b]); if (fresh && R>=2) link(sw,rt[(b+1)%R],'red'); }
+    link(d,sw,'dev');
+  });
+  const rf=fws.get('rst');
+  if (rf) { const a=devs.find(d=>d.kind==='wrk'&&d.seg==='corp')||devs.find(d=>d.kind==='trm'&&d.seg==='corp'); if (a) { link(rf,a,'acl'); rf.rule='ALLOW solo '+a.id+' ('+labelOf(a.fl)+') · DENY *'; } }
+  nodes.push(...devs);
+  return (TOPO={nodes,edges,byId,coreId:core.nid,R});
+}
+
+function layoutTopo(TP){
+  const key=(GM?1:0)+'|'+Array.from(netCol).sort().join(',');
+  if (TL && TL.key===key) return TL;
+  const vis=n=>GM||!n.secret, kids=new Map(), up=new Map(), pos=new Map(), zones=[], kc=new Map();
+  TP.edges.forEach(e => { if (e.t==='up') up.set(e.a,e.b); if (e.t!=='dev') return; const d=TP.byId.get(e.a); if (!vis(d)) return; if (!kids.has(e.b)) kids.set(e.b,[]); kids.get(e.b).push(d); });
+  const sws=TP.nodes.filter(n=>n.kind==='swt' && kids.has(n.nid)), YZ=214, YS=272, YD=322; let cx=20, maxY=0;
+  SEG_ORDER.forEach(seg => {
+    const zs=sws.filter(x=>x.seg===seg).sort((a,b)=>String(up.get(a.nid)).localeCompare(String(up.get(b.nid)))||a.fl-b.fl);
+    if (!zs.length) return;
+    const z={seg,x0:cx,sw:zs,fw:false}; let zb=YS+34; cx+=16;
+    zs.forEach(x => {
+      const ks=kids.get(x.nid), col=netCol.has(x.nid), cols=col?1:Math.min(4,Math.ceil(Math.sqrt(ks.length))), w=col?64:Math.max(64,cols*32+16), sx=cx+w/2;
+      pos.set(x.nid,{x:sx,y:YS}); kc.set(x.nid,ks.length);
+      if (!col) { ks.forEach((d,j) => pos.set(d.nid,{x:sx-(cols-1)*16+(j%cols)*32,y:YD+Math.floor(j/cols)*32})); zb=Math.max(zb,YD+Math.ceil(ks.length/cols)*32); }
+      cx+=w;
+    });
+    cx+=16; z.x1=cx; z.y0=YZ; z.y1=zb+10; z.count=zs.reduce((q,x)=>q+kids.get(x.nid).length,0);
+    z.fw=zs.some(x=>{const u=TP.byId.get(up.get(x.nid)); return u&&u.kind==='fwl';});
+    zones.push(z); cx+=22; maxY=Math.max(maxY,z.y1);
+  });
+  const fk=new Map();
+  sws.forEach(x => { const u=TP.byId.get(up.get(x.nid)); if (u&&u.kind==='fwl') { if (!fk.has(u.nid)) fk.set(u.nid,[]); fk.get(u.nid).push(pos.get(x.nid).x); } });
+  fk.forEach((xs,id) => pos.set(id,{x:xs.reduce((a,b)=>a+b,0)/xs.length,y:182}));
+  const W0=Math.max(cx,320), oth=TP.nodes.filter(n=>n.kind==='rtr'&&!n.core);
+  pos.set(TP.coreId,{x:W0/2,y:40}); oth.forEach((r,i) => pos.set(r.nid,{x:(i+.5)*W0/oth.length,y:116}));
+  return (TL={key,pos,zones,kc,W0,H:Math.max(maxY,260)+40});
+}
+
+function nvFit(){
+  const L=layoutTopo(buildTopology()), sideW=innerWidth>640?320:0;
+  nv.s=Math.max(.2,Math.min(1.6,(W-sideW-40)/L.W0,(HH-150)/L.H)); nv.ox=(W-sideW-L.W0*nv.s)/2; nv.oy=70;
+}
+
+function drawTopology(){
+  const TP=buildTopology(), L=layoutTopo(TP), sel=topoSel, near=new Set();
+  if (sel) { near.add(sel); TP.edges.forEach(e => { if (e.a===sel) near.add(e.b); else if (e.b===sel) near.add(e.a); }); }
+  ctx.save(); ctx.translate(nv.ox,nv.oy); ctx.scale(nv.s,nv.s); ctx.textBaseline='middle';
+  L.zones.forEach(z => {
+    const c=SEG[z.seg].c, w=z.x1-z.x0, h=z.y1-z.y0;
+    ctx.globalAlpha=z.fw?.10:.05; ctx.fillStyle=c; ctx.fillRect(z.x0,z.y0,w,h); ctx.globalAlpha=1;
+    ctx.strokeStyle=c; ctx.lineWidth=z.fw?2.5:1; ctx.setLineDash(z.fw?[]:[6,4]); ctx.strokeRect(z.x0,z.y0,w,h); ctx.setLineDash([]);
+    if (z.fw) { ctx.globalAlpha=.5; ctx.lineWidth=1; ctx.strokeRect(z.x0+4,z.y0+4,w-8,h-8); ctx.globalAlpha=1; }
+    ctx.font='bold 11px "Courier New",monospace'; ctx.textAlign='left'; ctx.fillStyle=c;
+    ctx.fillText((z.sw.every(x=>netCol.has(x.nid))?'▸ ':'▾ ')+SEG[z.seg].n+(z.fw?' · ISOLATA':'')+' · VLAN '+SEG[z.seg].vlan+' · '+z.count,z.x0+10,z.y0+13);
+  });
+  TP.edges.forEach(e => {
+    const a=L.pos.get(e.a), b=L.pos.get(e.b); if (!a||!b) return;
+    const na=TP.byId.get(e.a), nb=TP.byId.get(e.b); let col, lw, dash=[];
+    if (e.t==='bb') { col=(na.kind==='fwl')?SEG[na.seg].c:'#e8f6ff'; lw=2.6; dash=[10,4]; }
+    else if (e.t==='up') { col=SEG[na.seg].c; lw=1.6; }
+    else if (e.t==='dev') { col=SEG[na.seg].c; lw=1; }
+    else if (e.t==='red') { col='#8a8680'; lw=1.2; dash=[5,4]; }
+    else { col='#ff2ee6'; lw=1.6; dash=[2,4]; }
+    ctx.globalAlpha=sel&&!(e.a===sel||e.b===sel)?.12:(e.t==='dev'?.55:.9);
+    ctx.strokeStyle=(sel&&(e.a===sel||e.b===sel))?'#ffffff':col; ctx.lineWidth=lw; ctx.setLineDash(dash); ctx.lineDashOffset=e.t==='bb'?-T*14:0;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  });
+  ctx.setLineDash([]); ctx.lineDashOffset=0; ctx.globalAlpha=1;
+  const rk=n=>({swt:1,fwl:2,rtr:3})[n.kind]||0;
+  TP.nodes.filter(n=>L.pos.has(n.nid)).sort((a,b)=>rk(a)-rk(b)).forEach(n => {
+    const p=L.pos.get(n.nid), inf=rk(n)>0, r=inf?12:7, col=NET_INFO[n.kind].c, hot=(n.nid===sel||n.nid===netHoverId);
+    ctx.globalAlpha=sel&&!near.has(n.nid)?.3:1;
+    ctx.shadowColor=col; ctx.shadowBlur=6; netIcon(n,p.x,p.y,inf?24:13,col); ctx.shadowBlur=0;
+    if (hot) { ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,r+5,0,7); ctx.stroke(); }
+    if (n.kind==='swt' && netCol.has(n.nid)) { ctx.font='bold 10px "Courier New",monospace'; ctx.textAlign='left'; ctx.fillStyle='#e8c93a'; ctx.fillText('+'+L.kc.get(n.nid),p.x+r+4,p.y); }
+    if (inf || hot || nv.s>=1.2) {
+      ctx.font='9px "Courier New",monospace'; ctx.textAlign='center'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)';
+      ctx.strokeText(n.id,p.x,p.y+r+9); ctx.fillStyle=col; ctx.fillText(n.id,p.x,p.y+r+9);
+    }
+    ctx.globalAlpha=1;
   });
   ctx.restore();
 }
 
-// dispositivo sotto il puntatore (coordinate schermo), o null
-function netPick(cx,cy){
-  const f=getFloor(cur), R=Math.max(9,v2.s*.7); let best=null, bd=1e9;
-  netLive(f,cur).forEach(d => { const q=Math.hypot(v2.ox+d.x*v2.s-cx, v2.oy+d.y*v2.s-cy); if (q<R && q<bd) { bd=q; best=d; } });
-  return best;
+function topoPick(cx,cy){
+  const TP=buildTopology(), L=layoutTopo(TP), wx=(cx-nv.ox)/nv.s, wy=(cy-nv.oy)/nv.s; let best=null,bd=1e9;
+  L.pos.forEach((p,id) => { const n=TP.byId.get(id); if (!n) return; const r=isInfra(n)?14:9, d=Math.hypot(p.x-wx,p.y-wy); if (d<r && d<bd){bd=d;best=n;} });
+  if (best) return {node:best};
+  const z=L.zones.find(q => wx>=q.x0&&wx<=q.x1&&wy>=q.y0&&wy<=q.y0+20); return z?{zone:z}:null;
+}
+function toggleZone(z){ const all=z.sw.every(x=>netCol.has(x.nid)); z.sw.forEach(x => { if (all) netCol.delete(x.nid); else netCol.add(x.nid); }); }
+function topoClick(cx,cy){
+  const h=topoPick(cx,cy);
+  if (h && h.node) { const n=h.node; topoSel = topoSel===n.nid ? null : n.nid; if (n.kind==='swt') { if (netCol.has(n.nid)) netCol.delete(n.nid); else netCol.add(n.nid); } }
+  else if (h && h.zone) toggleZone(h.zone); else topoSel=null;
+  updateHud(); draw();
+}
+function topoPath(TP,id){
+  const adj=new Map(), add=(a,b)=>{ if (!adj.has(a)) adj.set(a,[]); adj.get(a).push(b); };
+  TP.edges.forEach(e => { if (e.t==='acl'||e.t==='red') return; add(e.a,e.b); add(e.b,e.a); });
+  const prev=new Map([[id,null]]), q=[id];
+  while (q.length) { const a=q.shift(); if (a===TP.coreId) break; (adj.get(a)||[]).forEach(b => { if (!prev.has(b)) { prev.set(b,a); q.push(b); } }); }
+  const p=[]; let c=TP.coreId; if (!prev.has(c)) return p; while (c!==null) { p.push(c); c=prev.get(c); } return p.reverse();
 }
 
 function renderNetList(list,f){
-  const live=netLive(f,cur).slice().sort((a,b) => NET_INFO[a.kind].o-NET_INFO[b.kind].o || (a.id<b.id?-1:a.id>b.id?1:0));
-  const counts={}; live.forEach(d => { counts[d.kind]=(counts[d.kind]||0)+1; });
+  const TP=buildTopology(), L=layoutTopo(TP), cnt=k=>TP.nodes.filter(n=>n.kind===k&&(GM||!n.secret)&&(L.pos.has(n.nid)||k==='rtr')).length;
+  const nd=TP.nodes.filter(n=>!n.infra&&(GM||!n.secret)).length;
   const head=document.createElement('div'); head.className='desc'; head.style.paddingLeft='6px';
-  head.textContent = live.length+' dispositivi — '+Object.keys(counts).sort((a,b) => NET_INFO[a].o-NET_INFO[b].o).map(k => counts[k]+' '+NET_INFO[k].p).join(' · ');
-  list.appendChild(head);
-  live.forEach(d => {
-    const inf=NET_INFO[d.kind], row=document.createElement('div'); row.className='r'+(netSel===d.id?' sel':'');
-    const b=document.createElement('b'); b.textContent='■'; b.style.color=inf.c;
-    const t=document.createElement('span'); t.textContent=d.id+' · '+netName(d)+((GM&&d.secret)?' ✱':'');
-    const i=document.createElement('i'); i.textContent='ICE '+d.ice;
-    row.append(b,t,i); row.onclick=()=>{ netSel = netSel===d.id ? null : d.id; updateHud(); draw(); };
-    list.appendChild(row);
-    if (netSel===d.id) {
-      const e=document.createElement('div'); e.className='desc'; e.textContent=d.roomName+' — '+inf.f;
-      const n=document.createElement('span'); n.className='n'; n.textContent='ICE livello '+d.ice+(d.kind==='com'?' · si muove con il PNG':''); e.appendChild(n);
-      list.appendChild(e);
-    }
+  head.textContent=cnt('rtr')+' router · '+cnt('swt')+' switch · '+cnt('fwl')+' firewall · '+nd+' dispositivi in '+TP.R+(TP.R===1?' fascia':' fasce di piani');
+  const lg=document.createElement('span'); lg.className='n'; lg.textContent='━ dorsale · ─ uplink · ┄ ridondante · ⋯ ACL. Clic su zona o switch = comprimi/espandi.'; head.appendChild(lg); list.appendChild(head);
+  const row=(sym,col,txt,right,on,fn) => { const r=document.createElement('div'); r.className='r'+(on?' sel':''); const b=document.createElement('b'); b.textContent=sym; b.style.color=col; const t=document.createElement('span'); t.textContent=txt; const i=document.createElement('i'); i.textContent=right; r.append(b,t,i); r.onclick=fn; list.appendChild(r); };
+  L.zones.forEach(z => row(z.sw.every(x=>netCol.has(x.nid))?'▸':'▾',SEG[z.seg].c,SEG[z.seg].n+(z.fw?' 🛡':''),z.count+' disp.',false,()=>{ toggleZone(z); updateHud(); draw(); }));
+  TP.nodes.filter(n=>isInfra(n)&&(n.kind==='rtr'||L.pos.has(n.nid))).sort((a,b)=>NET_INFO[a.kind].o-NET_INFO[b.kind].o||(a.id<b.id?-1:1)).forEach(n => {
+    row('■',NET_INFO[n.kind].c,n.id+(n.guard?' · guardiola':''),'ICE '+n.ice,topoSel===n.nid,()=>{ topoSel=topoSel===n.nid?null:n.nid; updateHud(); draw(); });
   });
+  const n=topoSel&&TP.byId.get(topoSel);
+  if (n) {
+    const e=document.createElement('div'); e.className='desc'; const sg=SEG[n.seg]||SEG.bb;
+    e.textContent=n.id+' · '+netName(n)+' — '+NET_INFO[n.kind].f;
+    const add=t => { const s2=document.createElement('span'); s2.className='n'; s2.textContent=t; e.appendChild(s2); };
+    add(sg.n+' · VLAN '+sg.vlan+' · ICE '+n.ice);
+    add('Ubicazione fisica: '+labelOf(n.fl)+' · '+n.roomName);
+    if (n.rule) add('Regola: '+n.rule);
+    const p=topoPath(TP,n.nid); if (p.length>1) add('Percorso verso il core: '+p.map(i=>TP.byId.get(i).id).join(' → '));
+    list.appendChild(e);
+  }
 }
 
-function showNetTip(d,cx,cy){
-  const el=document.getElementById('nettip');
-  el.innerHTML='<b style="color:'+NET_INFO[d.kind].c+'">'+d.id+'</b> '+netName(d)+'<br>'+d.roomName+' · ICE '+d.ice;
+function showNetTip(n,cx,cy){
+  const el=document.getElementById('nettip'), sg=SEG[n.seg]||SEG.bb;
+  el.innerHTML='<b style="color:'+NET_INFO[n.kind].c+'">'+n.id+'</b> '+netName(n)+'<br>'+sg.n+' · VLAN '+sg.vlan+'<br>'+labelOf(n.fl)+' · '+n.roomName+' · ICE '+n.ice+(n.rule?'<br>'+n.rule:'');
   el.style.left=Math.min(innerWidth-230,cx+14)+'px'; el.style.top=(cy+14)+'px'; el.style.display='block';
 }
 function hideNetTip(){ document.getElementById('nettip').style.display='none'; }
-function setNet(v){ NET=v; if (v) PLAN=false; netSel=null; netHoverId=null; hideNetTip(); updateHud(); draw(); }
+function setNet(v){ NET=v; if (v) PLAN=false; netSel=null; topoSel=null; netHoverId=null; hideNetTip(); if (v) { TL=null; nvFit(); } updateHud(); draw(); }
 document.querySelector('.netk').innerHTML = Object.values(NET_INFO).filter(x => x.p!=='SEC').map(x => '<span style="color:'+x.c+'">■</span> '+x.p).join(' &nbsp;');
 
 function draw2D(){
+  if (NET && !PLAN) { drawTopology(); return; }
   const f=getFloor(cur), g=PLAN?f.pg:f.g, s=v2.s, acc=accent(f);
   ctx.save(); ctx.translate(v2.ox, v2.oy);
   // piano terra: le strade intorno all'edificio
@@ -1978,7 +2130,6 @@ function draw2D(){
     ctx.shadowColor=acc; ctx.shadowBlur=10; ctx.fillStyle='#f2ede4'; ctx.strokeStyle=acc; ctx.lineWidth=2;
     ctx.beginPath(); ctx.arc(tx,ty,Math.max(4,s*.36)*(1+.08*Math.sin(T*4)),0,7); ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
   }
-  if (NET && !PLAN) drawNet(f,s);
   // scala
   const sc=10/CS*s; ctx.strokeStyle='#f2ede4'; ctx.fillStyle='#f2ede4'; ctx.lineWidth=2; ctx.textAlign='left'; ctx.font='11px "Courier New",monospace';
   ctx.beginPath(); ctx.moveTo(0,GD*s+14); ctx.lineTo(sc,GD*s+14); ctx.stroke(); ctx.fillText('10 m',sc+6,GD*s+14);
@@ -2131,6 +2282,7 @@ function viewChanged(){ sel=-1; if (!GM && !PLAN && fog.tok) cur=fog.tok.f; upda
 function setGM(v){ GM=v; if (v) PLAN=false; viewChanged(); }
 function setPlan(v){ PLAN=v; if (v) { GM=false; NET=false; } viewChanged(); }
 function zoomBy(k,cx=W/2,cy=HH/2){
+  if (mode==='2d' && NET && !PLAN) { const wx=(cx-nv.ox)/nv.s, wy=(cy-nv.oy)/nv.s; nv.s=Math.max(.15,Math.min(4,nv.s*k)); nv.ox=cx-wx*nv.s; nv.oy=cy-wy*nv.s; draw(); return; }
   if (mode==='2d') { const wx=(cx-v2.ox)/v2.s, wy=(cy-v2.oy)/v2.s; v2.s=Math.max(2,Math.min(80,v2.s*k)); v2.ox=cx-wx*v2.s; v2.oy=cy-wy*v2.s; }
   else v3.zoom=Math.max(1,Math.min(80,v3.zoom*k));
   draw();
@@ -2146,7 +2298,7 @@ document.getElementById('b-net').onclick=()=>setNet(!NET);
 document.getElementById('b-props').onclick=()=>{ SHOWPROPS=!SHOWPROPS; updateHud(); draw(); };
 document.getElementById('b-zin').onclick=()=>zoomBy(1.25);
 document.getElementById('b-zout').onclick=()=>zoomBy(0.8);
-document.getElementById('b-fit').onclick=()=>{fit();draw();};
+document.getElementById('b-fit').onclick=()=>{fit();if(NET&&!PLAN)nvFit();draw();};
 slider.oninput=()=>tryFloor(parseInt(slider.value,10));
 window.addEventListener('keydown',e=>{
   if (e.target.tagName==='INPUT' && e.key!=='ArrowUp' && e.key!=='ArrowDown') return;
@@ -2172,7 +2324,7 @@ cv.addEventListener('pointerdown',e=>{
 cv.addEventListener('pointermove',e=>{
   if (!drag) return;
   const dx=e.clientX-drag.x, dy=e.clientY-drag.y; drag.x=e.clientX; drag.y=e.clientY; drag.moved+=Math.abs(dx)+Math.abs(dy);
-  if (drag.pan) { if(mode==='2d'){v2.ox+=dx;v2.oy+=dy;} else {v3.px+=dx;v3.py+=dy;} }
+  if (drag.pan) { if(mode==='2d'){ if (NET && !PLAN) { nv.ox+=dx; nv.oy+=dy; } else { v2.ox+=dx; v2.oy+=dy; } } else {v3.px+=dx;v3.py+=dy;} }
   else { v3.yaw+=dx*0.008; v3.pitch=Math.max(0.15,Math.min(1.55,v3.pitch+dy*0.006)); }
   draw();
 });
@@ -2183,7 +2335,7 @@ cv.addEventListener('pointerup',e=>{
       for (let i=0;i<NL;i++) { const p=P(GW/2,GD/2,i*GAP3); const d=Math.hypot(p[0]-e.clientX,p[1]-e.clientY); if(d<bd){bd=d;best=i;} }
       if (best>=0) tryFloor(best);
     } else {
-      if (NET && !PLAN) { const nd=netPick(e.clientX,e.clientY); if (nd) { netSel = netSel===nd.id ? null : nd.id; updateHud(); draw(); drag=null; cv.classList.remove('drag'); return; } }
+      if (NET && !PLAN) { topoClick(e.clientX,e.clientY); drag=null; cv.classList.remove('drag'); return; }
       const x=Math.floor((e.clientX-v2.ox)/v2.s), y=Math.floor((e.clientY-v2.oy)/v2.s);
       if (x>=0&&y>=0&&x<GW&&y<GD) {
         const f=getFloor(cur), k=y*GW+x, ex=fog.exp[cur];
@@ -2202,7 +2354,7 @@ cv.addEventListener('pointerup',e=>{
 });
 cv.addEventListener('pointermove',e=>{                    // vista netrunning: tooltip del dispositivo sotto il mouse
   if (!NET || PLAN || mode!=='2d' || drag) { if (netHoverId) { netHoverId=null; hideNetTip(); draw(); } return; }
-  const d=netPick(e.clientX,e.clientY), id=d?d.id:null;
+  const h=topoPick(e.clientX,e.clientY), d=h&&h.node, id=d?d.nid:null;
   if (d) showNetTip(d,e.clientX,e.clientY); else hideNetTip();
   if (id!==netHoverId) { netHoverId=id; draw(); }
 });
@@ -2285,7 +2437,7 @@ let lastAnim=0;
    ========================================================================= */
 function applyCtlAll() {
   floorCache.forEach(f => { if (f) applyCtl(f); });
-  netCache.length = 0; camOn.clear(); camWallEl.dataset.f = ''; sel = -1; netSel = null;
+  netCache.length = 0; TOPO = null; TL = null; topoSel = null; camOn.clear(); camWallEl.dataset.f = ''; sel = -1; netSel = null;
   hideNetTip(); updateHud(); draw();
 }
 function ctlSave() { try { localStorage.setItem(CTL_KEY, JSON.stringify({npc:CTL.npc, devices:CTL.dev, security:CTL.sec})); } catch(e) {} }
