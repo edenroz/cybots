@@ -2445,18 +2445,50 @@ function sigBars(r){
    Router, switch, firewall e ICE sono icone posizionate sulla pianta (vedi physPlace); i collegamenti
    si tracciano tra le icone; i nodi su altri piani collegati a quelli di questo piano compaiono come "fantasmi" (▲/▼ piano). */
 function netMapNodes(){
-  const TP=buildTopology(), S=hackState(), fogOn=!GM, on=[], ghost=new Map();
+  const TP=buildTopology(), S=hackState(), fogOn=!GM, on=[], ghost=new Map(), s=v2.s;
   const ok=n=>!fogOn||NH.visible(S,n.nid);
   TP.nodes.forEach(n => { if (n.fl===cur && ok(n)) on.push(n); });
   const onSet=new Set(on.map(n=>n.nid));
   TP.edges.forEach(e => { const a=TP.byId.get(e.a), b=TP.byId.get(e.b); if (!ok(a)||!ok(b)) return;
     const add=n => { if (fogOn || n.infra) ghost.set(n.nid,n); };
     if (onSet.has(a.nid) && !onSet.has(b.nid) && b.fl!==cur) add(b); else if (onSet.has(b.nid) && !onSet.has(a.nid) && a.fl!==cur) add(a); });
-  return {TP,S,fogOn,on,onSet,ghosts:Array.from(ghost.values())};
+  // incertezza: dispositivi ed echi falsi dipendono dal "loro" router (il più vicino alla zona, a parità di piano): hackerato lui, la posizione diventa esatta e gli echi spariscono.
+  // I commlink dei PNG restano sempre incerti (si muovono).
+  const rts=TP.nodes.filter(n => n.kind==='rtr' && !n.priv).map(r => ({r,h:routerHalo(r)}));
+  const J=Math.max(1.5,3/CS);
+  const res=(x,y,fl) => { let b=null,bd=1e9; rts.forEach(({r,h}) => { const d=Math.hypot(h.x-x,h.y-y)/h.R+Math.abs(r.fl-fl)*.5; if (d<bd) { bd=d; b=r; } }); return !!b && S.st[b.nid]==='hacked'; };
+  const blur=(key,x,y) => { const h=hashStr(String(key)), a=(h%628)/100, m=J*(.4+((h>>>10)%60)/100); return [x+Math.cos(a)*m, y+Math.sin(a)*m]; };
+  const items=[], blurSet=new Set(), isz=n => n.infra ? Math.max(15,s*1.8) : Math.max(9,s);
+  const all=on.concat(Array.from(ghost.values()));
+  all.forEach(n => { const exact=n.infra||S.st[n.nid]==='hacked'||res(n.x,n.y,n.fl); if (!exact) blurSet.add(n.nid);
+    const p=exact?[n.x,n.y]:blur(n.tid||n.id,n.x,n.y); items.push({key:n.nid,x:p[0],y:p[1],rad:isz(n)*.6/s,w:n.infra?3:(S.st[n.nid]==='hacked'?2:1)}); });
+  const echoes=[], ez=Math.max(9,s);
+  netDecoys(cur).forEach(q => { const un=!res(q.x,q.y,cur); if (!un && !GM) return; const p=[q.x,q.y]; echoes.push({d:q,fake:true,real:null,unres:un,key:'e:'+q.id+q.x.toFixed(2)}); items.push({key:'e:'+q.id+q.x.toFixed(2),x:p[0],y:p[1],rad:ez*.6/s,w:1}); });
+  if (SHOWNPC) netLive(getFloor(cur),cur).forEach(d => { if (d.kind!=='com') return; const p=blur(d.id,d.x,d.y), k='e:'+d.id;
+    echoes.push({d,fake:false,real:[d.x,d.y],unres:true,key:k}); items.push({key:k,x:p[0],y:p[1],rad:ez*.6/s,w:1}); });
+  // anti-sovrapposizione: le icone vicine vengono allontanate (gli apparati di rete si spostano meno)
+  if (items.length > 1) {
+    const mr=items.reduce((a,q)=>Math.max(a,q.rad),0), G=Math.max(1,mr*2.2);
+    for (let it=0; it<8; it++) {
+      const grid=new Map(); items.forEach((q,i) => { const k=Math.floor(q.x/G)*100003+Math.floor(q.y/G); (grid.get(k)||grid.set(k,[]).get(k)).push(i); });
+      let moved=false;
+      items.forEach((a,i) => { const gx=Math.floor(a.x/G), gy=Math.floor(a.y/G);
+        for (let dx=-1;dx<=1;dx++) for (let dy=-1;dy<=1;dy++) { const c=grid.get((gx+dx)*100003+gy+dy); if (!c) continue;
+          c.forEach(j => { if (j<=i) return; const b=items[j]; let vx=b.x-a.x, vy=b.y-a.y, d=Math.hypot(vx,vy); const need=(a.rad+b.rad)*1.08;
+            if (d>=need) return; if (d<1e-6) { const an=(i*2.4+j); vx=Math.cos(an); vy=Math.sin(an); d=1; }
+            const push=need-d, ux=vx/d, uy=vy/d, wa=b.w/(a.w+b.w), wb=a.w/(a.w+b.w);
+            a.x-=ux*push*wa; a.y-=uy*push*wa; b.x+=ux*push*wb; b.y+=uy*push*wb; moved=true; }); } });
+      if (!moved) break;
+    }
+  }
+  const pos=new Map(items.map(q => [q.key,[q.x,q.y]]));
+  echoes.forEach(E => { E.pos=pos.get(E.key); });
+  const dp=n => pos.get(n.nid)||[n.x,n.y];
+  return {TP,S,fogOn,on,onSet,ghosts:Array.from(ghost.values()),dp,res,blur,J,echoes,isBlur:n=>blurSet.has(n.nid)};
 }
 function mapPick(cx,cy){
   const wx=(cx-v2.ox)/v2.s, wy=(cy-v2.oy)/v2.s, M=netMapNodes(), R=Math.max(1,12/v2.s); let best=null,bd=1e9;
-  M.on.concat(M.ghosts).forEach(n => { const d=Math.hypot(n.x-wx,n.y-wy); if (d<R && d<bd) { bd=d; best=n; } });
+  M.on.concat(M.ghosts).forEach(n => { const p=M.dp(n), d=Math.hypot(p[0]-wx,p[1]-wy); if (d<R && d<bd) { bd=d; best=n; } });
   return best;
 }
 function drawNetMap(f,s){
@@ -2467,9 +2499,9 @@ function drawNetMap(f,s){
   const sy=((T*0.18)%1)*H2, bh=H2*0.06, gr=ctx.createLinearGradient(0,sy-bh,0,sy+bh);
   gr.addColorStop(0,'rgba(0,255,242,0)'); gr.addColorStop(.5,'rgba(0,255,242,0.10)'); gr.addColorStop(1,'rgba(0,255,242,0)');
   ctx.fillStyle=gr; ctx.fillRect(0,sy-bh,W2,bh*2);
-  const M=netMapNodes(), TP=M.TP, S=M.S, fogOn=M.fogOn, tn=performance.now()/1000, sel=topoSel;
+  const M=netMapNodes(), TP=M.TP, S=M.S, fogOn=M.fogOn, tn=performance.now()/1000, sel=topoSel, P=n=>M.dp(n);
   const present=new Set(M.on.concat(M.ghosts).map(n=>n.nid));
-  // aloni di copertura dei router (segnale ambientale, come prima)
+  // aloni di copertura dei router (segnale ambientale)
   TP.nodes.filter(n => n.kind==='rtr' && !n.priv).forEach(r => {
     const df=Math.abs(r.fl-cur); if (df>2) return;
     const k=[1,.55,.3][df], h=routerHalo(r), X=h.x*s, Y=h.y*s, R=h.R*s;
@@ -2477,6 +2509,16 @@ function drawNetMap(f,s){
     ctx.globalCompositeOperation='screen'; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(X,Y,R,0,7); ctx.fill(); ctx.globalCompositeOperation='source-over';
     for (let q=0;q<2;q++) { const ph=(T*.35+q*.5+(hashStr(r.nid)%100)/100)%1; ctx.strokeStyle='rgba(0,255,242,'+(.3*k*(1-ph)).toFixed(3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(X,Y,R*ph,0,7); ctx.stroke(); }
   });
+  // echi: commlink dei PNG ed echi falsi (solo dove il router di zona non è ancora hackerato; i commlink restano ma diventano esatti)
+  const lbl=(t,X,Y,r,col) => { if (s<8) return; ctx.font=`${Math.max(8,Math.min(10,s*.8))}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(t,X,Y+r+2); ctx.fillStyle=col; ctx.fillText(t,X,Y+r+2); ctx.textBaseline='middle'; };
+  const echo=(d,pos,real,fake,unres) => {
+    const col=(fake&&GM)?'#6a6660':NET_INFO[d.kind].c, X=pos[0]*s, Y=pos[1]*s, al=fake?(GM?.55:.65+.3*Math.sin(T*1.1+d.ph)):1, isz=Math.max(9,s), r=Math.max(3.5,isz*.5);
+    if (unres) { ctx.globalAlpha=al*.35; ctx.strokeStyle=col; ctx.lineWidth=1; ctx.setLineDash([2,3]); ctx.beginPath(); ctx.arc(X,Y,M.J*s,0,7); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.globalAlpha=al; ctx.shadowColor=col; ctx.shadowBlur=5; netIcon(d,X,Y,isz,col); ctx.shadowBlur=0;
+    if (GM && real) { ctx.globalAlpha=.8; ctx.fillStyle='#fff'; ctx.fillRect(real[0]*s-1.5,real[1]*s-1.5,3,3); ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(real[0]*s,real[1]*s); ctx.lineTo(X,Y); ctx.stroke(); }
+    ctx.globalAlpha=al; lbl(d.id+((fake&&GM)?' ?':''),X,Y,r,col); ctx.globalAlpha=1;
+  };
+  M.echoes.forEach(E => { if (E.fake && !GM && Math.sin(T*1.1+E.d.ph)<=-.3) return; echo(E.d,E.pos,E.real,E.fake,E.unres); });
   // collegamenti: pieni e luminosi = esplorati, tratteggiati = individuati da esplorare (rossi se portano a un blocco)
   TP.edges.forEach(e => {
     if (!present.has(e.a) || !present.has(e.b) || !(M.onSet.has(e.a)||M.onSet.has(e.b))) return;
@@ -2485,15 +2527,18 @@ function drawNetMap(f,s){
     if (explored) { lw=Math.max(2,s*.28); al=1; glow=7; }
     else if (fogOn) { col=(sa==='protected'||sb==='protected')?'#ff5a5a':'#bfe9ff'; lw=Math.max(1.3,s*.15); dash=[5,5]; al=.9; }
     else { lw=Math.max(1,s*.12); al=.45; }
+    const pa=P(na), pb=P(nb);
     ctx.globalAlpha=(na.fl!==cur||nb.fl!==cur)?al*.6:al; ctx.strokeStyle=hl?'#ffffff':col; ctx.lineWidth=lw; ctx.setLineDash(dash); ctx.lineDashOffset=dash.length?-tn*8:0; ctx.shadowColor=col; ctx.shadowBlur=glow;
-    ctx.beginPath(); ctx.moveTo(na.x*s,na.y*s); ctx.lineTo(nb.x*s,nb.y*s); ctx.stroke(); ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.moveTo(pa[0]*s,pa[1]*s); ctx.lineTo(pb[0]*s,pb[1]*s); ctx.stroke(); ctx.shadowBlur=0;
   });
   ctx.setLineDash([]); ctx.lineDashOffset=0; ctx.globalAlpha=1;
   // nodi
   const drawNode=(n,ghost) => {
-    const st=NH.state(S,n.nid), inf=!!n.infra, X=n.x*s, Y=n.y*s, isz=inf?Math.max(15,s*1.8):Math.max(9,s), r=Math.max(3.5,isz*.5), col=NET_INFO[n.kind].c;
-    const block=NH.isGate(n)&&(st==='protected'||st==='spotted'), hot=(n.nid===sel||n.nid===netHoverId);
+    const st=NH.state(S,n.nid), inf=!!n.infra, p=P(n), X=p[0]*s, Y=p[1]*s, isz=inf?Math.max(15,s*1.8):Math.max(9,s), r=Math.max(3.5,isz*.5), col=NET_INFO[n.kind].c;
+    const block=NH.isGate(n)&&(st==='protected'||st==='spotted'), hot=(n.nid===sel||n.nid===netHoverId), unres=M.isBlur(n);
     let al=ghost?.5:1; if (st==='unid') al*=.3; else if (st!=='hacked') al*=.8;
+    if (unres) { ctx.globalAlpha=al*.35; ctx.strokeStyle=col; ctx.lineWidth=1; ctx.setLineDash([2,3]); ctx.beginPath(); ctx.arc(X,Y,M.J*s,0,7); ctx.stroke(); ctx.setLineDash([]);
+      if (GM) { ctx.globalAlpha=.8; ctx.fillStyle='#fff'; ctx.fillRect(n.x*s-1.5,n.y*s-1.5,3,3); ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(n.x*s,n.y*s); ctx.lineTo(X,Y); ctx.stroke(); } }
     ctx.globalAlpha=al; ctx.shadowColor=col; ctx.shadowBlur=st==='hacked'?10:4; netIcon(n,X,Y,isz,col); ctx.shadowBlur=0;
     if (block) { ctx.strokeStyle='#ff3b3b'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,r+4+1.5*Math.sin(tn*5),0,7); ctx.stroke(); drawLock(X+r+3,Y-r-1,'#ff3b3b'); }
     else if (st==='hacked') { ctx.fillStyle='#0a0908'; ctx.strokeStyle='#7cff4a'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(X+r,Y-r,5,0,7); ctx.fill(); ctx.stroke();
@@ -2510,18 +2555,18 @@ function drawNetMap(f,s){
   M.on.slice().sort((a,b)=>(a.infra?1:0)-(b.infra?1:0)).forEach(n => drawNode(n,false));
   const tgt=TP.byId.get(TP.targetId);
   if (tgt && tgt.fl===cur && (!fogOn||NH.visible(S,tgt.nid))) {
-    const X=tgt.x*s, Y=tgt.y*s, rr=Math.max(9,s)*.5+10+1.5*Math.sin(tn*3);
+    const p=P(tgt), X=p[0]*s, Y=p[1]*s, rr=Math.max(9,s)*.5+10+1.5*Math.sin(tn*3);
     ctx.strokeStyle='#e8c93a'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,rr,0,7); ctx.stroke(); ctx.lineWidth=1; ctx.beginPath(); ctx.arc(X,Y,rr+4,0,7); ctx.stroke();
     ctx.font='bold 10px "Courier New",monospace'; ctx.textAlign='center'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)';
     const t='◎ SERVER CENTRALE'+(NH.state(S,tgt.nid)==='hacked'?' · COMPROMESSO':''); ctx.strokeText(t,X,Y-rr-8); ctx.fillStyle='#e8c93a'; ctx.fillText(t,X,Y-rr-8);
   }
   const cn=S.cursor&&TP.byId.get(S.cursor);
   if (cn && cn.fl===cur && (!fogOn||NH.visible(S,cn.nid))) {
-    const ph=(tn*.9)%1, X=cn.x*s, Y=cn.y*s; ctx.strokeStyle='rgba(0,255,242,'+(1-ph).toFixed(2)+')'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,10+ph*18,0,7); ctx.stroke();
+    const p=P(cn), ph=(tn*.9)%1, X=p[0]*s, Y=p[1]*s; ctx.strokeStyle='rgba(0,255,242,'+(1-ph).toFixed(2)+')'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,10+ph*18,0,7); ctx.stroke();
     ctx.font='bold 10px "Courier New",monospace'; ctx.textAlign='center'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText('▶ TU SEI QUI',X,Y-24); ctx.fillStyle='#00fff2'; ctx.fillText('▶ TU SEI QUI',X,Y-24);
   }
   const fn=S.fx&&TP.byId.get(S.fx.id);
-  if (fn && fn.fl===cur) { const age=tn-S.fx.t; if (age>=0 && age<1.3) { ctx.strokeStyle=(S.fx.ok?'rgba(124,255,74,':'rgba(255,59,59,')+(1-age/1.3).toFixed(2)+')'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(fn.x*s,fn.y*s,8+age*40,0,7); ctx.stroke(); } }
+  if (fn && fn.fl===cur) { const age=tn-S.fx.t, p=P(fn); if (age>=0 && age<1.3) { ctx.strokeStyle=(S.fx.ok?'rgba(124,255,74,':'rgba(255,59,59,')+(1-age/1.3).toFixed(2)+')'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(p[0]*s,p[1]*s,8+age*40,0,7); ctx.stroke(); } }
   ctx.restore();
 }
 
