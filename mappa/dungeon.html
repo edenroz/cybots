@@ -62,6 +62,14 @@
   #camwall-close:hover{border-color:var(--red);color:var(--red);}
   #camgrid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;align-content:start;margin-top:8px;color:var(--grey);font-size:12px;}
   .camcv{width:100%;height:auto;border:1px solid rgba(0,255,242,.4);background:#050807;display:block;}
+  #side .hk-row{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap;}
+  #side .hk-btn{background:rgba(242,237,228,.08);border:1px solid rgba(242,237,228,.4);color:var(--white);font-family:inherit;font-size:11px;padding:5px 10px;cursor:pointer;letter-spacing:1px;}
+  #side .hk-btn:hover:not(:disabled){border-color:var(--cyan);color:var(--cyan);}
+  #side .hk-btn:disabled{opacity:.3;cursor:not-allowed;}
+  #side .hk-go{border-color:#ff3b3b;color:#ff3b3b;font-weight:bold;}
+  #side .hk-go:hover:not(:disabled){background:#ff3b3b;color:#0a0908!important;border-color:#ff3b3b!important;}
+  #side .hk-in{width:54px;background:rgba(242,237,228,.06);border:1px solid rgba(242,237,228,.3);color:var(--white);font-family:inherit;font-size:11px;padding:3px 5px;}
+  #side .hk-log{margin-top:6px;}
   @media (max-width:640px){#camwall{left:8px;right:8px;top:90px;bottom:70px;}}
   @media (max-width:640px){#ctl{left:8px;right:8px;width:auto;bottom:calc(78px + 31vh);}}
   @media (max-width:640px){#side{top:auto;bottom:70px;right:8px;left:8px;width:auto;max-height:30vh;}#title{max-width:90vw}}
@@ -1797,6 +1805,7 @@ const NET_INFO = {
   rtr: {p:'RTR', n:'Router',   c:'#ffffff', o:-3, ice:[3,5], f:'Instradamento tra segmenti e dorsale.'},
   swt: {p:'SWT', n:'Switch',   c:'#8cf0ff', o:-2, ice:[2,4], f:'Aggrega i dispositivi di un segmento.'},
   fwl: {p:'FWL', n:'Firewall', c:'#ff5a5a', o:-1, ice:[4,5], f:'Perimetro di una rete protetta.'},
+  ice: {p:'ICE', n:'ICE corporativo', c:'#ff3b3b', o:-0.5, ice:[4,5], f:'Contromisura attiva: blocca l\'accesso al segmento e va neutralizzata prima di proseguire.'},
   com: {p:'COM', n:'Commlink / impianti',          c:'#ff2ee6', o:13, ice:[1,4], f:'Comunicazioni e cyberware del PNG.'}
 };
 const NET_PROP = {rack:'srv', terminal:'trm', desk:'wrk', tv:'tv', vend:'vnd', machine:'mch', car:'veh'};
@@ -1895,10 +1904,336 @@ function netIcon(d,X,Y,s,col){
     case 'rtr': ctx.beginPath(); ctx.arc(X,Y,r*.85,0,7); ctx.stroke(); [[0,-1],[1,0],[0,1],[-1,0]].forEach(([a,b]) => { ctx.beginPath(); ctx.moveTo(X+a*r*.2,Y+b*r*.2); ctx.lineTo(X+a*r*.75,Y+b*r*.75); ctx.stroke(); ctx.fillRect(X+a*r*.75-1.5,Y+b*r*.75-1.5,3,3); }); break;
     case 'swt': ctx.strokeRect(X-r,Y-r*.5,r*2,r); for (let q=0;q<4;q++) ctx.fillRect(X-r*.8+q*r*.5,Y-r*.2,r*.3,r*.4); break;
     case 'fwl': ctx.beginPath(); ctx.moveTo(X-r,Y-r*.7); ctx.lineTo(X+r,Y-r*.7); ctx.lineTo(X+r,Y+r*.3); ctx.lineTo(X,Y+r); ctx.lineTo(X-r,Y+r*.3); ctx.closePath(); ctx.stroke(); ctx.fillRect(X-r*.5,Y-r*.2,r,r*.25); break;
+    case 'ice': ctx.beginPath(); for (let k=0;k<6;k++) { const a=k*1.047+.52; k?ctx.lineTo(X+Math.cos(a)*r*1.1,Y+Math.sin(a)*r*1.1):ctx.moveTo(X+Math.cos(a)*r*1.1,Y+Math.sin(a)*r*1.1); } ctx.closePath(); ctx.stroke(); ctx.fillRect(X-r*.12,Y-r*.55,r*.24,r*.65); ctx.fillRect(X-r*.12,Y+r*.3,r*.24,r*.24); break;
     case 'lgt': ctx.beginPath(); ctx.arc(X,Y,r*.45,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(X,Y,r*.9,0,7); ctx.stroke(); break;
     case 'mch': case 'veh': ctx.beginPath(); ctx.arc(X,Y,r*.7,0,7); ctx.stroke(); for (let k=0;k<6;k++) { const a=k*1.047+T*.5; ctx.beginPath(); ctx.moveTo(X+Math.cos(a)*r*.7,Y+Math.sin(a)*r*.7); ctx.lineTo(X+Math.cos(a)*r*1.05,Y+Math.sin(a)*r*1.05); ctx.stroke(); } break;
     default: ctx.beginPath(); ctx.arc(X,Y,r*.8,0,7); ctx.stroke(); ctx.beginPath(); ctx.arc(X,Y,r*.3,0,7); ctx.fill();   // com
   }
+}
+
+/* =========================================================================
+   NETHACK — LOGICA DI HACKING E SCOPERTA PROGRESSIVA DELLA LAN
+   Nessuna dipendenza da DOM/canvas: lavora solo sul grafo della topologia
+   (TP = {nodes, edges, byId, coreId, tier, targetId}) ed è separata dal disegno.
+   Stati di un nodo: unid (non identificato, invisibile) · spotted (individuato) ·
+   protected (firewall/ICE individuato e ancora attivo: blocca la progressione) · hacked.
+   Regola di scoperta: hackerare un nodo rende visibili i suoi vicini diretti. I firewall/ICE
+   sono i soli varchi verso i segmenti protetti: finché non sono hackerati, ciò che sta oltre
+   non viene mai rivelato (niente dispositivi, niente collegamenti).
+   Difficoltà: DR = 8 + peso rete + peso tipo + modificatori, limitata a 8..18 (10 = normale).
+   ========================================================================= */
+const NH = (function(){
+  const GATE = {fwl:1, ice:1};
+  const TIERS = [{n:'Domestica / poco protetta',w:0},{n:'Commerciale',w:1},{n:'Aziendale',w:3},{n:'Corporativa / militare',w:5}];
+  const TYPE_W = {lgt:0,tv:0,iot:0, trm:1,wrk:1,vnd:1, swt:2,mch:2,veh:2,elv:2,cam:2,lck:2, acc:3,trt:3,rtr:3, sec:4,srv:4,fwl:4, ice:5};
+  const LABEL = {unid:'non identificato', spotted:'individuato', hacked:'hackerato', protected:'protetto'};
+  const isGate = n => !!(n && GATE[n.kind]);
+  const clamp = (a,b,v) => Math.max(a,Math.min(b,v));
+
+  function tierFor(o){
+    let s = ({residential:0, mixed:1, office:2})[o.kind]; if (s === undefined) s = 1;
+    if ((o.floors||0) >= 25) s++;
+    if ((o.firewalls||0) >= 3) s++;
+    const sec = o.sec === undefined ? 1 : o.sec;
+    if (sec < 0.5) s--; else if (sec >= 1.5) s++;
+    return clamp(0,3,s);
+  }
+  // server centrale: preferenza al segmento riservato, poi ICE più alto, piano più basso; senza server: il router core
+  function pickTarget(TP){
+    const c = TP.nodes.filter(n => n.kind==='srv' && !n.infra && !n.secret)
+      .sort((a,b) => ((a.seg==='rst'?0:1)-(b.seg==='rst'?0:1)) || ((b.ice||0)-(a.ice||0)) || (a.fl-b.fl) || (a.nid<b.nid?-1:1));
+    return c.length ? c[0].nid : TP.coreId;
+  }
+  function difficulty(TP,n){
+    const tier = TP.tier||0, net = TIERS[tier].w, isT = TP.targetId === n.nid;
+    let type = n.kind==='com' ? 1+Math.min(3,Math.ceil((n.ice||0)/2)) : (TYPE_W[n.kind] !== undefined ? TYPE_W[n.kind] : 2);
+    if (isT) type = 5;
+    const ice = n.ice||0;
+    const mod = (n.secret?1:0) + (n.seg==='rst'?1:0) + (ice>=4?1:ice<=0?-1:0) + (n.mod||0) + (isT?1:0);
+    const raw = 8 + net + type + mod;
+    return {dr:clamp(8,18,raw), raw, base:8, net, type, mod, tier};
+  }
+
+  function create(TP){
+    const adj = new Map();
+    TP.nodes.forEach(n => adj.set(n.nid,[]));
+    TP.edges.forEach(e => { if (adj.has(e.a) && adj.has(e.b)) { adj.get(e.a).push({id:e.b,t:e.t}); adj.get(e.b).push({id:e.a,t:e.t}); } });
+    const S = {TP, adj, st:{}, gm:false, cursor:null, log:[], tries:{}, entries:[], forced:[], fx:null};
+    // "esterno": raggiungibile dal core senza attraversare firewall/ICE (i varchi vengono raggiunti ma non espansi)
+    const out = new Set([TP.coreId]), q = [TP.coreId];
+    while (q.length) { const a = q.shift(); if (a!==TP.coreId && isGate(TP.byId.get(a))) continue;
+      adj.get(a).forEach(o => { if (!out.has(o.id)) { out.add(o.id); q.push(o.id); } }); }
+    S.outer = out;
+    return S;
+  }
+  const state = (S,id) => S.st[id] || 'unid';
+  const shielded = (S,id) => !S.outer.has(id);
+  function visible(S,id){
+    const s = S.st[id]; if (!s || s==='unid') return false;
+    if (!S.gm) { const n = S.TP.byId.get(id); if (n && n.secret) return false; }
+    return true;
+  }
+  const canHack = (S,id) => { const s = S.st[id]; return visible(S,id) && (s==='spotted' || s==='protected'); };
+  function spot(S,id){ if (S.st[id]) return false; S.st[id] = isGate(S.TP.byId.get(id)) ? 'protected' : 'spotted'; return true; }
+  function reveal(S,id){ const out=[]; (S.adj.get(id)||[]).forEach(o => { if (spot(S,o.id)) out.push(o.id); }); return out; }
+
+  // punto d'ingresso fisico: solo dispositivi "esterni" (mai dietro un firewall)
+  function entry(S,ids){
+    const ok=[], refused=[];
+    ids.forEach(id => { const n = S.TP.byId.get(id);
+      if (!n || isGate(n) || n.secret || !S.outer.has(id)) { refused.push(id); return; }
+      spot(S,id); ok.push(id); if (!S.entries.includes(id)) S.entries.push(id); });
+    return {ok, refused};
+  }
+  function forceSpot(S,id){ if (!S.TP.byId.has(id)) return false; if (!S.forced.includes(id)) S.forced.push(id); return spot(S,id); }
+
+  function rollCheck(skill,rng){
+    const d1 = 1+Math.floor(rng()*10), dice=[d1]; let total=d1, explode=false;
+    if (d1===10) { const d2 = 1+Math.floor(rng()*10); dice.push(d2); total+=d2; explode=true; }
+    return {dice, total:total+skill, explode, fumble:d1===1};
+  }
+  function attempt(S,id,total,o){
+    o = o||{}; const n = S.TP.byId.get(id);
+    if (!n || !canHack(S,id)) return {ok:false, err:'Bersaglio non valido: serve un nodo individuato e non ancora hackerato.'};
+    const dr = difficulty(S.TP,n).dr; S.tries[id] = (S.tries[id]||0)+1;
+    const ok = !o.fumble && total >= dr; let newly = [];
+    if (ok) { S.st[id]='hacked'; S.cursor=id; newly = reveal(S,id).filter(x => visible(S,x)); }
+    S.log.push({id, ok, total, dr, text:o.text||'', fumble:!!o.fumble, newly:newly.length, t:Date.now()});
+    if (S.log.length > 60) S.log.shift();
+    return {ok, dr, total, newly, fumble:!!o.fumble};
+  }
+  function neighbors(S,id){ return (S.adj.get(id)||[]).map(o => o.id).filter(x => visible(S,x)); }
+  function summary(S){
+    let hacked=0, spotted=0, gates=0;
+    S.TP.nodes.forEach(n => { if (!visible(S,n.nid)) return; const s=S.st[n.nid]; if (s==='hacked') hacked++; else { spotted++; if (s==='protected') gates++; } });
+    return {hacked, spotted, gates, total:S.TP.nodes.length};
+  }
+  // distanza dal punto più vicino già noto al server centrale: salti e varchi (firewall/ICE) ancora da superare
+  function distance(S){
+    const T = S.TP.targetId; if (!T) return null;
+    if (S.st[T]==='hacked') return {reached:true};
+    const prev = new Map([[T,null]]), d = new Map([[T,0]]), q=[T];
+    while (q.length) { const a=q.shift(); S.adj.get(a).forEach(o => { if (!d.has(o.id)) { d.set(o.id,d.get(a)+1); prev.set(o.id,a); q.push(o.id); } }); }
+    let src = S.TP.nodes.filter(n => visible(S,n.nid) && S.st[n.nid]==='hacked');
+    if (!src.length) src = S.TP.nodes.filter(n => visible(S,n.nid));
+    let best=null; src.forEach(n => { if (d.has(n.nid) && (!best || d.get(n.nid) < d.get(best.nid))) best=n; });
+    if (!best) return null;
+    let gates=0, c=best.nid; while (c!==null && c!==T) { const n=S.TP.byId.get(c); if (isGate(n) && S.st[c]!=='hacked') gates++; c=prev.get(c); }
+    return {reached:false, hops:d.get(best.nid), gates, from:best.nid};
+  }
+  // controllo indipendente: ciò che è visibile deve essere raggiungibile dal core passando solo per varchi già hackerati
+  function openSet(S){
+    const op = new Set([S.TP.coreId].concat(S.forced)), q=Array.from(op);
+    while (q.length) { const a=q.shift(), n=S.TP.byId.get(a);
+      if (a!==S.TP.coreId && !S.forced.includes(a) && isGate(n) && S.st[a]!=='hacked') continue;
+      S.adj.get(a).forEach(o => { if (!op.has(o.id)) { op.add(o.id); q.push(o.id); } }); }
+    return op;
+  }
+  function checkInvariant(S){
+    const op = openSet(S), bad = [];
+    S.TP.nodes.forEach(n => { const s = S.st[n.nid]; if (!s) return;
+      if (!op.has(n.nid)) bad.push(n.nid+' fuori dal perimetro aperto');
+      if (isGate(n) && s==='spotted') bad.push(n.nid+' varco in stato spotted');
+      if (!isGate(n) && s==='protected') bad.push(n.nid+' non-varco in stato protected'); });
+    return bad;
+  }
+  function serialize(S){ return {st:S.st, cursor:S.cursor, log:S.log.slice(-40), tries:S.tries, entries:S.entries, forced:S.forced}; }
+  function restore(S,d){
+    if (!d || !d.st) return false; let n=0;
+    Object.keys(d.st).forEach(id => { if (S.TP.byId.has(id) && LABEL[d.st[id]]) { S.st[id]=d.st[id]; n++; } });
+    S.cursor = S.TP.byId.has(d.cursor) ? d.cursor : null;
+    S.log = Array.isArray(d.log) ? d.log : []; S.tries = d.tries||{};
+    S.entries = (d.entries||[]).filter(i => S.TP.byId.has(i)); S.forced = (d.forced||[]).filter(i => S.TP.byId.has(i));
+    return n>0;
+  }
+
+  /* rete di esempio: server centrale, 3 router, terminali, 2 firewall di segmento + 1 ICE corporativo */
+  function sampleNetwork(){
+    const nodes=[], edges=[], byId=new Map();
+    const N = (id,kind,o) => { const n=Object.assign({nid:id,id,kind,infra:['rtr','swt','fwl','ice'].includes(kind),ice:2,fl:0,x:0,y:0,seg:'corp',roomName:'Corridoio'},o||{}); nodes.push(n); byId.set(id,n); return n; };
+    const E = (a,b,t) => edges.push({a,b,t});
+    N('RTR-CORE','rtr',{seg:'bb',ice:4}); N('RTR-01','rtr',{seg:'bb',ice:3}); N('RTR-02','rtr',{seg:'bb',ice:3});
+    E('RTR-01','RTR-CORE','bb'); E('RTR-02','RTR-CORE','bb'); E('RTR-01','RTR-02','bb');
+    N('SW-CORP','swt',{ice:2}); E('SW-CORP','RTR-01','up'); E('SW-CORP','RTR-02','red');
+    [['TRM-01','trm',2],['TRM-02','trm',1],['WRK-01','wrk',2],['TV-01','tv',0]].forEach(([i,k,c]) => { N(i,k,{ice:c}); E(i,'SW-CORP','dev'); });
+    N('SW-OPS','swt',{seg:'bld',ice:2}); E('SW-OPS','RTR-02','up');
+    [['VND-01','vnd',1],['IOT-01','iot',0]].forEach(([i,k,c]) => { N(i,k,{ice:c,seg:'bld'}); E(i,'SW-OPS','dev'); });
+    N('FW-SEC','fwl',{seg:'sec',ice:4}); N('PRT-SEC','rtr',{seg:'sec',ice:3,priv:true}); N('SW-SEC','swt',{seg:'sec',ice:3});
+    E('FW-SEC','RTR-CORE','bb'); E('FW-SEC','PRT-SEC','priv'); E('SW-SEC','PRT-SEC','up');
+    ['CAM-01','CAM-02'].forEach(i => { N(i,'cam',{seg:'sec',ice:3}); E(i,'SW-SEC','dev'); });
+    N('FW-SRV','fwl',{seg:'srv',ice:4}); N('ICE-01','ice',{seg:'srv',ice:5}); N('PRT-SRV','rtr',{seg:'srv',ice:3,priv:true}); N('SW-SRV','swt',{seg:'srv',ice:3});
+    E('FW-SRV','RTR-CORE','bb'); E('FW-SRV','ICE-01','priv'); E('ICE-01','PRT-SRV','priv'); E('SW-SRV','PRT-SRV','up');
+    N('SRV-CENTRAL','srv',{seg:'srv',ice:5}); N('SRV-02','srv',{seg:'srv',ice:4}); E('SRV-CENTRAL','SW-SRV','dev'); E('SRV-02','SW-SRV','dev');
+    return {nodes, edges, byId, coreId:'RTR-CORE', tier:2, targetId:'SRV-CENTRAL'};
+  }
+
+  function selfTest(){
+    const lines=[]; let passed=0, total=0;
+    const t = (name,cond) => { total++; if (cond) passed++; lines.push((cond?'  ok  ':' FAIL ')+name); };
+    const TP = sampleNetwork(), S = create(TP), V = id => visible(S,id), H = (id,tot) => attempt(S,id,tot===undefined?99:tot,{text:'test'});
+    t('rete di esempio: 1 server centrale, 3 router, >=4 terminali, >=2 firewall, 1 ICE',
+      TP.nodes.filter(n=>n.nid==='SRV-CENTRAL').length===1 && TP.nodes.filter(n=>n.kind==='rtr'&&!n.priv).length===3 && TP.nodes.filter(n=>['trm','wrk','tv'].includes(n.kind)).length>=4 && TP.nodes.filter(n=>n.kind==='fwl').length>=2 && TP.nodes.filter(n=>n.kind==='ice').length===1);
+    t('all\'inizio nessun nodo è visibile', TP.nodes.every(n => !V(n.nid)));
+    ['CAM-02','SRV-CENTRAL','SW-SRV','PRT-SRV','ICE-01','FW-SRV'].forEach(i => t('ingresso fisico rifiutato su dispositivo protetto: '+i, entry(S,[i]).refused.length===1 && !V(i)));
+    t('ingresso valido su TV-01', entry(S,['TV-01']).ok.length===1 && state(S,'TV-01')==='spotted');
+    t('solo TV-01 visibile', TP.nodes.filter(n=>V(n.nid)).length===1);
+    t('hack di un nodo non individuato rifiutato', !H('SW-SEC').ok && !V('SW-SEC'));
+    t('l\'hack è esplicito: lo stato non cambia da solo', state(S,'TV-01')==='spotted');
+    t('tiro basso fallisce e non rivela nulla', !H('TV-01',0).ok && state(S,'TV-01')==='spotted' && !V('SW-CORP'));
+    t('nat 1 (fumble) fallisce anche con totale alto', !attempt(S,'TV-01',99,{fumble:true}).ok);
+    let r=H('TV-01'); t('TV-01 hackerato: si vede solo lo switch', r.ok && state(S,'TV-01')==='hacked' && V('SW-CORP') && !V('RTR-01') && !V('TRM-01') && S.cursor==='TV-01');
+    H('SW-CORP'); t('switch hackerato: router, terminali e dorsale ridondante visibili', V('RTR-01') && V('RTR-02') && V('TRM-01') && V('WRK-01'));
+    t('router non ancora hackerati: core e firewall nascosti', !V('RTR-CORE') && !V('FW-SEC') && !V('SW-OPS'));
+    H('RTR-01'); t('RTR-01 hackerato: appare il core', V('RTR-CORE') && !V('FW-SEC'));
+    H('RTR-CORE');
+    t('core hackerato: firewall visibili e "protetti"', V('FW-SEC') && V('FW-SRV') && state(S,'FW-SEC')==='protected' && state(S,'FW-SRV')==='protected');
+    ['PRT-SEC','SW-SEC','CAM-01','CAM-02','ICE-01','PRT-SRV','SW-SRV','SRV-CENTRAL','SRV-02'].forEach(i => t('oltre i firewall non visibile: '+i, !V(i)));
+    t('nessun collegamento verso i segmenti protetti', checkInvariant(S).length===0);
+    t('hack di un nodo protetto non visibile rifiutato', !H('SRV-CENTRAL').ok && !H('CAM-02').ok);
+    t('FW-SEC: tiro basso fallisce, resta bloccato', !H('FW-SEC',3).ok && state(S,'FW-SEC')==='protected' && !V('PRT-SEC'));
+    t('FW-SEC hackerato: appare PRT-SEC ma non oltre', H('FW-SEC').ok && V('PRT-SEC') && !V('SW-SEC') && !V('CAM-01'));
+    t('FW-SEC non apre il segmento server', !V('PRT-SRV') && !V('SRV-CENTRAL') && !V('ICE-01') && !V('FW-SRV')===false);
+    H('PRT-SEC'); H('SW-SEC'); t('segmento sicurezza esplorabile dopo il firewall', V('CAM-01') && V('CAM-02') && !V('SW-SRV'));
+    t('FW-SRV hackerato: appare l\'ICE, non il segmento', H('FW-SRV').ok && V('ICE-01') && state(S,'ICE-01')==='protected' && !V('PRT-SRV') && !V('SW-SRV') && !V('SRV-CENTRAL'));
+    t('l\'ICE blocca anche con firewall superato', !V('SRV-02') && checkInvariant(S).length===0);
+    let d=distance(S); t('distanza dal server centrale: 1 blocco (ICE) da superare', d && !d.reached && d.gates===1 && d.hops>=3);
+    t('ICE hackerato: appare PRT-SRV ma non i server', H('ICE-01').ok && V('PRT-SRV') && !V('SW-SRV') && !V('SRV-CENTRAL'));
+    H('PRT-SRV'); t('PRT-SRV hackerato: appare lo switch server', V('SW-SRV') && !V('SRV-CENTRAL'));
+    H('SW-SRV'); t('switch server hackerato: appaiono i server', V('SRV-CENTRAL') && V('SRV-02'));
+    t('server centrale hackerato = raggiunto', H('SRV-CENTRAL').ok && distance(S).reached===true && checkInvariant(S).length===0);
+    t('i nodi hackerati non sono più bersagli', !canHack(S,'TV-01') && !H('TV-01').ok);
+    // difficoltà
+    const dr = id => difficulty(TP,TP.byId.get(id)).dr;
+    t('DR ordinata per tipo: terminale < router < firewall < ICE <= server centrale', dr('TRM-01')<dr('RTR-01') && dr('RTR-01')<dr('FW-SEC') && dr('FW-SEC')<dr('ICE-01') && dr('ICE-01')<=dr('SRV-CENTRAL'));
+    t('server centrale = difficoltà massima della rete', TP.nodes.every(n => dr(n.nid)<=dr('SRV-CENTRAL')));
+    let inRange=true, mono=true;
+    for (let tr=0; tr<4; tr++) { TP.tier=tr; TP.nodes.forEach(n => { const v=dr(n.nid); if (v<8||v>18) inRange=false; });
+      if (tr && dr('TRM-01')<=0) mono=false; }
+    t('DR sempre tra 8 e 18, in tutte le classi di rete', inRange);
+    TP.tier=0; const a0=dr('FW-SEC'), a0t=dr('TV-01'); TP.tier=3; const a3=dr('FW-SEC'); TP.tier=1; const a1=dr('TRM-02');
+    t('DR cresce con la sicurezza della rete (stesso nodo)', a0<a3 && a0t===8);
+    t('DR 10 = difficoltà normale (terminale in rete commerciale)', a1===10);
+    TP.tier=2;
+    t('classi di rete: casa < ufficio < corporativa', tierFor({kind:'residential',floors:8,firewalls:0,sec:1})===0 && tierFor({kind:'office',floors:8,firewalls:1,sec:1})===2 && tierFor({kind:'office',floors:40,firewalls:4,sec:1})===3);
+    // fuzz: sequenze casuali di hack, l'invariante non deve mai rompersi
+    let rs=12345; const rnd=()=>{ rs=(rs*1103515245+12345)&0x7fffffff; return rs/0x7fffffff; }; let fuzzOk=true;
+    for (let run=0; run<60 && fuzzOk; run++) {
+      const S2=create(TP); entry(S2,[['TV-01','IOT-01','TRM-02','VND-01'][run%4]]);
+      for (let k=0;k<40;k++) { const c=TP.nodes.filter(n=>canHack(S2,n.nid)); if (!c.length) break;
+        attempt(S2,c[Math.floor(rnd()*c.length)].nid, rnd()<.7?99:0,{});
+        if (checkInvariant(S2).length) { fuzzOk=false; break; }
+        if (!S2.st['FW-SRV'] || S2.st['FW-SRV']!=='hacked') { if (['PRT-SRV','SW-SRV','SRV-CENTRAL','SRV-02','ICE-01'].some(i => visible(S2,i))) { fuzzOk=false; break; } }
+        if (S2.st['ICE-01']!=='hacked' && ['PRT-SRV','SW-SRV','SRV-CENTRAL','SRV-02'].some(i => visible(S2,i))) { fuzzOk=false; break; } }
+    }
+    t('fuzz: 60 sequenze casuali non violano mai i firewall/ICE', fuzzOk);
+    const S3=create(TP); S3.gm=true; forceSpot(S3,'SRV-CENTRAL');
+    t('il MASTER può forzare l\'individuazione di un nodo', visible(S3,'SRV-CENTRAL') && checkInvariant(S3).length===0);
+    const S4=create(TP); entry(S4,['TV-01']); attempt(S4,'TV-01',99,{}); const sv=JSON.stringify(serialize(S4)); const S5=create(TP);
+    t('salvataggio/ripristino dello stato', restore(S5,JSON.parse(sv)) && state(S5,'TV-01')==='hacked' && visible(S5,'SW-CORP'));
+    return {pass:passed===total, passed, total, lines};
+  }
+
+  return {TIERS, LABEL, isGate, tierFor, pickTarget, difficulty, create, state, shielded, isOuter:(S,id)=>S.outer.has(id), visible, canHack, entry, forceSpot, rollCheck, attempt, neighbors, summary, distance, checkInvariant, serialize, restore, sampleNetwork, selfTest};
+})();
+
+/* ---------- NETHACK: collegamento tra la logica (NH) e l'interfaccia ---------- */
+const HK_KEY = 'cydg-hack:' + SEED_HEX + (CUSTOM ? ':c' + hashStr(JSON.stringify(CUSTOM.raw)) : '');
+let HS = null, hackSkill = 8, hackManual = '';
+try { const v = parseInt(localStorage.getItem('cydg-hk-skill'),10); if (isFinite(v)) hackSkill = v; } catch(e) {}
+function hackSave(){ try { if (HS) localStorage.setItem(HK_KEY, JSON.stringify(NH.serialize(HS))); } catch(e) {} }
+function hackState(){
+  const TP = buildTopology();
+  if (!HS || HS.TP !== TP) {
+    HS = NH.create(TP); let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(HK_KEY) || 'null'); } catch(e) {}
+    if (!(saved && NH.restore(HS,saved))) hackScan(true);
+  }
+  HS.gm = GM;
+  return HS;
+}
+// scansione locale: i dispositivi "esterni" più vicini al gruppo diventano il punto d'ingresso nella LAN
+function hackScan(silent){
+  const S = HS || hackState(), t = fog.tok || {f:cur, x:CORE.x, y:CORE.y};
+  const c = S.TP.nodes.filter(n => !n.infra && !n.secret && NH.isOuter(S,n.nid))
+    .map(n => ({id:n.nid, d:Math.hypot(n.x-(t.x+.5), n.y-(t.y+.5))*CS + Math.abs(n.fl-t.f)*FLOOR_H*3})).sort((a,b) => a.d-b.d);
+  let pick = c.filter(q => q.d <= 18).slice(0,4); if (pick.length < 2) pick = c.slice(0,2);
+  const r = NH.entry(S, pick.map(q => q.id)); hackSave();
+  if (!silent) { toast(r.ok.length ? 'SCANSIONE: '+r.ok.length+' dispositivi in portata individuati.' : 'SCANSIONE: nessun dispositivo raggiungibile.'); if (!GM && TOPOV()) nvFit(); updateHud(); draw(); }
+  return r;
+}
+function doHack(){
+  const S = hackState(), id = topoSel;
+  if (!id || !NH.canHack(S,id)) { toast('Seleziona un nodo individuato (non ancora hackerato) e premi HACK.'); return; }
+  let total, fumble = false, txt;
+  if (hackManual !== '' && isFinite(+hackManual)) { total = +hackManual; txt = 'tiro manuale '+total; }
+  else { const r = NH.rollCheck(hackSkill, Math.random); total = r.total; fumble = r.fumble; txt = 'd10 '+r.dice.join('+')+' +'+hackSkill+' = '+total+(fumble?' (1 naturale)':''); }
+  hackManual = '';
+  const res = NH.attempt(S,id,total,{fumble,text:txt});
+  S.fx = {id, ok:res.ok, t:performance.now()/1000};
+  hackSave();
+  toast(res.ok ? id+' HACKERATO ('+total+' vs DR '+res.dr+') · '+res.newly.length+' nuovi nodi individuati' : id+': HACK FALLITO ('+total+' vs DR '+res.dr+')'+(fumble?' — fallimento critico':''));
+  if (res.ok && !GM) nvFit();
+  updateHud(); draw();
+}
+function hackReset(){
+  if (!confirm('Azzerare la scoperta della rete (stati, nodi individuati e log)?')) return;
+  try { localStorage.removeItem(HK_KEY); } catch(e) {}
+  HS = null; topoSel = null; hackState(); if (!GM) nvFit(); updateHud(); draw();
+}
+function drawLock(x,y,col){ ctx.save(); ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(x,y-1.5,3,Math.PI,0); ctx.stroke(); ctx.fillRect(x-4,y-1.5,8,6.5); ctx.restore(); }
+
+function renderHackPanel(list){
+  const S = hackState(), TP = S.TP, sm = NH.summary(S), dist = NH.distance(S), sel = topoSel && TP.byId.get(topoSel);
+  const mk = (tag,cls,txt) => { const e=document.createElement(tag); if (cls) e.className=cls; if (txt!==undefined) e.textContent=txt; return e; };
+  const sgn = v => (v>=0?'+':'')+v;
+  const head = mk('div','desc'); head.style.paddingLeft='6px';
+  head.textContent = 'RETE: '+NH.TIERS[TP.tier||0].n+' · compromessi '+sm.hacked+' · individuati '+sm.spotted+' · blocchi attivi '+sm.gates+(GM?' · nodi totali '+sm.total:'');
+  const tg = TP.byId.get(TP.targetId);
+  head.appendChild(mk('span','n', !dist ? 'Server centrale: nessun nodo noto da cui partire: usa SCANSIONE LOCALE.'
+    : dist.reached ? '✔ '+tg.id+' COMPROMESSO: obiettivo raggiunto.'
+    : 'Server centrale: a '+dist.hops+(dist.hops===1?' salto':' salti')+' dal nodo noto più vicino · '+dist.gates+(dist.gates===1?' blocco':' blocchi')+' (firewall/ICE) da superare.'));
+  head.appendChild(mk('span','n','━ esplorato · ┄ individuato, da esplorare · 🔒 firewall/ICE: blocca finché non è hackerato · ▶ posizione attuale'));
+  const r0 = mk('div','hk-row'), bs = mk('button','hk-btn','SCANSIONE LOCALE'); bs.title='Individua i dispositivi in portata del gruppo (punto d\'ingresso)'; bs.onclick=()=>hackScan(false); r0.appendChild(bs);
+  if (GM) { const br = mk('button','hk-btn','RESET RETE'); br.onclick=hackReset; r0.appendChild(br); }
+  head.appendChild(r0); list.appendChild(head);
+
+  if (sel && (GM || NH.visible(S,sel.nid))) {
+    const stt = NH.state(S,sel.nid), dd = NH.difficulty(TP,sel), box = mk('div','desc'), sg = SEG[sel.seg]||SEG.bb;
+    box.textContent = sel.id+' · '+netName(sel)+' — '+NET_INFO[sel.kind].f;
+    const add = t => box.appendChild(mk('span','n',t));
+    add('Stato: '+NH.LABEL[stt].toUpperCase()+' · sicurezza (ICE) '+sel.ice+'/5 · '+sg.n);
+    if (stt !== 'unid') add('Ubicazione fisica: '+labelOf(sel.fl)+' · '+sel.roomName);
+    add('DR '+dd.dr+' = base 8 · rete '+sgn(dd.net)+' · tipo '+sgn(dd.type)+' · mod. '+sgn(dd.mod)+(dd.raw!==dd.dr?' (limitato a 8–18)':''));
+    if (TP.targetId===sel.nid) add('★ SERVER CENTRALE: obiettivo della rete.');
+    if (NH.isGate(sel) && stt!=='hacked') add('BLOCCO: finché non viene hackerato nasconde il segmento che protegge e ne impedisce l\'accesso.');
+    if (sel.rule) add('Regola: '+sel.rule);
+    if (stt==='hacked') { const nb = NH.neighbors(S,sel.nid); if (nb.length) add('Collegato a: '+nb.slice(0,12).join(', ')+(nb.length>12?' … +'+(nb.length-12):'')); }
+    const row = mk('div','hk-row');
+    const sk = mk('input','hk-in'); sk.type='number'; sk.value=hackSkill; sk.title='Bonus netrunner (INT + Interface…)';
+    sk.oninput=()=>{ const v=parseInt(sk.value,10); hackSkill=isFinite(v)?v:0; try{ localStorage.setItem('cydg-hk-skill',String(hackSkill)); }catch(e){} };
+    const mn = mk('input','hk-in'); mn.type='text'; mn.placeholder='tiro'; mn.value=hackManual; mn.title='Tiro totale manuale (vuoto = tira 1d10 + bonus)';
+    mn.oninput=()=>{ hackManual=mn.value.trim(); };
+    const hb = mk('button','hk-btn hk-go','HACK'); hb.disabled = !NH.canHack(S,sel.nid); hb.onclick=doHack; hb.title='Tenta l\'hacking (tasto H)';
+    row.append(mk('span','n','bonus'), sk, mk('span','n','tiro'), mn, hb); box.appendChild(row);
+    if (GM) { const r2 = mk('div','hk-row');
+      if (stt==='unid') { const b=mk('button','hk-btn','INDIVIDUA'); b.onclick=()=>{ NH.forceSpot(S,sel.nid); hackSave(); updateHud(); draw(); }; r2.appendChild(b); }
+      if (sel.kind==='swt') { const b=mk('button','hk-btn',netCol.has(sel.nid)?'ESPANDI':'COMPRIMI'); b.onclick=()=>{ if (netCol.has(sel.nid)) netCol.delete(sel.nid); else netCol.add(sel.nid); updateHud(); draw(); }; r2.appendChild(b); }
+      box.appendChild(r2); }
+    list.appendChild(box);
+  }
+  const rank = {protected:0, spotted:1, hacked:2, unid:3};
+  const rows = TP.nodes.filter(n => GM ? (n.infra && !(n.kind==='rtr' && n.priv && !NH.visible(S,n.nid))) : NH.visible(S,n.nid))
+    .sort((a,b) => (rank[NH.state(S,a.nid)]-rank[NH.state(S,b.nid)]) || (a.id<b.id?-1:1));
+  const gl = {hacked:['◉','#7cff4a'], spotted:['◎','#ffffff'], protected:['🔒','#ff5a5a'], unid:['·','#6a6660']};
+  rows.slice(0,80).forEach(n => {
+    const stt = NH.state(S,n.nid), r = mk('div','r'+(topoSel===n.nid?' sel':'')), b = mk('b',null,gl[stt][0]); b.style.color=gl[stt][1];
+    r.append(b, mk('span',null,n.id+(TP.targetId===n.nid?' ★':'')), mk('i',null,'DR '+NH.difficulty(TP,n).dr));
+    r.onclick=()=>{ topoSel = topoSel===n.nid ? null : n.nid; updateHud(); draw(); }; list.appendChild(r);
+  });
+  if (rows.length > 80) list.appendChild(mk('div','desc','… +'+(rows.length-80)+' altri nodi'));
+  if (S.log.length) { const lg = mk('div','desc hk-log'); lg.appendChild(mk('span','n','REGISTRO HACKING'));
+    S.log.slice(-6).reverse().forEach(e => { const q = mk('span','n',(e.ok?'✔ ':'✘ ')+e.id+': '+(e.text||e.total)+' vs DR '+e.dr+(e.ok?' → hackerato (+'+e.newly+')':' → fallito')); q.style.color=e.ok?'#7cff4a':'#ff7a7a'; lg.appendChild(q); });
+    list.appendChild(lg); }
 }
 
 /* =========================================================================
@@ -1925,7 +2260,7 @@ const RST_ROOMS = new Set(['Camera blindata','Ufficio dirigenziale','Laboratorio
 let TOPO = null, TL = null, topoSel = null;
 const netCol = new Set();                 // switch compressi (i loro dispositivi sono nascosti)
 const nv = {s:1, ox:0, oy:0};             // vista della topologia (pan/zoom), indipendente da v2
-const isInfra = n => n.kind==='rtr' || n.kind==='swt' || n.kind==='fwl';
+const isInfra = n => n.kind==='rtr' || n.kind==='swt' || n.kind==='fwl' || n.kind==='ice';
 
 function segOf(d){
   if (d.kind==='srv' && (d.secret || RST_ROOMS.has(d.roomName))) return 'rst';
@@ -1966,7 +2301,10 @@ function buildTopology(){
   const mkFw=(key,seg,fl,room,rule) => { let f=fws.get(key); if (f) return f;
     const p=cellNear(fl,CORE.x,CORE.y,[2]); f=mk('fwl',{id:nm('FW-'+seg.toUpperCase()),fl,x:p[0],y:p[1],seg,rule,roomName:room||'Corridoio'}); fws.set(key,f);
     const pr=mk('rtr',{id:nm('PRT-'+seg.toUpperCase()),fl,x:p[0],y:p[1],seg,priv:true,fwId:f.nid,roomName:room||'Corridoio'}); f.prt=pr;
-    link(f,core,'bb'); link(f,pr,'priv'); return f; };
+    link(f,core,'bb');
+    if (seg==='rst') { const ic=mk('ice',{id:nm('ICE-RST'),fl,x:p[0],y:p[1],seg,fwId:f.nid,rule:'ICE corporativo: contromisure attive sul segmento riservato',roomName:room||'Corridoio'}); f.ice=ic; link(f,ic,'priv'); link(ic,pr,'priv'); }
+    else link(f,pr,'priv');
+    return f; };
   const swFor=(seg,key,fl,par,room) => { let s2=swMap.get(key); if (s2) return s2;
     const p=cellNear(fl,CORE.x,CORE.y,[2]); s2=mk('swt',{id:nm('SW-'+seg.toUpperCase()),fl,x:p[0],y:p[1],seg,roomName:room||'Corridoio'}); swMap.set(key,s2); link(s2,par.prt||par,'up'); return s2; };
   const secUp=b=>mkFw('sec','sec',coreFl,'','DENY corp→sec · ALLOW sec-ops, guardiole');
@@ -1988,7 +2326,10 @@ function buildTopology(){
   const rf=fws.get('rst');
   if (rf) { const a=devs.find(d=>d.kind==='wrk'&&d.seg==='corp')||devs.find(d=>d.kind==='trm'&&d.seg==='corp'); if (a) { link(rf,a,'acl'); rf.rule='ALLOW solo '+a.id+' ('+labelOf(a.fl)+') · DENY *'; } }
   nodes.push(...devs);
-  return (TOPO={nodes,edges,byId,coreId:core.nid,R});
+  const TPn = {nodes,edges,byId,coreId:core.nid,R};
+  TPn.tier = NH.tierFor({kind:KIND, floors:FL, sec:CTL.sec, firewalls:nodes.filter(n => n.kind==='fwl').length});
+  TPn.targetId = NH.pickTarget(TPn);
+  return (TOPO=TPn);
 }
 
 function layoutTopo(TP){
@@ -1996,7 +2337,7 @@ function layoutTopo(TP){
   if (TL && TL.key===key) return TL;
   const vis=n=>GM||!n.secret, kids=new Map(), up=new Map(), pos=new Map(), zones=[], kc=new Map();
   TP.edges.forEach(e => { if (e.t==='up') up.set(e.a,e.b); if (e.t!=='dev') return; const d=TP.byId.get(e.a); if (!vis(d)) return; if (!kids.has(e.b)) kids.set(e.b,[]); kids.get(e.b).push(d); });
-  const sws=TP.nodes.filter(n=>n.kind==='swt' && kids.has(n.nid)), YZ=214, YS=272, YD=322; let cx=20, maxY=0;
+  const sws=TP.nodes.filter(n=>n.kind==='swt' && kids.has(n.nid)), YZ=232, YS=290, YD=340; let cx=20, maxY=0;
   SEG_ORDER.forEach(seg => {
     const zs=sws.filter(x=>x.seg===seg).sort((a,b)=>String(up.get(a.nid)).localeCompare(String(up.get(b.nid)))||a.fl-b.fl);
     if (!zs.length) return;
@@ -2013,7 +2354,7 @@ function layoutTopo(TP){
   });
   const fk=new Map();
   sws.forEach(x => { const u=TP.byId.get(up.get(x.nid)); if (u&&u.priv) { if (!fk.has(u.nid)) fk.set(u.nid,[]); fk.get(u.nid).push(pos.get(x.nid).x); } });
-  fk.forEach((xs,id) => { const mx=xs.reduce((a,b)=>a+b,0)/xs.length; pos.set(id,{x:mx,y:190}); pos.set(TP.byId.get(id).fwId,{x:mx,y:160}); });
+  fk.forEach((xs,id) => { const mx=xs.reduce((a,b)=>a+b,0)/xs.length, fw=TP.byId.get(TP.byId.get(id).fwId); pos.set(id,{x:mx,y:202}); pos.set(fw.nid,{x:mx,y:150}); if (fw.ice) pos.set(fw.ice.nid,{x:mx+34,y:176}); });
   const W0=Math.max(cx,320), oth=TP.nodes.filter(n=>n.kind==='rtr'&&!n.core&&!n.priv);
   pos.set(TP.coreId,{x:W0/2,y:40}); oth.forEach((r,i) => pos.set(r.nid,{x:(i+.5)*W0/oth.length,y:116}));
   return (TL={key,pos,zones,kc,W0,H:Math.max(maxY,260)+40});
@@ -2023,7 +2364,7 @@ function layoutTopo(TP){
    I router NON sono segnati: si vedono aloni di segnale con centro spostato e raggio ampio
    (deterministico per router), che attraversano i piani con intensità decrescente. Nell'elenco
    la vicinanza del gruppo ai router è solo a 4 livelli di barre, senza distanze né stanze. */
-let NETV = 'map';
+let NETV = 'topo';
 const TOPOV = () => NET && !PLAN && NETV==='topo';
 function setNetView(v){ NETV=v; topoSel=null; netHoverId=null; hideNetTip(); if (v==='topo') { TL=null; nvFit(); } updateHud(); draw(); }
 const decoyCache = [];
@@ -2109,78 +2450,119 @@ function drawNetMap(f,s){
 }
 
 function nvFit(){
-  const L=layoutTopo(buildTopology()), sideW=innerWidth>640?320:0;
-  nv.s=Math.max(.2,Math.min(1.6,(W-sideW-40)/L.W0,(HH-150)/L.H)); nv.ox=(W-sideW-L.W0*nv.s)/2; nv.oy=70;
+  const TP=buildTopology(), L=layoutTopo(TP), sideW=innerWidth>640?320:0, aw=W-sideW-40, ah=HH-150;
+  let x0=0,y0=0,x1=L.W0,y1=L.H;
+  if (!GM) {                                   // giocatori: inquadra solo ciò che è stato scoperto
+    const S=hackState(); let ax=1e9,ay=1e9,bx=-1e9,by=-1e9;
+    TP.nodes.forEach(n => { const p=L.pos.get(n.nid); if (!p||!NH.visible(S,n.nid)) return; ax=Math.min(ax,p.x); bx=Math.max(bx,p.x); ay=Math.min(ay,p.y); by=Math.max(by,p.y); });
+    if (bx>=ax) { x0=ax-70; x1=bx+70; y0=ay-45; y1=by+65; }
+  }
+  nv.s=Math.max(.2,Math.min(1.6,aw/(x1-x0),ah/(y1-y0)));
+  nv.ox=(W-sideW)/2-(x0+x1)/2*nv.s; nv.oy=70-y0*nv.s;
 }
 
+/* Disegno della topologia. Lo stato (visibilità, esplorazione) arriva solo da NH: qui si disegna e basta.
+   Giocatori: solo i nodi individuati; collegamenti pieni = esplorati (entrambi i nodi hackerati),
+   tratteggiati = individuati ma da esplorare (rossi se portano a un blocco). MASTER: vede tutta la rete. */
 function drawTopology(){
-  const TP=buildTopology(), L=layoutTopo(TP), sel=topoSel, near=new Set();
+  const TP=buildTopology(), L=layoutTopo(TP), S=hackState(), fogOn=!GM, sel=topoSel, near=new Set(), tn=performance.now()/1000;
+  const vis=n=>!fogOn||NH.visible(S,n.nid);
   if (sel) { near.add(sel); TP.edges.forEach(e => { if (e.a===sel) near.add(e.b); else if (e.b===sel) near.add(e.a); }); }
   ctx.save(); ctx.translate(nv.ox,nv.oy); ctx.scale(nv.s,nv.s); ctx.textBaseline='middle';
   L.zones.forEach(z => {
-    const c=SEG[z.seg].c, w=z.x1-z.x0, h=z.y1-z.y0;
-    ctx.globalAlpha=z.fw?.10:.05; ctx.fillStyle=c; ctx.fillRect(z.x0,z.y0,w,h); ctx.globalAlpha=1;
-    ctx.strokeStyle=c; ctx.lineWidth=z.fw?2.5:1; ctx.setLineDash(z.fw?[]:[6,4]); ctx.strokeRect(z.x0,z.y0,w,h); ctx.setLineDash([]);
-    if (z.fw) { ctx.globalAlpha=.5; ctx.lineWidth=1; ctx.strokeRect(z.x0+4,z.y0+4,w-8,h-8); ctx.globalAlpha=1; }
+    const c=SEG[z.seg].c; let x0=z.x0,x1=z.x1,y1=z.y1,cnt=z.count,fw=z.fw;
+    if (fogOn) {
+      const mem=TP.nodes.filter(n => n.seg===z.seg && (n.kind==='swt'||!n.infra) && L.pos.has(n.nid) && vis(n));
+      if (!mem.length) return;
+      let ax=1e9,bx=-1e9,by=-1e9; mem.forEach(n => { const p=L.pos.get(n.nid); ax=Math.min(ax,p.x); bx=Math.max(bx,p.x); by=Math.max(by,p.y); });
+      x0=Math.min(ax-26,bx-150); x1=bx+26; y1=by+24; cnt=mem.filter(n=>!n.infra).length;
+      fw=TP.nodes.some(n => n.kind==='fwl' && n.seg===z.seg && vis(n));
+    }
+    const w=x1-x0, h=y1-z.y0;
+    ctx.globalAlpha=fw?.10:.05; ctx.fillStyle=c; ctx.fillRect(x0,z.y0,w,h); ctx.globalAlpha=1;
+    ctx.strokeStyle=c; ctx.lineWidth=fw?2.5:1; ctx.setLineDash(fw?[]:[6,4]); ctx.strokeRect(x0,z.y0,w,h); ctx.setLineDash([]);
+    if (fw) { ctx.globalAlpha=.5; ctx.lineWidth=1; ctx.strokeRect(x0+4,z.y0+4,w-8,h-8); ctx.globalAlpha=1; }
     ctx.font='bold 11px "Courier New",monospace'; ctx.textAlign='left'; ctx.fillStyle=c;
-    ctx.fillText((z.sw.every(x=>netCol.has(x.nid))?'▸ ':'▾ ')+SEG[z.seg].n+(z.fw?' · ISOLATA':'')+' · VLAN '+SEG[z.seg].vlan+' · '+z.count,z.x0+10,z.y0+13);
+    ctx.fillText((z.sw.every(x=>netCol.has(x.nid))?'▸ ':'▾ ')+SEG[z.seg].n+(fw?' · ISOLATA':'')+' · VLAN '+SEG[z.seg].vlan+' · '+cnt,x0+10,z.y0+13);
   });
   TP.edges.forEach(e => {
     const a=L.pos.get(e.a), b=L.pos.get(e.b); if (!a||!b) return;
-    const na=TP.byId.get(e.a), nb=TP.byId.get(e.b); let col, lw, dash=[];
-    if (e.t==='bb') { col=(na.kind==='fwl')?SEG[na.seg].c:'#e8f6ff'; lw=2.6; dash=[10,4]; }
-    else if (e.t==='up') { col=SEG[na.seg].c; lw=1.6; }
-    else if (e.t==='dev') { col=SEG[na.seg].c; lw=1; }
-    else if (e.t==='priv') { col=SEG[na.seg].c; lw=2.2; }
-    else if (e.t==='red') { col='#8a8680'; lw=1.2; dash=[5,4]; }
-    else { col='#ff2ee6'; lw=1.6; dash=[2,4]; }
-    ctx.globalAlpha=sel&&!(e.a===sel||e.b===sel)?.12:(e.t==='dev'?.55:.9);
-    ctx.strokeStyle=(sel&&(e.a===sel||e.b===sel))?'#ffffff':col; ctx.lineWidth=lw; ctx.setLineDash(dash); ctx.lineDashOffset=e.t==='bb'?-T*14:0;
-    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    const na=TP.byId.get(e.a), nb=TP.byId.get(e.b); if (!vis(na)||!vis(nb)) return;
+    const sa=NH.state(S,e.a), sb=NH.state(S,e.b), explored=(sa==='hacked'&&sb==='hacked'), hl=sel&&(e.a===sel||e.b===sel);
+    let col, lw, dash=[], al, glow=0;
+    if (fogOn) {
+      if (explored) { col=(SEG[na.seg!=='bb'?na.seg:nb.seg]||SEG.bb).c; lw=2.6; al=1; glow=7; }
+      else { col=(sa==='protected'||sb==='protected')?'#ff5a5a':'#bfe9ff'; lw=1.4; dash=[5,5]; al=.85; }
+    } else {
+      if (e.t==='bb') { col=(na.kind==='fwl')?SEG[na.seg].c:'#e8f6ff'; lw=2.6; dash=[10,4]; }
+      else if (e.t==='up') { col=SEG[na.seg].c; lw=1.6; }
+      else if (e.t==='dev') { col=SEG[na.seg].c; lw=1; }
+      else if (e.t==='priv') { col=SEG[na.seg].c; lw=2.2; }
+      else if (e.t==='red') { col='#8a8680'; lw=1.2; dash=[5,4]; }
+      else { col='#ff2ee6'; lw=1.6; dash=[2,4]; }
+      al=e.t==='dev'?.55:.9; if (explored) { lw+=.8; al=1; glow=6; dash=[]; }
+    }
+    ctx.globalAlpha=sel&&!hl?Math.min(al,.2):al;
+    ctx.strokeStyle=hl?'#ffffff':col; ctx.lineWidth=lw; ctx.setLineDash(dash); ctx.shadowColor=col; ctx.shadowBlur=glow;
+    ctx.lineDashOffset=(!fogOn&&e.t==='bb'&&!explored)?-tn*14:(dash.length&&fogOn?-tn*8:0);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); ctx.shadowBlur=0;
   });
   ctx.setLineDash([]); ctx.lineDashOffset=0; ctx.globalAlpha=1;
-  const rk=n=>({swt:1,fwl:2,rtr:3})[n.kind]||0;
-  TP.nodes.filter(n=>L.pos.has(n.nid)).sort((a,b)=>rk(a)-rk(b)).forEach(n => {
-    const p=L.pos.get(n.nid), inf=rk(n)>0, r=inf?12:7, col=NET_INFO[n.kind].c, hot=(n.nid===sel||n.nid===netHoverId);
-    ctx.globalAlpha=sel&&!near.has(n.nid)?.3:1;
-    ctx.shadowColor=col; ctx.shadowBlur=6; netIcon(n,p.x,p.y,inf?24:13,col); ctx.shadowBlur=0;
-    if (hot) { ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,r+5,0,7); ctx.stroke(); }
+  const rk=n=>({swt:1,fwl:2,ice:2,rtr:3})[n.kind]||0;
+  TP.nodes.filter(n => L.pos.has(n.nid) && vis(n)).sort((a,b)=>rk(a)-rk(b)).forEach(n => {
+    const p=L.pos.get(n.nid), st=NH.state(S,n.nid), inf=rk(n)>0, r=inf?12:7, col=NET_INFO[n.kind].c, hot=(n.nid===sel||n.nid===netHoverId);
+    const block=NH.isGate(n)&&(st==='protected'||st==='spotted');
+    let al=sel&&!near.has(n.nid)?.35:1; if (st==='unid') al*=.28; else if (st!=='hacked') al*=.75;
+    ctx.globalAlpha=al; ctx.shadowColor=col; ctx.shadowBlur=st==='hacked'?10:4; netIcon(n,p.x,p.y,inf?24:13,col); ctx.shadowBlur=0;
+    if (block) { ctx.strokeStyle='#ff3b3b'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,r+4+1.5*Math.sin(tn*5),0,7); ctx.stroke(); drawLock(p.x+r+3,p.y-r-1,'#ff3b3b'); }
+    else if (st==='hacked') { ctx.fillStyle='#0a0908'; ctx.strokeStyle='#7cff4a'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(p.x+r,p.y-r,5.5,0,7); ctx.fill(); ctx.stroke();
+      ctx.lineWidth=1.8; ctx.beginPath(); ctx.moveTo(p.x+r-3,p.y-r); ctx.lineTo(p.x+r-1,p.y-r+2.5); ctx.lineTo(p.x+r+3.5,p.y-r-2.5); ctx.stroke(); }
+    if (hot) { ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,r+(block?9:5),0,7); ctx.stroke(); }
     if (n.kind==='swt' && netCol.has(n.nid)) { ctx.font='bold 10px "Courier New",monospace'; ctx.textAlign='left'; ctx.fillStyle='#e8c93a'; ctx.fillText('+'+L.kc.get(n.nid),p.x+r+4,p.y); }
-    if (inf || hot || nv.s>=1.2) {
-      ctx.font='9px "Courier New",monospace'; ctx.textAlign='center'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)';
-      ctx.strokeText(n.id,p.x,p.y+r+9); ctx.fillStyle=col; ctx.fillText(n.id,p.x,p.y+r+9);
-    }
+    ctx.font='9px "Courier New",monospace'; ctx.textAlign='center'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)';
+    ctx.strokeText(n.id,p.x,p.y+r+9); ctx.fillStyle=block?'#ff7a7a':col; ctx.fillText(n.id,p.x,p.y+r+9);
+    if (st==='spotted'||st==='protected') { const t='DR '+NH.difficulty(TP,n).dr; ctx.strokeText(t,p.x,p.y+r+19); ctx.fillStyle='#e8c93a'; ctx.fillText(t,p.x,p.y+r+19); }
     ctx.globalAlpha=1;
   });
-  if (sel) {
+  const tgt=TP.byId.get(TP.targetId), tp=tgt&&L.pos.get(tgt.nid);
+  if (tp && vis(tgt)) {
+    const rr=(NH.isGate(tgt)||tgt.infra?12:7)+8+1.5*Math.sin(tn*3);
+    ctx.strokeStyle='#e8c93a'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(tp.x,tp.y,rr,0,7); ctx.stroke(); ctx.lineWidth=1; ctx.beginPath(); ctx.arc(tp.x,tp.y,rr+4,0,7); ctx.stroke();
+    ctx.font='bold 10px "Courier New",monospace'; ctx.textAlign='center'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)';
+    const t='◎ SERVER CENTRALE'+(NH.state(S,tgt.nid)==='hacked'?' · COMPROMESSO':''); ctx.strokeText(t,tp.x,tp.y-rr-8); ctx.fillStyle='#e8c93a'; ctx.fillText(t,tp.x,tp.y-rr-8);
+  }
+  const cp=S.cursor&&L.pos.get(S.cursor);
+  if (cp && vis(TP.byId.get(S.cursor))) {
+    const ph=(tn*.9)%1; ctx.strokeStyle='rgba(0,255,242,'+(1-ph).toFixed(2)+')'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cp.x,cp.y,12+ph*18,0,7); ctx.stroke();
+    ctx.font='bold 10px "Courier New",monospace'; ctx.textAlign='center'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText('▶ TU SEI QUI',cp.x,cp.y-22); ctx.fillStyle='#00fff2'; ctx.fillText('▶ TU SEI QUI',cp.x,cp.y-22);
+  }
+  if (S.fx) { const age=tn-S.fx.t, fp=L.pos.get(S.fx.id);
+    if (fp && age>=0 && age<1.3) { ctx.strokeStyle=S.fx.ok?'rgba(124,255,74,'+(1-age/1.3).toFixed(2)+')':'rgba(255,59,59,'+(1-age/1.3).toFixed(2)+')'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(fp.x,fp.y,10+age*46,0,7); ctx.stroke(); } }
+  if (!fogOn && sel) {                         // solo MASTER: percorso verso il prossimo ICE
     const ni=topoNextIce(TP,sel);
-    if (ni.path.length>1) {                       // linea tratteggiata animata fino al prossimo ICE
-      ctx.lineWidth=3.5; ctx.strokeStyle='#ff3b3b'; ctx.setLineDash([9,6]); ctx.lineDashOffset=-T*26; ctx.shadowColor='#ff3b3b'; ctx.shadowBlur=8;
+    if (ni.path.length>1) {
+      ctx.lineWidth=3.5; ctx.strokeStyle='#ff3b3b'; ctx.setLineDash([9,6]); ctx.lineDashOffset=-tn*26; ctx.shadowColor='#ff3b3b'; ctx.shadowBlur=8;
       ctx.beginPath(); let st=false;
       ni.path.forEach(id => { const p=L.pos.get(id); if (!p) { st=false; return; } if (!st) { ctx.moveTo(p.x,p.y); st=true; } else ctx.lineTo(p.x,p.y); });
       ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset=0; ctx.shadowBlur=0;
-    }
-    const ip=ni.ice && L.pos.get(ni.ice.nid);
-    if (ip) {
-      const rr=(isInfra(ni.ice)?14:9)+4+2*Math.sin(T*6);
-      ctx.strokeStyle='#ff3b3b'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(ip.x,ip.y,rr,0,7); ctx.stroke();
-      ctx.font='bold 10px "Courier New",monospace'; ctx.textAlign='left'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)';
-      const tx='ICE '+ni.ice.ice; ctx.strokeText(tx,ip.x+rr+4,ip.y-8); ctx.fillStyle='#ff3b3b'; ctx.fillText(tx,ip.x+rr+4,ip.y-8);
     }
   }
   ctx.restore();
 }
 
 function topoPick(cx,cy){
-  const TP=buildTopology(), L=layoutTopo(TP), wx=(cx-nv.ox)/nv.s, wy=(cy-nv.oy)/nv.s; let best=null,bd=1e9;
-  L.pos.forEach((p,id) => { const n=TP.byId.get(id); if (!n) return; const r=isInfra(n)?14:9, d=Math.hypot(p.x-wx,p.y-wy); if (d<r && d<bd){bd=d;best=n;} });
+  const TP=buildTopology(), L=layoutTopo(TP), S=hackState(), wx=(cx-nv.ox)/nv.s, wy=(cy-nv.oy)/nv.s; let best=null,bd=1e9;
+  L.pos.forEach((p,id) => { const n=TP.byId.get(id); if (!n) return; if (!GM && !NH.visible(S,id)) return;
+    const r=isInfra(n)?14:9, d=Math.hypot(p.x-wx,p.y-wy); if (d<r && d<bd){bd=d;best=n;} });
   if (best) return {node:best};
+  if (!GM) return null;
   const z=L.zones.find(q => wx>=q.x0&&wx<=q.x1&&wy>=q.y0&&wy<=q.y0+20); return z?{zone:z}:null;
 }
 function toggleZone(z){ const all=z.sw.every(x=>netCol.has(x.nid)); z.sw.forEach(x => { if (all) netCol.delete(x.nid); else netCol.add(x.nid); }); }
-function topoClick(cx,cy){
+// clic = seleziona (l'hacking parte solo dal pulsante HACK); Maiusc+clic su uno switch = comprimi/espandi
+function topoClick(cx,cy,shift){
   const h=topoPick(cx,cy);
-  if (h && h.node) { const n=h.node; topoSel = topoSel===n.nid ? null : n.nid; if (n.kind==='swt') { if (netCol.has(n.nid)) netCol.delete(n.nid); else netCol.add(n.nid); } }
+  if (h && h.node) { const n=h.node; topoSel = topoSel===n.nid ? null : n.nid; if (n.kind==='swt' && shift) { if (netCol.has(n.nid)) netCol.delete(n.nid); else netCol.add(n.nid); } }
   else if (h && h.zone) toggleZone(h.zone); else topoSel=null;
   updateHud(); draw();
 }
@@ -2208,35 +2590,13 @@ function renderNetList(list,f){
     if (hn) { const RA=hackReach(TQ,hn.nid), e=document.createElement('div'); e.className='desc'; e.textContent=hn.id+' hackerato · ICE '+hn.ice; const a=document.createElement('span'); a.className='n'; a.textContent='Dorsale: '+Array.from(RA.routers).map(i=>TQ.byId.get(i).id).join(', '); e.appendChild(a); const b=document.createElement('span'); b.className='n'; b.textContent=RA.fws.size?'Si ferma ai firewall: '+Array.from(RA.fws).map(i=>TQ.byId.get(i).id).join(', '):'Nessun firewall sulla dorsale.'; e.appendChild(b); list.appendChild(e); }
     return;
   }
-  const TP=buildTopology(), L=layoutTopo(TP), cnt=k=>TP.nodes.filter(n=>n.kind===k&&(GM||!n.secret)&&(L.pos.has(n.nid)||(k==='rtr'&&!n.priv))).length;
-  const nd=TP.nodes.filter(n=>!n.infra&&(GM||!n.secret)).length;
-  const head=document.createElement('div'); head.className='desc'; head.style.paddingLeft='6px';
-  head.textContent=cnt('rtr')+' router · '+cnt('swt')+' switch · '+cnt('fwl')+' firewall · '+nd+' dispositivi in '+TP.R+(TP.R===1?' fascia':' fasce di piani');
-  const lg=document.createElement('span'); lg.className='n'; lg.textContent='━ dorsale · ─ uplink · ┄ ridondante · ⋯ ACL. Clic su zona o switch = comprimi/espandi.'; head.appendChild(lg); list.appendChild(head);
-  const row=(sym,col,txt,right,on,fn) => { const r=document.createElement('div'); r.className='r'+(on?' sel':''); const b=document.createElement('b'); b.textContent=sym; b.style.color=col; const t=document.createElement('span'); t.textContent=txt; const i=document.createElement('i'); i.textContent=right; r.append(b,t,i); r.onclick=fn; list.appendChild(r); };
-  L.zones.forEach(z => row(z.sw.every(x=>netCol.has(x.nid))?'▸':'▾',SEG[z.seg].c,SEG[z.seg].n+(z.fw?' 🛡':''),z.count+' disp.',false,()=>{ toggleZone(z); updateHud(); draw(); }));
-  TP.nodes.filter(n=>isInfra(n)&&((n.kind==='rtr'&&!n.priv)||L.pos.has(n.nid))).sort((a,b)=>NET_INFO[a.kind].o-NET_INFO[b.kind].o||(a.id<b.id?-1:1)).forEach(n => {
-    row('■',NET_INFO[n.kind].c,n.id+(n.guard?' · guardiola':''),'ICE '+n.ice,topoSel===n.nid,()=>{ topoSel=topoSel===n.nid?null:n.nid; updateHud(); draw(); });
-  });
-  const n=topoSel&&TP.byId.get(topoSel);
-  if (n) {
-    const e=document.createElement('div'); e.className='desc'; const sg=SEG[n.seg]||SEG.bb;
-    e.textContent=n.id+' · '+netName(n)+' — '+NET_INFO[n.kind].f;
-    const add=t => { const s2=document.createElement('span'); s2.className='n'; s2.textContent=t; e.appendChild(s2); };
-    add(sg.n+' · VLAN '+sg.vlan+' · ICE '+n.ice);
-    add('Ubicazione fisica: '+labelOf(n.fl)+' · '+n.roomName);
-    if (n.rule) add('Regola: '+n.rule);
-    const p=topoPath(TP,n.nid); if (p.length>1) add('Percorso verso il core: '+p.map(i=>TP.byId.get(i).id).join(' → '));
-    const ni=topoNextIce(TP,n.nid);
-    if (ni.ice) { const h=ni.path.length-1; add('Prossimo ICE: '+ni.ice.id+' (ICE '+ni.ice.ice+') a '+h+(h===1?' salto':' salti')+' — linea rossa tratteggiata'); }
-    else if (p.length>1) add('Nessun ICE tra questo nodo e il core.');
-    list.appendChild(e);
-  }
+  renderHackPanel(list);
 }
 
 function showNetTip(n,cx,cy){
   const el=document.getElementById('nettip'), sg=SEG[n.seg]||SEG.bb;
-  el.innerHTML='<b style="color:'+NET_INFO[n.kind].c+'">'+n.id+'</b> '+netName(n)+'<br>'+sg.n+' · VLAN '+sg.vlan+'<br>'+labelOf(n.fl)+' · '+n.roomName+' · ICE '+n.ice+(n.rule?'<br>'+n.rule:'');
+  const HSx=hackState();
+  el.innerHTML='<b style="color:'+NET_INFO[n.kind].c+'">'+n.id+'</b> '+netName(n)+'<br>'+sg.n+' · VLAN '+sg.vlan+'<br>'+NH.LABEL[NH.state(HSx,n.nid)]+' · DR '+NH.difficulty(HSx.TP,n).dr+' · ICE '+n.ice+'<br>'+labelOf(n.fl)+' · '+n.roomName+(n.rule?'<br>'+n.rule:'');
   el.style.left=Math.min(innerWidth-230,cx+14)+'px'; el.style.top=(cy+14)+'px'; el.style.display='block';
 }
 function hideNetTip(){ document.getElementById('nettip').style.display='none'; }
@@ -2566,7 +2926,7 @@ function updateHud(){
 }
 function setFloor(i){ cur=Math.max(0,Math.min(NL-1,i)); sel=-1; netSel=null; updateHud(); draw(); }
 function setMode(m){ mode=m; document.getElementById('b-view').textContent = m==='2d'?'VISTA 3D':'VISTA 2D'; draw(); }
-function viewChanged(){ sel=-1; if (!GM && !PLAN && fog.tok) cur=fog.tok.f; updateHud(); draw(); }
+function viewChanged(){ sel=-1; if (!GM && !PLAN && fog.tok) cur=fog.tok.f; if (!GM && topoSel && !NH.visible(hackState(),topoSel)) topoSel=null; if (TOPOV()) { TL=null; nvFit(); } updateHud(); draw(); }
 function setGM(v){ GM=v; if (v) PLAN=false; viewChanged(); }
 function setPlan(v){ PLAN=v; if (v) { GM=false; NET=false; } viewChanged(); }
 function zoomBy(k,cx=W/2,cy=HH/2){
@@ -2623,6 +2983,7 @@ window.addEventListener('keydown',e=>{
   else if (e.key==='c'||e.key==='C') toggleCamWall();
   else if (e.key==='n'||e.key==='N') setNet(!NET);
   else if ((e.key==='t'||e.key==='T') && NET && !PLAN) setNetView(NETV==='map'?'topo':'map');
+  else if ((e.key==='h'||e.key==='H') && NET && !PLAN && TOPOV()) doHack();
   else if (e.key==='Escape' && CAMWALL) toggleCamWall(false);
   else if (e.key==='+'||e.key==='=') zoomBy(1.25);
   else if (e.key==='-') zoomBy(0.8);
@@ -2656,7 +3017,7 @@ cv.addEventListener('pointerup',e=>{
       if (best>=0) tryFloor(best);
     } else {
       if (NET && !PLAN && NETV==='map') { const hk=hackPick(e.clientX,e.clientY); if (hk!==undefined) { hackSel=hackSel===hk?null:hk; updateHud(); draw(); drag=null; cv.classList.remove('drag'); return; } }
-      if (TOPOV()) { topoClick(e.clientX,e.clientY); drag=null; cv.classList.remove('drag'); return; }
+      if (TOPOV()) { topoClick(e.clientX,e.clientY,e.shiftKey); drag=null; cv.classList.remove('drag'); return; }
       const x=Math.floor((e.clientX-v2.ox)/v2.s), y=Math.floor((e.clientY-v2.oy)/v2.s);
       if (x>=0&&y>=0&&x<GW&&y<GD) {
         const f=getFloor(cur), k=y*GW+x, ex=fog.exp[cur];
@@ -2848,6 +3209,8 @@ if (CUSTOM_ERR) toast('Definizione dungeon non valida: ' + CUSTOM_ERR);
 if (fogLoad()) fogReveal(); else fogStart();
 if (!GM && !PLAN) cur = fog.tok.f;
 resize(); updateHud(); draw();
+window.CY_NETHACK = {NH, buildTopology, hackState, selfTest:NH.selfTest};
+if (Q.get('nettest')==='1') { const rt = NH.selfTest(); console.log(rt.lines.join('\n')); toast('NETHACK self-test: '+(rt.pass?'OK':'FALLITO')+' ('+rt.passed+'/'+rt.total+')'); }
 })();
 </script>
 </body>
