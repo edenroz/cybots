@@ -2037,6 +2037,14 @@ const NH = (function(){
       if (!isGate(n) && s==='protected') bad.push(n.nid+' non-varco in stato protected'); });
     return bad;
   }
+  // garanzia: tolti gli ICE, il server centrale non è raggiungibile dal core (ogni percorso passa da almeno un ICE)
+  function targetGuarded(TP){
+    const T=TP.targetId; if (!T || T===TP.coreId || !TP.nodes.some(n => n.kind==='ice')) return false;
+    const adj=new Map(); TP.nodes.forEach(n => adj.set(n.nid,[])); TP.edges.forEach(e => { adj.get(e.a).push(e.b); adj.get(e.b).push(e.a); });
+    const seen=new Set([TP.coreId]), q=[TP.coreId];
+    while (q.length) { const a=q.shift(); if (a===T) return false; adj.get(a).forEach(b => { if (!seen.has(b) && TP.byId.get(b).kind!=='ice') { seen.add(b); q.push(b); } }); }
+    return true;
+  }
   function serialize(S){ return {st:S.st, cursor:S.cursor, log:S.log.slice(-40), tries:S.tries, entries:S.entries, forced:S.forced}; }
   function restore(S,d){
     if (!d || !d.st) return false; let n=0;
@@ -2104,6 +2112,7 @@ const NH = (function(){
     t('i nodi hackerati non sono più bersagli', !canHack(S,'TV-01') && !H('TV-01').ok);
     // difficoltà
     const dr = id => difficulty(TP,TP.byId.get(id)).dr;
+    t('ogni percorso verso il server centrale passa da un ICE', targetGuarded(TP));
     t('DR ordinata per tipo: terminale < router < firewall < ICE <= server centrale', dr('TRM-01')<dr('RTR-01') && dr('RTR-01')<dr('FW-SEC') && dr('FW-SEC')<dr('ICE-01') && dr('ICE-01')<=dr('SRV-CENTRAL'));
     t('server centrale = difficoltà massima della rete', TP.nodes.every(n => dr(n.nid)<=dr('SRV-CENTRAL')));
     let inRange=true, mono=true;
@@ -2133,7 +2142,7 @@ const NH = (function(){
     return {pass:passed===total, passed, total, lines};
   }
 
-  return {TIERS, LABEL, isGate, tierFor, pickTarget, difficulty, create, state, shielded, isOuter:(S,id)=>S.outer.has(id), visible, canHack, entry, forceSpot, rollCheck, attempt, neighbors, summary, distance, checkInvariant, serialize, restore, sampleNetwork, selfTest};
+  return {targetGuarded, TIERS, LABEL, isGate, tierFor, pickTarget, difficulty, create, state, shielded, isOuter:(S,id)=>S.outer.has(id), visible, canHack, entry, forceSpot, rollCheck, attempt, neighbors, summary, distance, checkInvariant, serialize, restore, sampleNetwork, selfTest};
 })();
 
 /* ---------- NETHACK: collegamento tra la logica (NH) e l'interfaccia ---------- */
@@ -2282,6 +2291,11 @@ function buildTopology(){
   // dispositivi fisici (stessi oggetti della planimetria, non copie)
   const devs=[];
   for (let i=0;i<NL;i++) getNetDevices(i).devs.forEach(d => { d.seg=segOf(d); let n=0; d.nid=d.tid; while (byId.has(d.nid)) d.nid=d.tid+'#'+(++n); byId.set(d.nid,d); devs.push(d); });
+  if (!devs.some(d => d.kind==='srv' && !d.secret)) {
+    const cf=Math.min(NL-1,NB), p=cellNear(cf,CORE.x,CORE.y,[2]);
+    const d={kind:'srv',id:'SRV-CENTRAL',name:'Server centrale',fl:cf,x:p[0],y:p[1],roomName:'Sala server centrale',secret:false,ice0:5,ice:Math.min(5,Math.round(5*CTL.sec)),th:-1,seg:'rst'};
+    d.tid=labelOf(cf)+'/SRV-CENTRAL'; d.nid=d.tid; byId.set(d.nid,d); devs.push(d);
+  }
   // in ogni server room con >=3 server il più sensibile finisce in una subnet isolata
   const sg=new Map();
   devs.filter(d=>d.kind==='srv').forEach(d => { const k=d.fl+'|'+d.roomName; if (!sg.has(k)) sg.set(k,[]); sg.get(k).push(d); });
@@ -2302,7 +2316,7 @@ function buildTopology(){
     const p=cellNear(fl,CORE.x,CORE.y,[2]); f=mk('fwl',{id:nm('FW-'+seg.toUpperCase()),fl,x:p[0],y:p[1],seg,rule,roomName:room||'Corridoio'}); fws.set(key,f);
     const pr=mk('rtr',{id:nm('PRT-'+seg.toUpperCase()),fl,x:p[0],y:p[1],seg,priv:true,fwId:f.nid,roomName:room||'Corridoio'}); f.prt=pr;
     link(f,core,'bb');
-    if (seg==='rst') { const ic=mk('ice',{id:nm('ICE-RST'),fl,x:p[0],y:p[1],seg,fwId:f.nid,rule:'ICE corporativo: contromisure attive sul segmento riservato',roomName:room||'Corridoio'}); f.ice=ic; link(f,ic,'priv'); link(ic,pr,'priv'); }
+    if (seg==='rst'||seg==='srv') { const ic=mk('ice',{id:nm('ICE-'+seg.toUpperCase()),fl,x:p[0],y:p[1],seg,fwId:f.nid,rule:'ICE corporativo: contromisure attive a protezione dei server',roomName:room||'Corridoio'}); f.ice=ic; link(f,ic,'priv'); link(ic,pr,'priv'); }
     else link(f,pr,'priv');
     return f; };
   const swFor=(seg,key,fl,par,room) => { let s2=swMap.get(key); if (s2) return s2;
