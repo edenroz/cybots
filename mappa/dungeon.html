@@ -1634,7 +1634,7 @@ function roomSeen(f,r){
 // cambio piano: libero per il master; ai giocatori serve stare su scale (±1 piano) o ascensore
 function tryFloor(i){
   i = Math.max(0, Math.min(NL-1, i));
-  if (GM || PLAN) { setFloor(i); return; }
+  if (GM || PLAN || NET) { setFloor(i); return; }
   const from = fog.tok.f;
   if (i===from) { updateHud(); return; }
   const t = getFloor(from).g[fog.tok.y*GW+fog.tok.x];
@@ -2181,13 +2181,13 @@ function doHack(){
   S.fx = {id, ok:res.ok, t:performance.now()/1000};
   hackSave();
   toast(res.ok ? id+' HACKERATO ('+total+' vs DR '+res.dr+') · '+res.newly.length+' nuovi nodi individuati' : id+': HACK FALLITO ('+total+' vs DR '+res.dr+')'+(fumble?' — fallimento critico':''));
-  if (res.ok && !GM) nvFit();
+  if (res.ok && !GM && TOPOV()) nvFit();
   updateHud(); draw();
 }
 function hackReset(){
   if (!confirm('Azzerare la scoperta della rete (stati, nodi individuati e log)?')) return;
   try { localStorage.removeItem(HK_KEY); } catch(e) {}
-  HS = null; topoSel = null; hackState(); if (!GM) nvFit(); updateHud(); draw();
+  HS = null; topoSel = null; hackState(); if (!GM && TOPOV()) nvFit(); updateHud(); draw();
 }
 function drawLock(x,y,col){ ctx.save(); ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(x,y-1.5,3,Math.PI,0); ctx.stroke(); ctx.fillRect(x-4,y-1.5,8,6.5); ctx.restore(); }
 
@@ -2201,7 +2201,7 @@ function renderHackPanel(list){
   head.appendChild(mk('span','n', !dist ? 'Server centrale: nessun nodo noto da cui partire: usa SCANSIONE LOCALE.'
     : dist.reached ? '✔ '+tg.id+' COMPROMESSO: obiettivo raggiunto.'
     : 'Server centrale: a '+dist.hops+(dist.hops===1?' salto':' salti')+' dal nodo noto più vicino · '+dist.gates+(dist.gates===1?' blocco':' blocchi')+' (firewall/ICE) da superare.'));
-  head.appendChild(mk('span','n','━ esplorato · ┄ individuato, da esplorare · 🔒 firewall/ICE: blocca finché non è hackerato · ▶ posizione attuale'));
+  head.appendChild(mk('span','n','━ esplorato · ┄ individuato, da esplorare · 🔒 firewall/ICE: blocca finché non è hackerato · ▶ posizione attuale · ▲▼ nodo su un altro piano · clic sull\'icona = seleziona'));
   const r0 = mk('div','hk-row'), bs = mk('button','hk-btn','SCANSIONE LOCALE'); bs.title='Individua i dispositivi in portata del gruppo (punto d\'ingresso)'; bs.onclick=()=>hackScan(false); r0.appendChild(bs);
   if (GM) { const br = mk('button','hk-btn','RESET RETE'); br.onclick=hackReset; r0.appendChild(br); }
   head.appendChild(r0); list.appendChild(head);
@@ -2236,8 +2236,8 @@ function renderHackPanel(list){
   const gl = {hacked:['◉','#7cff4a'], spotted:['◎','#ffffff'], protected:['🔒','#ff5a5a'], unid:['·','#6a6660']};
   rows.slice(0,80).forEach(n => {
     const stt = NH.state(S,n.nid), r = mk('div','r'+(topoSel===n.nid?' sel':'')), b = mk('b',null,gl[stt][0]); b.style.color=gl[stt][1];
-    r.append(b, mk('span',null,n.id+(TP.targetId===n.nid?' ★':'')), mk('i',null,'DR '+NH.difficulty(TP,n).dr));
-    r.onclick=()=>{ topoSel = topoSel===n.nid ? null : n.nid; updateHud(); draw(); }; list.appendChild(r);
+    r.append(b, mk('span',null,n.id+' · '+labelOf(n.fl)+(TP.targetId===n.nid?' ★':'')), mk('i',null,'DR '+NH.difficulty(TP,n).dr));
+    r.onclick=()=>{ topoSel = topoSel===n.nid ? null : n.nid; if (topoSel && NETV==='map') { cur=n.fl; sel=-1; } updateHud(); draw(); }; list.appendChild(r);
   });
   if (rows.length > 80) list.appendChild(mk('div','desc','… +'+(rows.length-80)+' altri nodi'));
   if (S.log.length) { const lg = mk('div','desc hk-log'); lg.appendChild(mk('span','n','REGISTRO HACKING'));
@@ -2279,6 +2279,30 @@ function cellNear(fl,tx,ty,want){
   const g=getFloor(fl).g; let best=null,bd=1e18;
   for (let k=0;k<g.length;k++) { if (want.indexOf(g[k])<0) continue; const x=k%GW,y=(k/GW)|0,d=(x-tx)**2+(y-ty)**2; if (d<bd){bd=d;best=[x+.5,y+.5];} }
   return best || [CORE.x+.5,CORE.y+.5];
+}
+
+/* Posizione fisica degli apparati di rete (switch, router privati, firewall, ICE) sulla pianta, così la LAN
+   si legge direttamente sulla mappa: lo switch sta nel corridoio più vicino ai suoi dispositivi (al piano dove
+   ne ha di più); PRT, firewall e ICE di un segmento stanno accanto ai suoi switch; gli apparati sovrapposti
+   vengono distanziati. */
+function physPlace(TP){
+  const kids=new Map();
+  TP.edges.forEach(e => { if (e.t==='dev') { const d=TP.byId.get(e.a); if (!kids.has(e.b)) kids.set(e.b,[]); kids.get(e.b).push(d); } });
+  TP.nodes.filter(n => n.kind==='swt' && !n.guard && kids.has(n.nid)).forEach(sw => {
+    const ks=kids.get(sw.nid), cnt={}; ks.forEach(d => { cnt[d.fl]=(cnt[d.fl]||0)+1; });
+    const fl=+Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0], on=ks.filter(d => d.fl===fl);
+    const cx=on.reduce((a,d)=>a+d.x,0)/on.length, cy=on.reduce((a,d)=>a+d.y,0)/on.length, p=cellNear(fl,Math.round(cx),Math.round(cy),[2]);
+    sw.fl=fl; sw.x=p[0]; sw.y=p[1];
+  });
+  const placed=new Set();
+  TP.edges.forEach(e => { if (e.t!=='up') return; const sw=TP.byId.get(e.a), u=TP.byId.get(e.b);
+    if (u && u.priv && !placed.has(u.nid)) { placed.add(u.nid); u.fl=sw.fl; u.x=sw.x; u.y=sw.y; } });
+  TP.nodes.filter(n => n.kind==='fwl' && n.prt).forEach(f => { const p=f.prt; f.fl=p.fl; f.x=p.x; f.y=p.y; if (f.ice) { f.ice.fl=p.fl; f.ice.x=p.x; f.ice.y=p.y; } });
+  const used=new Map();
+  TP.nodes.filter(n => n.infra).forEach(n => {
+    const k=n.fl+'|'+Math.round(n.x)+'|'+Math.round(n.y), c=used.get(k)||0; used.set(k,c+1);
+    if (c) { const a=c*2.4, rad=1.2+.4*Math.floor(c/5); n.x+=Math.cos(a)*rad; n.y+=Math.sin(a)*rad; }
+  });
 }
 
 function buildTopology(){
@@ -2342,6 +2366,7 @@ function buildTopology(){
   nodes.push(...devs);
   const TPn = {nodes,edges,byId,coreId:core.nid,R};
   TPn.tier = NH.tierFor({kind:KIND, floors:FL, sec:CTL.sec, firewalls:nodes.filter(n => n.kind==='fwl').length});
+  physPlace(TPn);
   TPn.targetId = NH.pickTarget(TPn);
   return (TOPO=TPn);
 }
@@ -2378,7 +2403,7 @@ function layoutTopo(TP){
    I router NON sono segnati: si vedono aloni di segnale con centro spostato e raggio ampio
    (deterministico per router), che attraversano i piani con intensità decrescente. Nell'elenco
    la vicinanza del gruppo ai router è solo a 4 livelli di barre, senza distanze né stanze. */
-let NETV = 'topo';
+let NETV = 'map';
 const TOPOV = () => NET && !PLAN && NETV==='topo';
 function setNetView(v){ NETV=v; topoSel=null; netHoverId=null; hideNetTip(); if (v==='topo') { TL=null; nvFit(); } updateHud(); draw(); }
 const decoyCache = [];
@@ -2416,50 +2441,87 @@ function sigBars(r){
   const d=Math.hypot(t.x+.5-r.x,t.y+.5-r.y)*CS+Math.abs(t.f-r.fl)*FLOOR_H*2;
   return d<10?4:d<22?3:d<40?2:d<65?1:0;
 }
+/* Vista di netrunning sulla pianta: gli stessi dati di NH/topologia, disegnati sul piano fisico.
+   Router, switch, firewall e ICE sono icone posizionate sulla pianta (vedi physPlace); i collegamenti
+   si tracciano tra le icone; i nodi su altri piani collegati a quelli di questo piano compaiono come "fantasmi" (▲/▼ piano). */
+function netMapNodes(){
+  const TP=buildTopology(), S=hackState(), fogOn=!GM, on=[], ghost=new Map();
+  const ok=n=>!fogOn||NH.visible(S,n.nid);
+  TP.nodes.forEach(n => { if (n.fl===cur && ok(n)) on.push(n); });
+  const onSet=new Set(on.map(n=>n.nid));
+  TP.edges.forEach(e => { const a=TP.byId.get(e.a), b=TP.byId.get(e.b); if (!ok(a)||!ok(b)) return;
+    const add=n => { if (fogOn || n.infra) ghost.set(n.nid,n); };
+    if (onSet.has(a.nid) && !onSet.has(b.nid) && b.fl!==cur) add(b); else if (onSet.has(b.nid) && !onSet.has(a.nid) && a.fl!==cur) add(a); });
+  return {TP,S,fogOn,on,onSet,ghosts:Array.from(ghost.values())};
+}
+function mapPick(cx,cy){
+  const wx=(cx-v2.ox)/v2.s, wy=(cy-v2.oy)/v2.s, M=netMapNodes(), R=Math.max(1,12/v2.s); let best=null,bd=1e9;
+  M.on.concat(M.ghosts).forEach(n => { const d=Math.hypot(n.x-wx,n.y-wy); if (d<R && d<bd) { bd=d; best=n; } });
+  return best;
+}
 function drawNetMap(f,s){
-  const TP=buildTopology(), W2=GW*s, H2=GD*s;
+  const W2=GW*s, H2=GD*s;
   ctx.save();
   ctx.globalCompositeOperation='multiply'; ctx.fillStyle='rgb(70,170,175)'; ctx.fillRect(0,0,W2,H2);
   ctx.globalCompositeOperation='source-over'; ctx.fillStyle='rgba(0,10,14,0.38)'; ctx.fillRect(0,0,W2,H2);
   const sy=((T*0.18)%1)*H2, bh=H2*0.06, gr=ctx.createLinearGradient(0,sy-bh,0,sy+bh);
   gr.addColorStop(0,'rgba(0,255,242,0)'); gr.addColorStop(.5,'rgba(0,255,242,0.10)'); gr.addColorStop(1,'rgba(0,255,242,0)');
   ctx.fillStyle=gr; ctx.fillRect(0,sy-bh,W2,bh*2);
-  // dispositivi (come nella vista originale, senza collegamenti)
-  // posizioni volutamente imprecise: ogni segnale è spostato (cerchio di incertezza) e si mescola a falsi echi
-  const J=Math.max(1.5,3/CS), blur=d => { const h=hashStr(String(d.tid||d.id)), a=(h%628)/100, m=J*(.4+((h>>>10)%60)/100); return [d.x+Math.cos(a)*m, d.y+Math.sin(a)*m]; };
-  const shown=netLive(f,cur).map(d => ({d,p:blur(d),fake:false}))
-    .concat(netDecoys(cur).filter(q => GM || Math.sin(T*1.1+q.ph)>-.3).map(q => ({d:q,p:[q.x,q.y],fake:true})));
-  shown.forEach(({d,p,fake}) => {
-    const col=(fake&&GM)?'#6a6660':NET_INFO[d.kind].c, X=p[0]*s, Y=p[1]*s, al=fake?(GM?.55:.65+.3*Math.sin(T*1.1+d.ph)):1;
-    ctx.globalAlpha=al*.35; ctx.strokeStyle=col; ctx.lineWidth=1; ctx.setLineDash([2,3]); ctx.beginPath(); ctx.arc(X,Y,J*s,0,7); ctx.stroke(); ctx.setLineDash([]);
-    ctx.globalAlpha=al; ctx.shadowColor=col; ctx.shadowBlur=5; netIcon(d,X,Y,s,col); ctx.shadowBlur=0;
-    if (GM && !fake) { ctx.globalAlpha=.8; ctx.fillStyle='#fff'; ctx.fillRect(d.x*s-1.5,d.y*s-1.5,3,3); ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(d.x*s,d.y*s); ctx.lineTo(X,Y); ctx.stroke(); }
-    if (s>=8) { ctx.font=`${Math.max(8,Math.min(10,s*.8))}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; const r=Math.max(3.5,s*.5), t=d.id+((fake&&GM)?' ?':''); ctx.strokeText(t,X,Y+r+2); ctx.fillStyle=col; ctx.fillText(t,X,Y+r+2); }
-    ctx.globalAlpha=1;
-  });
-  // aloni dei router
-  TP.nodes.filter(n=>n.kind==='rtr'&&!n.priv).forEach(r => {
+  const M=netMapNodes(), TP=M.TP, S=M.S, fogOn=M.fogOn, tn=performance.now()/1000, sel=topoSel;
+  const present=new Set(M.on.concat(M.ghosts).map(n=>n.nid));
+  // aloni di copertura dei router (segnale ambientale, come prima)
+  TP.nodes.filter(n => n.kind==='rtr' && !n.priv).forEach(r => {
     const df=Math.abs(r.fl-cur); if (df>2) return;
     const k=[1,.55,.3][df], h=routerHalo(r), X=h.x*s, Y=h.y*s, R=h.R*s;
-    const g=ctx.createRadialGradient(X,Y,0,X,Y,R); g.addColorStop(0,'rgba(255,255,255,'+(.22*k).toFixed(3)+')'); g.addColorStop(.5,'rgba(0,255,242,'+(.10*k).toFixed(3)+')'); g.addColorStop(1,'rgba(0,255,242,0)');
+    const g=ctx.createRadialGradient(X,Y,0,X,Y,R); g.addColorStop(0,'rgba(255,255,255,'+(.16*k).toFixed(3)+')'); g.addColorStop(.5,'rgba(0,255,242,'+(.07*k).toFixed(3)+')'); g.addColorStop(1,'rgba(0,255,242,0)');
     ctx.globalCompositeOperation='screen'; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(X,Y,R,0,7); ctx.fill(); ctx.globalCompositeOperation='source-over';
-    for (let q=0;q<2;q++) { const ph=(T*.35+q*.5+(hashStr(r.nid)%100)/100)%1; ctx.strokeStyle='rgba(0,255,242,'+(.35*k*(1-ph)).toFixed(3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(X,Y,R*ph,0,7); ctx.stroke(); }
-    if (r.nid===hackSel) { ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,R*.35,0,7); ctx.stroke(); }
-    if (s>=4) { ctx.font=`bold ${Math.max(9,Math.min(12,s*.9))}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='middle'; const t='≈ '+r.id+(df?' ('+(r.fl>cur?'▲':'▼')+df+')':''); ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(t,X,Y); ctx.fillStyle='rgba(255,255,255,'+(.5+.5*k).toFixed(2)+')'; ctx.fillText(t,X,Y); }
+    for (let q=0;q<2;q++) { const ph=(T*.35+q*.5+(hashStr(r.nid)%100)/100)%1; ctx.strokeStyle='rgba(0,255,242,'+(.3*k*(1-ph)).toFixed(3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(X,Y,R*ph,0,7); ctx.stroke(); }
   });
-  // router hackerato: dorsale fino ai firewall (posizioni indicative, come gli aloni)
-  const hs=hackSel&&TP.byId.get(hackSel);
-  if (hs) {
-    const RA=hackReach(TP,hs.nid), pt=n=>{ const h=routerHalo(n); return [h.x*s,h.y*s]; };
-    ctx.lineWidth=2; ctx.setLineDash([8,5]); ctx.lineDashOffset=-T*16;
-    RA.edges.forEach(([a,b]) => { const na=TP.byId.get(a), nb=TP.byId.get(b), p=pt(na), q=pt(nb); ctx.strokeStyle=(na.kind==='fwl'||nb.kind==='fwl')?'#ff5a5a':'#ffffff'; ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]); ctx.stroke(); });
-    ctx.setLineDash([]); ctx.lineDashOffset=0;
-    const mark=(n,col) => { const p=pt(n), df=n.fl-cur; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(p[0],p[1],Math.max(3,s*.35),0,7); ctx.fill();
-      ctx.font=`bold ${Math.max(9,Math.min(11,s*.8))}px "Courier New",monospace`; ctx.textAlign='left'; ctx.textBaseline='middle'; const t=n.id+(df?' · '+labelOf(n.fl):'')+(n.kind==='fwl'?' 🛡':'');
-      ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText(t,p[0]+8,p[1]-8); ctx.fillStyle=col; ctx.fillText(t,p[0]+8,p[1]-8); };
-    RA.routers.forEach(id => mark(TP.byId.get(id),id===hs.nid?'#ffffff':'#8cf0ff'));
-    RA.fws.forEach(id => mark(TP.byId.get(id),'#ff5a5a'));
+  // collegamenti: pieni e luminosi = esplorati, tratteggiati = individuati da esplorare (rossi se portano a un blocco)
+  TP.edges.forEach(e => {
+    if (!present.has(e.a) || !present.has(e.b) || !(M.onSet.has(e.a)||M.onSet.has(e.b))) return;
+    const na=TP.byId.get(e.a), nb=TP.byId.get(e.b), sa=NH.state(S,e.a), sb=NH.state(S,e.b), explored=(sa==='hacked'&&sb==='hacked'), hl=sel&&(e.a===sel||e.b===sel);
+    const sg=SEG[na.seg!=='bb'?na.seg:nb.seg]||SEG.bb; let col=sg.c, lw, dash=[], al, glow=0;
+    if (explored) { lw=Math.max(2,s*.28); al=1; glow=7; }
+    else if (fogOn) { col=(sa==='protected'||sb==='protected')?'#ff5a5a':'#bfe9ff'; lw=Math.max(1.3,s*.15); dash=[5,5]; al=.9; }
+    else { lw=Math.max(1,s*.12); al=.45; }
+    ctx.globalAlpha=(na.fl!==cur||nb.fl!==cur)?al*.6:al; ctx.strokeStyle=hl?'#ffffff':col; ctx.lineWidth=lw; ctx.setLineDash(dash); ctx.lineDashOffset=dash.length?-tn*8:0; ctx.shadowColor=col; ctx.shadowBlur=glow;
+    ctx.beginPath(); ctx.moveTo(na.x*s,na.y*s); ctx.lineTo(nb.x*s,nb.y*s); ctx.stroke(); ctx.shadowBlur=0;
+  });
+  ctx.setLineDash([]); ctx.lineDashOffset=0; ctx.globalAlpha=1;
+  // nodi
+  const drawNode=(n,ghost) => {
+    const st=NH.state(S,n.nid), inf=!!n.infra, X=n.x*s, Y=n.y*s, isz=inf?Math.max(15,s*1.8):Math.max(9,s), r=Math.max(3.5,isz*.5), col=NET_INFO[n.kind].c;
+    const block=NH.isGate(n)&&(st==='protected'||st==='spotted'), hot=(n.nid===sel||n.nid===netHoverId);
+    let al=ghost?.5:1; if (st==='unid') al*=.3; else if (st!=='hacked') al*=.8;
+    ctx.globalAlpha=al; ctx.shadowColor=col; ctx.shadowBlur=st==='hacked'?10:4; netIcon(n,X,Y,isz,col); ctx.shadowBlur=0;
+    if (block) { ctx.strokeStyle='#ff3b3b'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,r+4+1.5*Math.sin(tn*5),0,7); ctx.stroke(); drawLock(X+r+3,Y-r-1,'#ff3b3b'); }
+    else if (st==='hacked') { ctx.fillStyle='#0a0908'; ctx.strokeStyle='#7cff4a'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(X+r,Y-r,5,0,7); ctx.fill(); ctx.stroke();
+      ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(X+r-2.5,Y-r); ctx.lineTo(X+r-.8,Y-r+2.2); ctx.lineTo(X+r+3,Y-r-2.2); ctx.stroke(); }
+    if (hot) { ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,r+(block?9:5),0,7); ctx.stroke(); }
+    if (s>=4 || inf || hot) {
+      ctx.font=`${Math.max(8,Math.min(10,s*.8))}px "Courier New",monospace`; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)';
+      const t=n.id+(ghost?' '+(n.fl>cur?'▲':'▼')+labelOf(n.fl):''); ctx.strokeText(t,X,Y+r+2); ctx.fillStyle=block?'#ff7a7a':col; ctx.fillText(t,X,Y+r+2);
+      if (st==='spotted'||st==='protected') { const d='DR '+NH.difficulty(TP,n).dr; ctx.strokeText(d,X,Y+r+12); ctx.fillStyle='#e8c93a'; ctx.fillText(d,X,Y+r+12); }
+    }
+    ctx.globalAlpha=1; ctx.textBaseline='middle';
+  };
+  M.ghosts.forEach(n => drawNode(n,true));
+  M.on.slice().sort((a,b)=>(a.infra?1:0)-(b.infra?1:0)).forEach(n => drawNode(n,false));
+  const tgt=TP.byId.get(TP.targetId);
+  if (tgt && tgt.fl===cur && (!fogOn||NH.visible(S,tgt.nid))) {
+    const X=tgt.x*s, Y=tgt.y*s, rr=Math.max(9,s)*.5+10+1.5*Math.sin(tn*3);
+    ctx.strokeStyle='#e8c93a'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,rr,0,7); ctx.stroke(); ctx.lineWidth=1; ctx.beginPath(); ctx.arc(X,Y,rr+4,0,7); ctx.stroke();
+    ctx.font='bold 10px "Courier New",monospace'; ctx.textAlign='center'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)';
+    const t='◎ SERVER CENTRALE'+(NH.state(S,tgt.nid)==='hacked'?' · COMPROMESSO':''); ctx.strokeText(t,X,Y-rr-8); ctx.fillStyle='#e8c93a'; ctx.fillText(t,X,Y-rr-8);
   }
+  const cn=S.cursor&&TP.byId.get(S.cursor);
+  if (cn && cn.fl===cur && (!fogOn||NH.visible(S,cn.nid))) {
+    const ph=(tn*.9)%1, X=cn.x*s, Y=cn.y*s; ctx.strokeStyle='rgba(0,255,242,'+(1-ph).toFixed(2)+')'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,10+ph*18,0,7); ctx.stroke();
+    ctx.font='bold 10px "Courier New",monospace'; ctx.textAlign='center'; ctx.lineWidth=3; ctx.strokeStyle='rgba(10,9,8,0.9)'; ctx.strokeText('▶ TU SEI QUI',X,Y-24); ctx.fillStyle='#00fff2'; ctx.fillText('▶ TU SEI QUI',X,Y-24);
+  }
+  const fn=S.fx&&TP.byId.get(S.fx.id);
+  if (fn && fn.fl===cur) { const age=tn-S.fx.t; if (age>=0 && age<1.3) { ctx.strokeStyle=(S.fx.ok?'rgba(124,255,74,':'rgba(255,59,59,')+(1-age/1.3).toFixed(2)+')'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(fn.x*s,fn.y*s,8+age*40,0,7); ctx.stroke(); } }
   ctx.restore();
 }
 
@@ -2596,14 +2658,7 @@ function topoNextIce(TP,id){
 }
 
 function renderNetList(list,f){
-  const tg=document.createElement('div'); tg.className='r'; tg.innerHTML='<b style="color:#00fff2">⇄</b><span>VISTA: '+(NETV==='map'?'MAPPA (copertura router)':'TOPOLOGIA LAN')+'</span><i>[T]</i>'; tg.onclick=()=>setNetView(NETV==='map'?'topo':'map'); list.appendChild(tg);
-  if (NETV==='map') {
-    const TQ=buildTopology(), hd=document.createElement('div'); hd.className='desc'; hd.style.paddingLeft='6px'; hd.textContent='Segnale dei router vicino al gruppo (aloni sulla mappa: posizione indicativa).'; list.appendChild(hd);
-    TQ.nodes.filter(n=>n.kind==='rtr'&&!n.priv).map(r=>({r,b:sigBars(r)})).sort((a,b)=>b.b-a.b||(a.r.id<b.r.id?-1:1)).forEach(({r,b}) => { const row=document.createElement('div'); row.className='r'; const i1=document.createElement('b'); i1.textContent='■'; i1.style.color='#fff'; const t=document.createElement('span'); t.textContent=r.id+(r.core?' · core':''); const i2=document.createElement('i'); i2.textContent='▮'.repeat(b)+'▯'.repeat(4-b); row.append(i1,t,i2); list.appendChild(row); });
-    const hn=hackSel&&TQ.byId.get(hackSel);
-    if (hn) { const RA=hackReach(TQ,hn.nid), e=document.createElement('div'); e.className='desc'; e.textContent=hn.id+' hackerato · ICE '+hn.ice; const a=document.createElement('span'); a.className='n'; a.textContent='Dorsale: '+Array.from(RA.routers).map(i=>TQ.byId.get(i).id).join(', '); e.appendChild(a); const b=document.createElement('span'); b.className='n'; b.textContent=RA.fws.size?'Si ferma ai firewall: '+Array.from(RA.fws).map(i=>TQ.byId.get(i).id).join(', '):'Nessun firewall sulla dorsale.'; e.appendChild(b); list.appendChild(e); }
-    return;
-  }
+  const tg=document.createElement('div'); tg.className='r'; tg.innerHTML='<b style="color:#00fff2">⇄</b><span>VISTA: '+(NETV==='map'?'MAPPA DEL PIANO':'SCHEMA LAN')+'</span><i>[T]</i>'; tg.onclick=()=>setNetView(NETV==='map'?'topo':'map'); list.appendChild(tg);
   renderHackPanel(list);
 }
 
@@ -2997,7 +3052,7 @@ window.addEventListener('keydown',e=>{
   else if (e.key==='c'||e.key==='C') toggleCamWall();
   else if (e.key==='n'||e.key==='N') setNet(!NET);
   else if ((e.key==='t'||e.key==='T') && NET && !PLAN) setNetView(NETV==='map'?'topo':'map');
-  else if ((e.key==='h'||e.key==='H') && NET && !PLAN && TOPOV()) doHack();
+  else if ((e.key==='h'||e.key==='H') && NET && !PLAN && mode==='2d') doHack();
   else if (e.key==='Escape' && CAMWALL) toggleCamWall(false);
   else if (e.key==='+'||e.key==='=') zoomBy(1.25);
   else if (e.key==='-') zoomBy(0.8);
@@ -3030,7 +3085,9 @@ cv.addEventListener('pointerup',e=>{
       for (let i=0;i<NL;i++) { const p=P(GW/2,GD/2,i*GAP3); const d=Math.hypot(p[0]-e.clientX,p[1]-e.clientY); if(d<bd){bd=d;best=i;} }
       if (best>=0) tryFloor(best);
     } else {
-      if (NET && !PLAN && NETV==='map') { const hk=hackPick(e.clientX,e.clientY); if (hk!==undefined) { hackSel=hackSel===hk?null:hk; updateHud(); draw(); drag=null; cv.classList.remove('drag'); return; } }
+      if (NET && !PLAN && NETV==='map') { const hn=mapPick(e.clientX,e.clientY);
+        if (hn) { if (hn.fl!==cur) { cur=hn.fl; sel=-1; } topoSel = topoSel===hn.nid ? null : hn.nid; updateHud(); draw(); drag=null; cv.classList.remove('drag'); return; }
+        topoSel=null; }
       if (TOPOV()) { topoClick(e.clientX,e.clientY,e.shiftKey); drag=null; cv.classList.remove('drag'); return; }
       const x=Math.floor((e.clientX-v2.ox)/v2.s), y=Math.floor((e.clientY-v2.oy)/v2.s);
       if (x>=0&&y>=0&&x<GW&&y<GD) {
@@ -3049,8 +3106,8 @@ cv.addEventListener('pointerup',e=>{
   drag=null; cv.classList.remove('drag');
 });
 cv.addEventListener('pointermove',e=>{                    // vista netrunning: tooltip del dispositivo sotto il mouse
-  if (!TOPOV() || mode!=='2d' || drag) { if (netHoverId) { netHoverId=null; hideNetTip(); draw(); } return; }
-  const h=topoPick(e.clientX,e.clientY), d=h&&h.node, id=d?d.nid:null;
+  if (!(TOPOV() || (NET && !PLAN && NETV==='map')) || mode!=='2d' || drag) { if (netHoverId) { netHoverId=null; hideNetTip(); draw(); } return; }
+  const d=TOPOV() ? (topoPick(e.clientX,e.clientY)||{}).node : mapPick(e.clientX,e.clientY), id=d?d.nid:null;
   if (d) showNetTip(d,e.clientX,e.clientY); else hideNetTip();
   if (id!==netHoverId) { netHoverId=id; draw(); }
 });
@@ -3223,7 +3280,7 @@ if (CUSTOM_ERR) toast('Definizione dungeon non valida: ' + CUSTOM_ERR);
 if (fogLoad()) fogReveal(); else fogStart();
 if (!GM && !PLAN) cur = fog.tok.f;
 resize(); updateHud(); draw();
-window.CY_NETHACK = {NH, buildTopology, hackState, selfTest:NH.selfTest};
+window.CY_NETHACK = {NH, buildTopology, hackState, netMapNodes, mapPick, selfTest:NH.selfTest};
 if (Q.get('nettest')==='1') { const rt = NH.selfTest(); console.log(rt.lines.join('\n')); toast('NETHACK self-test: '+(rt.pass?'OK':'FALLITO')+' ('+rt.passed+'/'+rt.total+')'); }
 })();
 </script>
