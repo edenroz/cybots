@@ -1697,6 +1697,14 @@ function drawProp(p,s){
     case 'terminal': ctx.fillStyle='#1a2226'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.fillStyle='rgba(0,255,242,'+(0.45+0.4*Math.sin(T*5+p.x+p.y*2)).toFixed(2)+')'; ctx.fillRect(x+w*.25,y+h*.25,w*.5,h*.3); break;
     case 'vend': ctx.fillStyle='#262d48'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.fillStyle=(Math.sin(T*3+p.x)>-.3)?'#ff2ee6':'#4a1a44'; ctx.fillRect(x+w*.3,y+h*.2,w*.4,h*.5); break;
     case 'rug': ctx.fillStyle=['rgba(160,40,60,.35)','rgba(40,90,160,.35)','rgba(60,140,80,.30)'][p.v||0]; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.strokeStyle='rgba(242,237,228,.25)'; ctx.lineWidth=1; ctx.strokeRect(x+m*2.5,y+m*2.5,w-5*m,h-5*m); break;
+    case 'router': ctx.fillStyle='#14202a'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.strokeStyle='#ffffff'; ctx.lineWidth=1; ctx.strokeRect(x+m,y+m,w-2*m,h-2*m);
+      ctx.fillStyle=(Math.sin(T*5+p.x*1.9)>0)?'#ffffff':'#4a4a4a'; ctx.fillRect(x+w*.25,y+h*.3,s*.12,s*.12); ctx.fillStyle=(Math.sin(T*3.4+p.y*2.7)>0)?'#8cf0ff':'#1d4a52'; ctx.fillRect(x+w*.55,y+h*.55,s*.12,s*.12); break;
+    case 'asr': ctx.fillStyle='#1b2530'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.strokeStyle='#e8f6ff'; ctx.lineWidth=1.5; ctx.strokeRect(x+m,y+m,w-2*m,h-2*m);
+      for (let q=0;q<3;q++) { ctx.fillStyle=(Math.sin(T*(3+q)+p.x+q*2)>0)?'#e8f6ff':'#2c4658'; ctx.fillRect(x+w*.22,y+h*(.22+q*.24),w*.56,s*.1); } break;
+    case 'noc': ctx.fillStyle='#262b10'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.strokeStyle='#f5ff5a'; ctx.lineWidth=1.5; ctx.strokeRect(x+m,y+m,w-2*m,h-2*m);
+      ctx.fillStyle='rgba(245,255,90,'+(0.45+0.4*Math.sin(T*4+p.x)).toFixed(2)+')'; ctx.fillRect(x+w*.25,y+h*.25,w*.5,h*.35); break;
+    case 'srvc': ctx.fillStyle='#10181c'; ctx.fillRect(x+m,y+m,w-2*m,h-2*m); ctx.strokeStyle='#e8c93a'; ctx.lineWidth=1.5; ctx.strokeRect(x+m,y+m,w-2*m,h-2*m);
+      ctx.fillStyle=(Math.sin(T*6+p.x*2.3)>0)?'#ff3b3b':'#5a1a1a'; ctx.fillRect(x+w*.3,y+h*.3,s*.12,s*.12); ctx.fillStyle=(Math.sin(T*4+p.y*3.1)>0)?'#e8c93a':'#5a4a1a'; ctx.fillRect(x+w*.6,y+h*.55,s*.12,s*.12); break;
     case 'car': ctx.fillStyle='#44525c'; ctx.fillRect(x+m,y+m*1.4,w-2*m,h-2.8*m); ctx.fillStyle='#8fb0c0'; ctx.fillRect(x+w*.62,y+h*.28,w*.18,h*.44); break;
   }
 }
@@ -1931,7 +1939,7 @@ const NH = (function(){
   const TIERS = [{n:'Domestica / poco protetta',w:0},{n:'Commerciale',w:1},{n:'Aziendale',w:3},{n:'Corporativa / militare',w:5}];
   const TYPE_W = {lgt:0,tv:0,iot:0, trm:1,wrk:1,vnd:1, swt:2,mch:2,veh:2,elv:2,cam:2,lck:2, acc:3,trt:3,rtr:3,noc:3, asr:4,sec:4,srv:4,fwl:4, ice:5};
   // ICE a ruoli diversi: ciascuno sorveglia un segmento specifico e ha un peso (difficoltà) diverso
-  const ICE_ROLES = {guardian:{n:'Guardiano',w:2,watch:'l\'automazione dell\'edificio (impianti, ascensori, luci)'},sentinel:{n:'Sentinella',w:3,watch:'telecamere, serrature e sistemi di sicurezza'},cerberus:{n:'Cerbero',w:4,watch:'le sale server e i dati'},vault:{n:'Caveau',w:5,watch:'la rete riservata'},black:{n:'ICE nero',w:6,watch:'il server centrale'},noc:{n:'Custode',w:5,watch:'il centro operativo di rete (NOC)'}};
+  const ICE_ROLES = {guardian:{n:'Guardiano',w:2,watch:'l\'automazione dell\'edificio (impianti, ascensori, luci)'},sentinel:{n:'Sentinella',w:3,watch:'telecamere, serrature e sistemi di sicurezza'},cerberus:{n:'Cerbero',w:4,watch:'le sale server e i dati'},vault:{n:'Caveau',w:5,watch:'la rete riservata'},black:{n:'ICE nero',w:6,watch:'il centro operativo di rete (NOC)'}};
   const LABEL = {unid:'non identificato', spotted:'individuato', hacked:'hackerato', protected:'protetto'};
   const isGate = n => !!(n && GATE[n.kind]);
   const clamp = (a,b,v) => Math.max(a,Math.min(b,v));
@@ -2123,8 +2131,8 @@ const NH = (function(){
     const N = (id,kind,o) => { const n=Object.assign({nid:id,id,kind,infra:['rtr','swt','fwl','ice','asr','noc'].includes(kind),ice:2,fl:0,x:0,y:0,seg:'corp',roomName:'Corridoio'},o||{}); nodes.push(n); byId.set(id,n); return n; };
     const E = (a,b,t) => edges.push({a,b,t});
     N('ASR-CORE','asr',{seg:'bb',ice:4,core:true}); N('ASR-02','asr',{seg:'bb',ice:4}); E('ASR-02','ASR-CORE','bb');
-    N('ICE-NOC','ice',{seg:'bb',ice:5,role:'noc'}); E('ICE-NOC','ASR-CORE','bb');
-    N('NOC','noc',{seg:'bb',ice:3}); E('NOC','ICE-NOC','priv');
+    N('ICE-BLACK','ice',{seg:'bb',ice:5,role:'black'}); E('ICE-BLACK','ASR-CORE','bb');
+    N('NOC','noc',{seg:'bb',ice:3}); E('NOC','ICE-BLACK','priv');
     N('RTR-01','rtr',{seg:'bb',ice:3}); N('RTR-02','rtr',{seg:'bb',ice:3}); E('RTR-01','ASR-CORE','up'); E('RTR-02','ASR-02','up'); E('RTR-01','RTR-02','peer');
     N('SW-CORP','swt',{ice:2}); E('SW-CORP','RTR-01','up');
     [['TRM-01','trm',2],['TRM-02','trm',1],['WRK-01','wrk',2],['TV-01','tv',0]].forEach(([i,k,c]) => { N(i,k,{ice:c}); E(i,'SW-CORP','dev'); });
@@ -2136,7 +2144,7 @@ const NH = (function(){
     G('bld',[['ICE-GUARDIAN','ice','guardian']],'PRT-BLD','SW-BLD',[['VND-01','vnd',1],['IOT-01','iot',0]]);
     G('sec',[['ICE-SENTINEL','ice','sentinel']],'PRT-SEC','SW-SEC',[['CAM-01','cam',3],['CAM-02','cam',3],['LCK-01','lck',3]]);
     G('srv',[['FW-SRV','fwl'],['ICE-CERBERUS','ice','cerberus']],'PRT-SRV','SW-SRV',[['SRV-02','srv',4]]);
-    G('rst',[['FW-RST','fwl'],['ICE-VAULT','ice','vault'],['ICE-BLACK','ice','black']],'PRT-RST','SW-RST',[['SRV-CENTRAL','srv',5,{central:true}]]);
+    G('rst',[['FW-RST','fwl'],['ICE-VAULT','ice','vault']],'PRT-RST','SW-RST',[['SRV-CENTRAL','srv',5,{central:true}]]);
     E('FW-RST','WRK-01','acl');
     return {nodes, edges, byId, coreId:'ASR-CORE', nocId:'NOC', tier:2, targetId:'SRV-CENTRAL'};
   }
@@ -2294,7 +2302,7 @@ function renderHackPanel(list){
     if (TP.targetId===sel.nid) add('★ SERVER CENTRALE: obiettivo della rete.');
     if (sel.kind==='ice' && NH.ICE_ROLES[sel.role]) { const ro=NH.ICE_ROLES[sel.role]; add('Ruolo ICE: '+ro.n+' (livello '+ro.w+') — sorveglia '+ro.watch+'.'); }
     { const rt=NH.route(S,sel.nid); if (rt.length>1) add('Percorso verso il core e il NOC: '+rt.map(i => (GM||NH.visible(S,i))?i:'?').join(' → ')+' (linea gialla sulla mappa).'); }
-    if (sel.kind==='noc') add('Protetto da ICE-NOC: raggiungibile solo dopo averlo neutralizzato. Hackerarlo rivela l\'intera topologia.');
+    if (sel.kind==='noc') add('Protetto da ICE-BLACK: raggiungibile solo dopo averlo neutralizzato. Hackerarlo rivela l\'intera topologia.');
     else if (sel.kind==='rtr' && !sel.priv) add('Il router pubblico NON dà accesso al NOC: apre la propria area e la backbone (ASR), che è collegata al NOC. Per l\'accesso totale va hackerato il NOC stesso.');
     if (sel.kind==='noc' && stt==='hacked') add('Accesso totale: l\'intera rete è stata individuata. I nodi protetti restano inaccessibili finché non cadono gli ICE/firewall che li proteggono.');
     if (sel.kind==='rtr' && !sel.priv && stt==='hacked') add('Accesso superiore: area locale, router collegati e backbone individuati.');
@@ -2396,7 +2404,7 @@ function physPlace(TP){
   chains.forEach((p,i) => { const ang=(20+i*360/nC)*d2r; p.chain.concat([p]).forEach((c,k) => { c.hub=true; c.hubA=ang; c.hubK=3.2+1.3*k; }); });
   const oa=TP.nodes.filter(n => n.kind==='asr' && !n.core); oa.forEach((a,k) => { a.hub=true; a.hubA=(20+180/nC+k*360/Math.max(1,oa.length))*d2r; a.hubK=1.8; });
   core.hub=true; core.hubA=0; core.hubK=0;
-  const nc=TP.byId.get(TP.nocId), ni=TP.byId.get('ICE-NOC');
+  const nc=TP.byId.get(TP.nocId), ni=TP.byId.get('ICE-BLACK');
   if (ni) { ni.hub=true; ni.hubA=270*d2r; ni.hubK=1.0; }
   if (nc) { nc.hub=true; nc.hubA=270*d2r; nc.hubK=2.0; }
 }
@@ -2407,6 +2415,7 @@ function physPlace(TP){
    (Sentinella = telecamere/serrature, Guardiano = automazione, Cerbero = server, Caveau/ICE nero = rete riservata e server centrale), a volte preceduto da un firewall. */
 function buildTopology(){
   if (TOPO) return TOPO;
+  for (let i=0;i<NL;i++) { const f=getFloor(i); if (f.propsAll.some(p => p.infra)) { f.propsAll=f.propsAll.filter(p => !p.infra); applyCtl(f); } }   // si ripiazzano da zero
   const rng=mulberry32(hashStr(SEED_STR+'#topo')), nodes=[], edges=[], byId=new Map(), ek=new Set(), sq={};
   const nm = p => p+'-'+String(sq[p]=(sq[p]||0)+1).padStart(2,'0');
   const mk = (kind,o) => { const inf=NET_INFO[kind], n=Object.assign({kind,infra:true,ice0:inf.ice[0]+Math.floor(rng()*(inf.ice[1]-inf.ice[0]+1))},o);
@@ -2435,8 +2444,8 @@ function buildTopology(){
   if (R>=3) link(asr[R-1],asr[0],'bb');
   // NOC: centro operativo di rete, attaccato alla backbone
   const pn=cellNear(coreFl,CORE.x+3,CORE.y+2,[2]);
-  const nocIce=mk('ice',{id:'ICE-NOC',role:'noc',name:'ICE Custode',fl:coreFl,x:pn[0],y:pn[1],seg:'bb',roomName:'Sala operativa',
-    rule:'ICE Custode: sorveglia il centro operativo di rete'});
+  const nocIce=mk('ice',{id:'ICE-BLACK',role:'black',name:'ICE nero',fl:coreFl,x:pn[0],y:pn[1],seg:'bb',roomName:'Sala operativa',
+    rule:'ICE nero: sorveglia il centro operativo di rete (NOC)'});
   const noc=mk('noc',{id:'NOC',name:'NOC · centro operativo di rete',fl:coreFl,x:pn[0],y:pn[1],seg:'bb',roomName:'Sala operativa'});
   link(nocIce,core,'bb'); link(nocIce,noc,'priv');
   // router pubblici: sparsi sui corridoi di ogni fascia, collegati alla backbone e tra loro
@@ -2468,7 +2477,7 @@ function buildTopology(){
   const secG=()=>mkGate('sec','sec',coreFl,'',[{kind:'ice',role:'sentinel'}]);
   const bldG=()=>mkGate('bld','bld',coreFl,'',[{kind:'ice',role:'guardian'}]);
   const srvG=(k,fl,room)=>mkGate(k,'srv',fl,room,[{kind:'fwl'},{kind:'ice',role:'cerberus'}],'ALLOW corp→srv (443,22) · DENY *');
-  const rstG=()=>mkGate('rst','rst',coreFl,'',[{kind:'fwl'},{kind:'ice',role:'vault'},{kind:'ice',role:'black'}],'ALLOW solo workstation autorizzate · DENY *');
+  const rstG=()=>mkGate('rst','rst',coreFl,'',[{kind:'fwl'},{kind:'ice',role:'vault'}],'ALLOW solo workstation autorizzate · DENY *');
   const guards=[]; for (let i=0;i<NL;i++) getFloor(i).rooms.forEach(r => { if (r.type==='Guardiola' && !r.secret) guards.push({fl:i,r,sw:null}); });
   devs.forEach(d => {
     const b=band(d.fl); let sw;
@@ -2492,8 +2501,85 @@ function buildTopology(){
   const TPn = {nodes,edges,byId,coreId:core.nid,nocId:noc.nid,R};
   TPn.tier = NH.tierFor({kind:KIND, floors:FL, sec:CTL.sec, firewalls:nodes.filter(n => n.kind==='fwl').length});
   physPlace(TPn);
+  placeNetGear(TPn);
   TPn.targetId = NH.pickTarget(TPn);
   return (TOPO=TPn);
+}
+
+/* =========================================================================
+   APPARECCHIATURE DI RETE COME ARREDI
+   Server centrale, router (pubblici e di segmento), ASR e NOC sono oggetti fisici: vengono posati in una stanza
+   adatta (locale tecnico, sala server...) come arredi veri (props con flag "infra"), compaiono in pianta e nella
+   descrizione della stanza. I server "normali" sono già arredi (rack). Il posizionamento è deterministico e viene
+   rifatto da zero a ogni ricostruzione della topologia; gli arredi "infra" non vengono mai esportati nel JSON.
+   ========================================================================= */
+const GEAR_PREF = {
+  asr: ['Locale tecnico','Sala server','Generatori','Ripostiglio','Locale personale','Magazzino','Deposito merci'],
+  noc: ['Sala server','Locale tecnico','Studio','Ufficio dirigenziale','Archivio','Sala riunioni','Open space'],
+  srvc:['Camera blindata','Sala server','Archivio','Locale tecnico','Ufficio dirigenziale','Laboratorio clandestino'],
+  rtr: ['Locale tecnico','Ripostiglio','Sala server','Guardiola','Reception','Locale personale','Pausa caffè','Magazzino','Retrobottega','Lavanderia comune','Locale spazzatura','Studio','Officina']
+};
+const GEAR_PROP = {asr:'asr', noc:'noc', srvc:'srvc', rtr:'router'};
+function gearOcc(f){
+  const o=new Set();
+  f.propsAll.forEach(p => { if (p.k==='rug') return; for (let dy=0;dy<(p.h||1);dy++) for (let dx=0;dx<(p.w||1);dx++) o.add((p.y+dy)*GW+p.x+dx); });
+  f.feats.forEach(ft => o.add(ft.y*GW+ft.x)); f.camsAll.forEach(c => o.add(c.y*GW+c.x)); (f.links||[]).forEach(l => o.add(l.k));
+  return o;
+}
+function gearCells(f,r,occ){
+  const g=f.g0||f.g;
+  return r.cells.filter(k => g[k]===1 && !occ.has(k) && !inZone(k%GW,(k/GW)|0) && ![-1,1,-GW,GW].some(d => g[k+d]>=3));
+}
+function gearPick(key,fl0,nx,ny,used){
+  const pref=GEAR_PREF[key]; let best=null;
+  for (let off=0; off<NL; off++) {
+    if (best && off>4) break;                                   // si guardano al massimo 4 piani sopra/sotto, oltre solo se non si è trovato nulla
+    for (const fl of (off ? [fl0-off,fl0+off] : [fl0])) {
+      if (fl<0 || fl>=NL) continue;
+      const f=getFloor(fl), occ=gearOcc(f);
+      f.rooms.forEach(r => {
+        if (r.secret || r.flood) return;
+        const cells=gearCells(f,r,occ); if (!cells.length) return;
+        let rk=pref.indexOf(r.type); if (rk<0) rk=pref.length+3;
+        const sc=rk*100 + off*60 + (used.get(fl+'|'+r.id)||0)*150 + Math.hypot(r.lx-nx,r.ly-ny);
+        if (!best || sc<best.sc) best={sc,f,r,cells};
+      });
+    }
+  }
+  return best;
+}
+function gearPlace(n,key,used,rng){
+  const b=gearPick(key,n.fl,n.x,n.y,used); if (!b) return false;
+  const g=b.f.g0||b.f.g, wallc=b.cells.filter(k => [-1,1,-GW,GW].some(d => g[k+d]===0)), list=wallc.length ? wallc : b.cells;
+  const k=list[Math.floor(rng()*list.length)];
+  b.f.propsAll.push({x:k%GW, y:(k/GW)|0, k:GEAR_PROP[key], w:1, h:1, infra:n.nid});
+  applyCtl(b.f);
+  used.set(b.f.idx+'|'+b.r.id,(used.get(b.f.idx+'|'+b.r.id)||0)+1);
+  n.fl=b.f.idx; n.x=(k%GW)+.5; n.y=((k/GW)|0)+.5; n.roomName=b.r.type;
+  return true;
+}
+function placeNetGear(TP){
+  const rng=mulberry32(hashStr(SEED_STR+'#gear')), used=new Map();
+  const core=TP.byId.get(TP.coreId), noc=TP.byId.get(TP.nocId), ib=TP.byId.get('ICE-BLACK');
+  gearPlace(core,'asr',used,rng);
+  TP.nodes.filter(n => n.kind==='asr' && n!==core).forEach(n => gearPlace(n,'asr',used,rng));
+  if (noc && gearPlace(noc,'noc',used,rng) && ib) { ib.fl=noc.fl; ib.x=noc.x; ib.y=noc.y; ib.roomName=noc.roomName; }
+  const cs=TP.nodes.find(n => n.central); if (cs) gearPlace(cs,'srvc',used,rng);
+  TP.nodes.filter(n => n.kind==='rtr').forEach(n => { if (gearPlace(n,'rtr',used,rng) && n.chain) n.chain.forEach(c => { c.fl=n.fl; c.x=n.x; c.y=n.y; }); });
+  TP.hubC=[core.x,core.y];
+}
+// apparecchiature di rete presenti in una stanza (per la descrizione): i giocatori vedono solo i nomi generici
+function roomNetGear(f,r){
+  if (!r || r.core) return [];
+  const TP=buildTopology(), out=[];
+  TP.nodes.forEach(n => {
+    if (!['srv','rtr','asr','noc'].includes(n.kind) || n.fl!==f.idx) return;
+    if (n.secret && !GM) return;
+    const rr=f.rid[(n.y|0)*GW+(n.x|0)]; if (rr<0 || f.rooms[rr]!==r) return;
+    const nm=GM ? netName(n) : NET_INFO[n.kind].n, idt=(n.central && !GM) || nm===n.id ? '' : ' '+n.id;
+    out.push(nm+idt+(GM ? ' ['+(SEG[n.seg]||SEG.bb).n+']' : ''));
+  });
+  return out;
 }
 
 function layoutTopo(TP){
@@ -3172,6 +3258,7 @@ function updateHud(){
     if (sel===si) {
       const e=document.createElement('div'); e.className='desc'; e.textContent=r.desc;
       if (r.amb) { const a=document.createElement('span'); a.className='n'; a.textContent='♪ '+r.amb; e.appendChild(a); }
+      { const eq=roomNetGear(f,r); if (eq.length) { const q=document.createElement('span'); q.className='n'; q.style.color='#00fff2'; q.textContent='⚙ Apparecchiature di rete: '+eq.join(' · '); e.appendChild(q); } }
       const pn = f.npcs.filter(q => q.rm===r.id).map(q => q.nick), nts = (r.notes||[]).concat(pn.length ? ['PNG presenti: '+pn.join(', ')] : []);
       if (GM && nts.length) { const m=document.createElement('span'); m.className='gm'; m.textContent='▸ '+nts.join(' · '); e.appendChild(m); }
       if (GM && r.secret) { const m=document.createElement('span'); m.className='gm'; m.textContent='▸ accessibile solo da una porta segreta'; e.appendChild(m); }
@@ -3392,7 +3479,7 @@ let lastAnim=0;
 function applyCtlAll() {
   floorCache.forEach(f => { if (f) applyCtl(f); });
   netCache.length = 0; decoyCache.length = 0; TOPO = null; TL = null; topoSel = null; camOn.clear(); camWallEl.dataset.f = ''; sel = -1; netSel = null;
-  hideNetTip(); updateHud(); draw();
+  hideNetTip(); try { buildTopology(); } catch(e) { console.error(e); } updateHud(); draw();
 }
 function ctlSave() { try { localStorage.setItem(CTL_KEY, JSON.stringify({npc:CTL.npc, devices:CTL.dev, security:CTL.sec})); } catch(e) {} }
 const CTL_UI = [['npc','s-npc','v-npc'], ['dev','s-dev','v-dev'], ['sec','s-sec','v-sec']];
@@ -3440,7 +3527,7 @@ function buildExport() {
     const cx = v => +(v-OX).toFixed(2), cy = v => +(v-OY).toFixed(2);
     floors.push({
       map: rows, rooms, furnish: false,
-      props: f.propsAll.map(p => { const o={k:p.k, x:p.x-OX, y:p.y-OY}; if (p.w>1) o.w=p.w; if (p.h>1) o.h=p.h; if (p.v) o.v=p.v; return o; }),
+      props: f.propsAll.filter(p => !p.infra).map(p => { const o={k:p.k, x:p.x-OX, y:p.y-OY}; if (p.w>1) o.w=p.w; if (p.h>1) o.h=p.h; if (p.v) o.v=p.v; return o; }),
       decals: f.decals.map(d => ({x:cx(d.x), y:cy(d.y), k:d.k, r:+d.r.toFixed(2), z:+d.z.toFixed(2)})),
       feats: f.feats.map(ft => ({x:ft.x-OX, y:ft.y-OY, k:ft.k, label:ft.label})),
       npcs: f.npcsAll.filter(n => !n.extra).map(n => ({x:cx(n.ax), y:cy(n.ay), to:[cx(n.bx), cy(n.by)], speed:+n.sp.toFixed(3), phase:+n.ph.toFixed(3), nick:n.nick})),
@@ -3481,7 +3568,8 @@ if (CUSTOM_ERR) toast('Definizione dungeon non valida: ' + CUSTOM_ERR);
 if (fogLoad()) fogReveal(); else fogStart();
 if (!GM && !PLAN) cur = fog.tok.f;
 resize(); updateHud(); draw();
-window.CY_NETHACK = {NH, buildTopology, hackState, netMapNodes, mapPick, selfTest:NH.selfTest};
+setTimeout(() => { try { buildTopology(); } catch(e) { console.error(e); } updateHud(); draw(); }, 30);   // posa gli arredi di rete (router, ASR, server, NOC)
+window.CY_NETHACK = {roomNetGear, getFloor, NH, buildTopology, hackState, netMapNodes, mapPick, selfTest:NH.selfTest};
 if (Q.get('nettest')==='1') { const rt = NH.selfTest(); console.log(rt.lines.join('\n')); toast('NETHACK self-test: '+(rt.pass?'OK':'FALLITO')+' ('+rt.passed+'/'+rt.total+')'); }
 })();
 </script>
